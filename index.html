@@ -101,10 +101,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.10';
+const VER = '0.11';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
-  attivo: ['Conto corrente', 'Conto di investimento', 'Portafoglio', 'Immobile', 'Altro attivo'],
+  attivo: ['Conto corrente', 'Conto di investimento', 'Immobile', 'Altro attivo'],
   passivo: ['Mutuo', 'Prestito', 'Carta di credito', 'Altro debito']
 };
 const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
@@ -262,6 +262,7 @@ function pagePat() {
     : v.categoria === 'Portafoglio' ? ` · in ${esc(contoName(v))}${v.obiettivo ? ` · obiettivo ${eur(v.obiettivo)} (${Math.round(v.valore / v.obiettivo * 100)}%)` : ''}` : '';
   const cat = g('fc', ed ? ed.categoria : CATS[tipo][0]);
   const isPf = tipo === 'attivo' && cat === 'Portafoglio';
+  const catOpts = CATS[tipo].includes(cat) || !(ed && ed.tipo === tipo && ed.categoria === cat) ? CATS[tipo] : [...CATS[tipo], cat];
   const conti = D.voci.filter(v => v.tipo === 'attivo' && (v.categoria === 'Conto corrente' || v.categoria === 'Conto di investimento'));
   const contoSel = g('fcn', ed && ed.conto ? ed.conto : (conti.length ? conti[0].id : 'new'));
   const pfCampi = isPf ? `<label class="lbl">Dove si trova il portafoglio?</label><select id="fcn" data-act="fcat">${conti.map(c => `<option value="${c.id}" ${contoSel === c.id ? 'selected' : ''}>${esc(c.nome)} (conto già aperto)</option>`).join('')}<option value="new" ${contoSel === 'new' ? 'selected' : ''}>+ Nuovo conto</option></select>
@@ -279,8 +280,7 @@ function pagePat() {
   const list = tp => {
     const items = vis.filter(v => v.tipo === tp && !nested.has(v.id)).sort((a, b) => tot(b) - tot(a));
     if (!items.length) return '<p class="note">Nessuna voce.</p>';
-    const hint = items.some(v => kids[v.id]) ? '<p class="note" style="margin:-4px 0 6px">▸ Le righe con la freccia si espandono: tocca per vedere liquidità e portafogli.</p>' : '';
-    return hint + items.map(v => {
+    return items.map(v => {
       const k = kids[v.id];
       if (!k) return `<div class="row${rcl}"${clk(v.id)}><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${det(v)}${acc(v)}</small></div><div class="v${tp === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`;
       const open = S.exp && S.exp[v.id];
@@ -302,7 +302,7 @@ function pagePat() {
   const form = D.readonly ? '' : `<div class="card" id="formvoce"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
     <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
     ${selAcc}
-    <label class="lbl">Categoria</label><select id="fc" data-act="fcat">${CATS[tipo].map(c => `<option ${g('fc', ed ? ed.categoria : '') === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <label class="lbl">Categoria</label><select id="fc" data-act="fcat">${catOpts.map(c => `<option ${g('fc', ed ? ed.categoria : '') === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
     ${pfCampi}
     ${selMod}
     <label class="lbl">Nome (es. Conto Fineco, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">
