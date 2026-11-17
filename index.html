@@ -119,7 +119,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.21';
+const VER = '0.22';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -394,6 +394,7 @@ function popup() {
   let body;
   if (p.mode === 'upd') body = `<label class="lbl">${v.categoria === 'Liquidità' ? 'Nuovo saldo in euro' : 'Nuovo valore in euro'}</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
   else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(v.nome)}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
+  else if (p.mode === 'arch') body = `<p style="margin-top:0"><b>${esc(v.nome)}</b> vale ancora <b>${eur(v.valore)}</b>: archiviandolo, questa cifra esce dai totali. Procedere?</p><div class="acts"><button class="b" data-act="poparchok">Sì, archivia</button><button class="b s" data-act="popback">Annulla</button></div>`;
   else if (isA) body = `<div class="acts" style="flex-direction:column"><button class="b" data-act="popres">Ripristina</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
   else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b s" data-act="poparch">Archivia</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
   return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)}${v.dove && v.dove !== v.nome ? ' · su ' + esc(v.dove) : ''} · ${esc(accName(v))} · ${eur(v.valore)}${isA ? ' · archiviato' : ''}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${ob}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
@@ -629,7 +630,7 @@ const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn',
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
 async function act(el) {
-  const a = el.dataset.act, v = el.dataset.v, D = S.data;
+  let a = el.dataset.act; const v = el.dataset.v, D = S.data;
   S.msg = '';
   try {
     if (a === 'mode') { S.mode = v; return render(); }
@@ -663,8 +664,13 @@ async function act(el) {
       await setDoc(doc(db, 'users', D.uid, 'voci', x.id), dati); Object.assign(x, dati);
       await syncStorico(); S.pop = null; S.msg = 'Valore aggiornato.'; return render();
     }
-    if (a === 'poparch' || a === 'popres') {
-      const id = S.pop.id, to = a === 'poparch', from = to ? D.voci : D.arch, dest = to ? D.arch : D.voci, i = from.findIndex(z => z.id === id);
+    if (a === 'poparch') {
+      const x0 = D.voci.find(z => z.id === S.pop.id);
+      if (x0 && x0.valore !== 0) { S.pop.mode = 'arch'; return render(); }
+      a = 'poparchok';
+    }
+    if (a === 'poparchok' || a === 'popres') {
+      const id = S.pop.id, to = a === 'poparchok', from = to ? D.voci : D.arch, dest = to ? D.arch : D.voci, i = from.findIndex(z => z.id === id);
       if (i < 0) return;
       await updateDoc(doc(db, 'users', D.uid, 'voci', id), { archiviata: to });
       const [x] = from.splice(i, 1); x.archiviata = to; if (!to) applyPiano(x); dest.push(x);
