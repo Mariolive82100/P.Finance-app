@@ -130,7 +130,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.32';
+const VER = '0.33';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -581,7 +581,8 @@ function formMese() {
     <label class="lbl">Mese (formato AAAA-MM, es. 2026-03)</label><input id="mm" type="month" placeholder="AAAA-MM" max="${prevMonth()}" value="${esc(e ? e.mese : dr.mm || '')}" ${e ? 'readonly' : ''}>
     <label class="lbl">Totale attivi (€)</label><input id="ma" inputmode="decimal" value="${esc(e ? f(e.attivi) : dr.ma || '')}">
     <label class="lbl">Totale passivi (€)</label><input id="mp" inputmode="decimal" value="${esc(e ? f(e.passivi) : dr.mp || '')}">
-    <div class="acts"><button class="b" data-act="savem">Salva mese</button>${e ? '<button class="b s" data-act="cancelm">Annulla</button>' : ''}</div></div>`;
+    <div class="acts"><button class="b" data-act="savem">Salva mese</button>${e ? '<button class="b s" data-act="cancelm">Annulla</button>' : ''}</div>
+    ${e ? '' : `<hr style="border:0;border-top:1px solid #e2eceb;margin:16px 0 10px"><label class="lbl">Oppure importa molti mesi insieme da un file (righe: mese;attivi;passivi, es. 2024-05;120000;8000)</label><input id="impf" type="file" accept=".csv,.txt"><div class="msg" id="impmsg"></div>`}</div>`;
 }
 
 function pageAnd() {
@@ -831,6 +832,26 @@ const tip = document.createElement('div'); tip.className = 'tip'; document.body.
 const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
 document.addEventListener('mousemove', e => tipAt(e, e.target.closest ? e.target.closest('[data-tip]') : null));
 document.addEventListener('mouseleave', () => tipAt(null, null));
+document.addEventListener('change', async e => {
+  if (e.target.id !== 'impf' || !e.target.files[0]) return;
+  const D = S.data, box = $('impmsg'); if (!D || D.readonly) return;
+  try {
+    const txt = await e.target.files[0].text(), mk = monthKey(); let ok = 0, skip = 0, bad = 0;
+    for (const ln of txt.split(/\r?\n/)) {
+      const p = ln.trim().split(/[;,\t]/).map(x => x.trim()); if (p.length < 3 || !/^\d{4}-\d{2}$/.test(p[0])) continue;
+      const at = Number(p[1].replace(',', '.')), pa = Number(p[2].replace(',', '.'));
+      if (!isFinite(at) || !isFinite(pa) || at < 0 || pa < 0 || +p[0].slice(5) < 1 || +p[0].slice(5) > 12) { bad++; continue; }
+      const ex = D.storico.find(x => x.mese === p[0]);
+      if (p[0] >= mk || (ex && !ex.manuale)) { skip++; continue; }
+      const dati = { attivi: r2(at), passivi: r2(pa), netto: r2(at - pa) };
+      await setDoc(doc(db, 'users', D.uid, 'storico', p[0]), { ...dati, manuale: true, aggiornato: serverTimestamp() });
+      if (ex) Object.assign(ex, dati, { manuale: true }); else D.storico.push({ mese: p[0], ...dati, manuale: true });
+      ok++;
+    }
+    D.storico.sort((x, y) => x.mese.localeCompare(y.mese));
+    S.msg = `Importati ${ok} mesi.` + (skip ? ` Saltati ${skip} (mese in corso o già registrato dall'app).` : '') + (bad ? ` Righe non valide: ${bad}.` : ''); render();
+  } catch (er) { if (box) box.textContent = errText(er); }
+});
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT') act(el); });
 document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.act) act(e.target); });
 document.addEventListener('keydown', e => {
