@@ -51,6 +51,10 @@ svg{width:100%;height:auto}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:6px 0 10px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .tw{overflow-x:auto}
+.chev{color:#0f766e;font-size:20px;line-height:1;transition:transform .15s;padding:0 4px}
+.chev.open{transform:rotate(90deg)}
+.sub{margin:0 0 10px 10px;padding-left:10px;border-left:3px solid #9cc9c0;background:rgba(255,255,255,.55);border-radius:0 8px 8px 0}
+.sub .row{padding:8px 6px}
 .card.at{background:#e9f4f0}.card.pa{background:#fbeded}
 .card.at h2{color:#0b5f58}.card.pa h2{color:#9b1c1c}
 .card.at .row{border-bottom-color:#d2e5de}.card.pa .row{border-bottom-color:#f0d3d3}
@@ -97,7 +101,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.9';
+const VER = '0.10';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Conto corrente', 'Conto di investimento', 'Portafoglio', 'Immobile', 'Altro attivo'],
@@ -263,12 +267,27 @@ function pagePat() {
   const pfCampi = isPf ? `<label class="lbl">Dove si trova il portafoglio?</label><select id="fcn" data-act="fcat">${conti.map(c => `<option value="${c.id}" ${contoSel === c.id ? 'selected' : ''}>${esc(c.nome)} (conto già aperto)</option>`).join('')}<option value="new" ${contoSel === 'new' ? 'selected' : ''}>+ Nuovo conto</option></select>
     ${contoSel === 'new' ? `<label class="lbl">Nome del nuovo conto</label><input id="fcm" maxlength="60" value="${esc(g('fcm', ''))}">` : ''}` : '';
   const obj = isPf ? `<label class="lbl">Obiettivo in euro (facoltativo)</label><input id="fo" inputmode="decimal" value="${esc(g('fo', ed && ed.obiettivo ? String(ed.obiettivo).replace('.', ',') : ''))}">
-    <p class="note" style="margin-top:0">Il valore del conto non deve già comprendere questo portafoglio, altrimenti verrebbe contato due volte.</p>` : '';
+    <p class="note" style="margin-top:0">Il portafoglio si somma alla liquidità del conto: nel conto inserisci solo il saldo liquido.</p>` : '';
   const accOpts = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
+  const kids = {};
+  vis.filter(v => v.tipo === 'attivo' && v.categoria === 'Portafoglio' && v.conto && vis.some(c => c.id === v.conto)).forEach(pf => (kids[pf.conto] = kids[pf.conto] || []).push(pf));
+  const nested = new Set(Object.values(kids).flat().map(x => x.id));
+  const tot = v => v.valore + (kids[v.id] || []).reduce((s, x) => s + x.valore, 0);
+  const acc = v => D.accounts.length ? ' · ' + esc(accName(v)) : '';
+  const clk = id => D.readonly ? '' : ` data-act="pop" data-v="${id}"`;
+  const rcl = D.readonly ? '' : ' cl';
   const list = tp => {
-    const items = vis.filter(v => v.tipo === tp).sort((a, b) => b.valore - a.valore);
+    const items = vis.filter(v => v.tipo === tp && !nested.has(v.id)).sort((a, b) => tot(b) - tot(a));
     if (!items.length) return '<p class="note">Nessuna voce.</p>';
-    return items.map(v => `<div class="row${D.readonly ? '' : ' cl'}"${D.readonly ? '' : ` data-act="pop" data-v="${v.id}"`}><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${det(v)}${D.accounts.length ? ' · ' + esc(accName(v)) : ''}</small></div><div class="v${tp === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`).join('');
+    const hint = items.some(v => kids[v.id]) ? '<p class="note" style="margin:-4px 0 6px">▸ Le righe con la freccia si espandono: tocca per vedere liquidità e portafogli.</p>' : '';
+    return hint + items.map(v => {
+      const k = kids[v.id];
+      if (!k) return `<div class="row${rcl}"${clk(v.id)}><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${det(v)}${acc(v)}</small></div><div class="v${tp === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`;
+      const open = S.exp && S.exp[v.id];
+      const sub = open ? `<div class="sub"><div class="row${rcl}"${clk(v.id)}><div class="n">Liquidità<small>Saldo del conto</small></div><div class="v">${eur(v.valore)}</div></div>`
+        + k.map(pf => `<div class="row${rcl}"${clk(pf.id)}><div class="n">${esc(pf.nome)}<small>Portafoglio${pf.obiettivo ? ` · obiettivo ${eur(pf.obiettivo)} (${Math.round(pf.valore / pf.obiettivo * 100)}%)` : ''}</small></div><div class="v">${eur(pf.valore)}</div></div>`).join('') + '</div>' : '';
+      return `<div class="row cl" data-act="exp" data-v="${v.id}"><div class="n">${esc(v.nome)}<small>${esc(v.categoria)} · liquidità + ${k.length} ${k.length === 1 ? 'portafoglio' : 'portafogli'}${acc(v)}</small></div><div class="v">${eur(tot(v))}</div><span class="chev ${open ? 'open' : ''}">▸︎</span></div>${sub}`;
+    }).join('');
   };
   const fname = fa === 'all' ? '' : fa === 'main' ? D.nome : ((D.accounts.find(a => a.id === fa) || {}).nome || '');
   const filtro = fname ? `<div class="banner"><span>Account: <b>${esc(fname)}</b></span><button class="b sm" data-act="facc" data-v="all">Mostra tutti</button></div>` : '';
@@ -278,7 +297,7 @@ function pagePat() {
     <label class="lbl">Data di inizio</label><input id="fi" type="date" value="${esc(g('fi', ed && ed.piano ? ed.inizio : ''))}">
     <label class="lbl">Data di fine</label><input id="ff" type="date" value="${esc(g('ff', ed && ed.piano ? ed.fine : ''))}">
     <p class="note" style="margin-top:0">Il debito residuo scende da solo ogni mese della sola quota capitale (importo diviso per i mesi). Gli interessi sono un costo e non vengono considerati.</p>`
-    : `<label class="lbl">Valore in euro</label><input id="fv" inputmode="decimal" value="${esc(g('fv', ed && !ed.piano ? String(ed.valore).replace('.', ',') : ''))}">`;
+    : `<label class="lbl">${tipo === 'attivo' && cat === 'Conto di investimento' ? 'Liquidità del conto in euro' : tipo === 'attivo' && cat === 'Conto corrente' ? 'Saldo in euro' : 'Valore in euro'}</label><input id="fv" inputmode="decimal" value="${esc(g('fv', ed && !ed.piano ? String(ed.valore).replace('.', ',') : ''))}">${tipo === 'attivo' && cat === 'Conto di investimento' ? '<p class="note" style="margin-top:0">Inserisci solo la liquidità (il saldo non investito). I portafogli del conto si aggiungono a parte con la categoria Portafoglio e vengono sommati in automatico.</p>' : ''}`;
   const selMod = tipo === 'passivo' ? `<label class="lbl">Come vuoi inserire il debito?</label><select id="fm" data-act="fmod"><option value="piano" ${mod === 'piano' ? 'selected' : ''}>Piano di rimborso (calcolo automatico)</option><option value="manuale" ${mod === 'manuale' ? 'selected' : ''}>Residuo inserito a mano</option></select>` : '';
   const form = D.readonly ? '' : `<div class="card" id="formvoce"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
     <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
@@ -317,7 +336,7 @@ function popup() {
   let body;
   const pi = v.piano ? piano(v) : null;
   const pf = v.categoria === 'Portafoglio' ? `<div class="lbl" style="margin:-6px 0 12px">In: ${esc(contoName(v))}${v.obiettivo ? ` · Obiettivo ${eur(v.obiettivo)} · raggiunto ${Math.round(v.valore / v.obiettivo * 100)}%</div><div style="height:8px;background:#e2eceb;border-radius:6px;margin-bottom:12px"><div style="height:100%;width:${Math.min(100, v.valore / v.obiettivo * 100)}%;background:#0f766e;border-radius:6px"></div>` : ''}</div>` : '';
-  if (p.mode === 'upd') body = `<label class="lbl">Nuovo valore in euro</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
+  if (p.mode === 'upd') body = `<label class="lbl">${v.categoria === 'Conto di investimento' ? 'Nuova liquidità in euro' : 'Nuovo valore in euro'}</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
   else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(v.nome)}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
   else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
   return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)} · ${esc(accName(v))} · ${eur(v.valore)}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${pf}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
@@ -369,7 +388,7 @@ function pageDis() {
     vs.forEach(v => {
       const k = view === 'acc' ? accKey(v) : v.categoria;
       const g = G[k] = G[k] || { label: view === 'acc' ? accName(v) : v.categoria, items: [], sum: 0 };
-      g.items.push({ nome: v.nome, val: v.valore, sub: v.categoria === 'Portafoglio' ? 'in ' + contoName(v) : (view === 'acc' ? v.categoria : accName(v)) });
+      g.items.push({ nome: v.categoria === 'Conto di investimento' && D.voci.some(z => z.conto === v.id) ? v.nome + ' (liquidità)' : v.nome, val: v.valore, sub: v.categoria === 'Portafoglio' ? 'in ' + contoName(v) : (view === 'acc' ? v.categoria : accName(v)) });
       g.sum += v.valore;
     });
     const share = x => total > 0 ? (x / total * 100).toFixed(1).replace('.', ',') + '%' : '';
@@ -532,6 +551,7 @@ async function act(el) {
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
+    if (a === 'exp') { S.exp = S.exp || {}; S.exp[v] = !S.exp[v]; return render(); }
     if (a === 'menu') { S.menu = !S.menu; S.addAcc = false; return render(); }
     if (a === 'addo') { S.addAcc = true; render(); const i = $('an'); if (i) i.focus(); return; }
     if (a === 'addc') { S.addAcc = false; return render(); }
