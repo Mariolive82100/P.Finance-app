@@ -54,6 +54,7 @@ svg{width:100%;height:auto}
 .stk{position:sticky;top:var(--hh,92px);z-index:4;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 .pie{display:block;margin:0 auto;max-width:520px;width:100%}
 .pie .dim{opacity:.35}
+.tip{position:fixed;display:none;z-index:50;background:#16302d;color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:260px}
 .pie path{transition:opacity .2s}
 .ps2{padding-left:24px;font-size:13px}
 .dgrid{display:block}
@@ -124,7 +125,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.24';
+const VER = '0.25';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -409,7 +410,7 @@ const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 
 const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
 
 function treeSvg(root, branches) {
-  const colW = 176, nw = 160, nh = 46, lh = 52, rootY = 4, rootH = 62, b1Y = 112, b1H = 50, gY = 218, leafY0 = gY + nh + 14;
+  const colW = 176, nw = 160, nh = 46, lh = 40, rootY = 4, rootH = 62, b1Y = 112, b1H = 50, gY = 218, leafY0 = gY + nh + 14;
   const cols = branches.reduce((s, b) => s + b.groups.length, 0), W = Math.max(cols * colW, 360), off = (W - cols * colW) / 2, mid = W / 2;
   const maxL = Math.max(1, ...branches.flatMap(b => b.groups.map(g => g.items.length))), H = leafY0 + maxL * lh + 6;
   const TONE = { a: { st: '#0f766e', fill: '#d6f2ee', ln: '#4f9f96', leaf: '#b5d9d4', tx: '#16302d' }, p: { st: '#b91c1c', fill: '#fde8e8', ln: '#d96464', leaf: '#efb0b0', tx: '#b91c1c' } };
@@ -422,20 +423,20 @@ function treeSvg(root, branches) {
     b.groups.forEach((g, i) => {
       const x = off + (col + i) * colW + colW / 2, gx = x - nw / 2, rail = gx + 12, lx = rail + 12, lw = gx + nw - lx;
       o += `<path d="M${bx} ${b1Y + b1H} C${bx} ${m2} ${x} ${m2} ${x} ${gY}" fill="none" stroke="${c.ln}" stroke-width="2.5"/>`;
-      o += `<rect x="${gx}" y="${gY}" width="${nw}" height="${nh}" rx="10" fill="${c.fill}" stroke="${c.st}" stroke-width="1.8"/>` + T(x, gY + 19, trunc(g.label, 20), 13, 600, '#16302d') + T(x, gY + 36, eur0(g.sum) + (g.pct ? ' · ' + g.pct : ''), 12, 600, c.tx);
+      o += `<rect x="${gx}" y="${gY}" width="${nw}" height="${nh}" rx="10" fill="${c.fill}" stroke="${c.st}" stroke-width="1.8"/>` + T(x, gY + 19, trunc(g.label, 22), 11, 600, '#16302d') + T(x, gY + 35, eur0(g.sum) + (g.pct ? ' · ' + g.pct : ''), 10.5, 600, c.tx);
       if (g.items.length) o += `<line x1="${rail}" x2="${rail}" y1="${gY + nh}" y2="${leafY0 + (g.items.length - 1) * lh + 23}" stroke="${c.ln}" stroke-width="2"/>`;
       g.items.forEach((it, j) => {
         const y = leafY0 + j * lh;
         o += `<line x1="${rail}" x2="${lx}" y1="${y + 23}" y2="${y + 23}" stroke="${c.ln}" stroke-width="2"/><g><title>${esc(it.nome + ' · ' + it.sub + ' · ' + eur(it.val))}</title>`
           + `<rect x="${lx}" y="${y}" width="${lw}" height="${lh - 6}" rx="8" fill="#fff" stroke="${c.leaf}" stroke-width="1.5"/>`
-          + T(lx + 8, y + 15, trunc(it.nome, 17), 12, 600, '#16302d', 'start') + T(lx + 8, y + 28, trunc(it.sub, 20), 10.5, 400, '#5b7370', 'start')
-          + T(lx + 8, y + 41, eur0(it.val) + (it.pct ? ' · ' + it.pct : ''), 11, 600, c.tx, 'start') + '</g>';
+          + T(lx + 8, y + 14, trunc(it.nome, 20), 10.5, 600, '#16302d', 'start')
+          + T(lx + 8, y + 27, eur0(it.val) + (it.pct ? ' · ' + it.pct : ''), 10, 600, c.tx, 'start') + '</g>';
       });
     });
-    o += `<rect x="${bx - 90}" y="${b1Y}" width="180" height="${b1H}" rx="12" fill="${c.fill}" stroke="${c.st}" stroke-width="2.5"/>` + T(bx, b1Y + 21, b.label, 14, 700, c.st) + T(bx, b1Y + 40, eur0(b.sum), 14, 700, c.tx);
+    o += `<rect x="${bx - 90}" y="${b1Y}" width="180" height="${b1H}" rx="12" fill="${c.fill}" stroke="${c.st}" stroke-width="2.5"/>` + T(bx, b1Y + 21, b.label, 12, 700, c.st) + T(bx, b1Y + 40, eur0(b.sum), 12.5, 700, c.tx);
     col += b.groups.length;
   });
-  o += `<rect x="${mid - 110}" y="${rootY}" width="220" height="${rootH}" rx="12" fill="#1f3b38"/>` + T(mid, rootY + 21, 'Patrimonio netto', 13, 600, '#d6f2ee') + T(mid, rootY + 42, eur0(root.netto), 16, 700, '#fff') + T(mid, rootY + 56, 'Attivi ' + eur0(root.attivi) + ' − Passivi ' + eur0(root.passivi), 10, 500, '#b5d9d4');
+  o += `<rect x="${mid - 110}" y="${rootY}" width="220" height="${rootH}" rx="12" fill="#1f3b38"/>` + T(mid, rootY + 21, 'Patrimonio netto', 11, 600, '#d6f2ee') + T(mid, rootY + 42, eur0(root.netto), 14, 700, '#fff') + T(mid, rootY + 56, 'Attivi ' + eur0(root.attivi) + ' − Passivi ' + eur0(root.passivi), 9, 500, '#b5d9d4');
   return `<div class="tw"><svg viewBox="0 0 ${W} ${H}" style="min-width:${W}px">${o}</svg></div>`;
 }
 
@@ -477,12 +478,12 @@ function pageDis() {
     pb.groups.forEach((g, i) => {
       const fr = g.sum / tot; if (fr <= 0) return;
       const a2 = ang + fr * P2, col = PAL[i % PAL.length], dim = gi >= 0 && gi !== i ? ' dim' : '', on = gi === i;
-      inner += `<path class="${on ? 'sel' : ''}${dim}" d="${ring(ang, a2, r0, on ? r1 + 5 : r1)}" fill="${col}" fill-rule="evenodd" data-act="pies" data-v="${i}"><title>${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}</title></path>`;
+      inner += `<path class="${on ? 'sel' : ''}${dim}" d="${ring(ang, a2, r0, on ? r1 + 5 : r1)}" fill="${col}" fill-rule="evenodd" data-act="pies" data-v="${i}" data-tip="${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}"></path>`;
       let ib = ang;
       g.items.forEach((it, j) => {
         const f2 = it.val / tot; if (f2 <= 0) return;
         const ie = ib + f2 * P2, io = on && ii === j;
-        outer += `<path class="${io ? 'sel' : ''}${dim}" d="${ring(ib, ie, r2, io ? r3 + 7 : on ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}"><title>${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}</title></path>`;
+        outer += `<path class="${io ? 'sel' : ''}${dim}" d="${ring(ib, ie, r2, io ? r3 + 7 : on ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}" data-tip="${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}"></path>`;
         ib = ie;
       });
       ang = a2;
@@ -786,6 +787,10 @@ async function act(el) {
   } catch (e) { S.msg = errText(e); render(); }
 }
 
+const tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
+const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
+document.addEventListener('mousemove', e => tipAt(e, e.target.closest ? e.target.closest('[data-tip]') : null));
+document.addEventListener('mouseleave', () => tipAt(null, null));
 let sw = null;
 document.addEventListener('touchstart', e => {
   if (e.touches.length !== 1) { sw = null; return; }
