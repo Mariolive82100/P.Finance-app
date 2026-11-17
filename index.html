@@ -102,7 +102,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.13';
+const VER = '0.14';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -321,8 +321,8 @@ function pagePat() {
   const filtro = fname ? `<div class="banner"><span>Account: <b>${esc(fname)}</b></span><button class="b sm" data-act="facc" data-v="all">Mostra tutti</button></div>` : '';
   const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${g('fa', ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
   const num = (id, dflt) => esc(g(id, dflt));
-  const suggest = [...new Set([...D.voci.filter(v => v.categoria === 'Liquidità').map(v => v.nome), ...D.voci.filter(v => v.dove).map(v => v.dove)])];
-  const invCampi = isInv ? `<label class="lbl">Dove si trova (conto o portafoglio, es. Directa)</label><input id="fw" list="dl" maxlength="60" value="${num('fw', ed && ed.dove ? ed.dove : '')}"><datalist id="dl">${suggest.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+  const suggest = [...new Set(D.voci.filter(v => v.categoria === 'Liquidità').map(v => v.nome))];
+  const invCampi = isInv ? `<label class="lbl">Conto di riferimento (se non c'è in elenco viene creato anche tra la liquidità)</label><input id="fw" list="dl" maxlength="60" value="${num('fw', ed && ed.dove ? ed.dove : '')}"><datalist id="dl">${suggest.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
     <label class="lbl">Obiettivo in euro (facoltativo)</label><input id="fo" inputmode="decimal" value="${num('fo', ed && ed.obiettivo ? String(ed.obiettivo).replace('.', ',') : '')}">` : '';
   const campi = mod === 'piano'
     ? `<label class="lbl">Importo preso a prestito (€)</label><input id="fk" inputmode="decimal" value="${num('fk', ed && ed.piano ? String(ed.capitale).replace('.', ',') : '')}">
@@ -336,7 +336,7 @@ function pagePat() {
     ${selAcc}
     <label class="lbl">Categoria</label><select id="fc" data-act="fcat">${CATS[tipo].map(c => `<option ${cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
     ${selMod}
-    <label class="lbl">Nome (es. Conto Fineco, ETF mondo, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">
+    ${isInv ? '' : `<label class="lbl">Nome (es. Conto Fineco, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">`}
     ${campi}
     <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div></div>`;
   return `${filtro}<div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
@@ -369,7 +369,7 @@ function popup() {
   if (p.mode === 'upd') body = `<label class="lbl">${v.categoria === 'Liquidità' ? 'Nuovo saldo in euro' : 'Nuovo valore in euro'}</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
   else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(v.nome)}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
   else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
-  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)}${v.dove ? ' · su ' + esc(v.dove) : ''} · ${esc(accName(v))} · ${eur(v.valore)}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${ob}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
+  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)}${v.dove && v.dove !== v.nome ? ' · su ' + esc(v.dove) : ''} · ${esc(accName(v))} · ${eur(v.valore)}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${ob}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
 }
 
 const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(v || 0);
@@ -658,7 +658,7 @@ async function act(el) {
     if (a === 'export') return exportCsv();
     if (a === 'save') {
       S.fd = grabForm();
-      const tipo = $('ft').value, categoria = $('fc').value, nome = $('fn').value.trim(), fm = $('fm'), fa2 = $('fa');
+      const tipo = $('ft').value, categoria = $('fc').value; let nome = $('fn') ? $('fn').value.trim() : '', fm = $('fm'), fa2 = $('fa');
       const base = { tipo, categoria, nome, account: fa2 && fa2.value !== 'main' ? fa2.value : '' };
       let dati;
       if (tipo === 'passivo' && fm && fm.value === 'piano') {
@@ -668,11 +668,17 @@ async function act(el) {
         dati = applyPiano({ ...base, piano: true, capitale: r2(cap), inizio: ini, fine: fin, valore: 0 });
       } else {
         const valore = pnum($('fv').value);
+        const isI = tipo === 'attivo' && categoria === 'Investimenti';
+        if (isI) { nome = ($('fw') ? $('fw').value.trim() : ''); base.nome = nome; if (!nome) { S.msg = 'Indica il conto di riferimento.'; return render(); } }
         if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
         dati = { ...base, valore: r2(valore) };
         if (tipo === 'attivo' && categoria === 'Investimenti') {
-          const dove = $('fw') ? $('fw').value.trim() : '', ob = $('fo') ? pnum($('fo').value) : NaN;
-          if (dove) dati.dove = dove;
+          const dove = nome, ob = $('fo') ? pnum($('fo').value) : NaN;
+          dati.dove = dove; dati.nome = dove;
+          if (!D.voci.some(x => x.categoria === 'Liquidità' && x.nome.toLowerCase() === dove.toLowerCase())) {
+            const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: dove, account: base.account, valore: 0 };
+            const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
+          }
           if (isFinite(ob) && ob > 0) dati.obiettivo = r2(ob);
         }
       }
