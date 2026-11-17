@@ -51,6 +51,13 @@ svg{width:100%;height:auto}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:6px 0 10px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .tw{overflow-x:auto}
+.stk{position:sticky;top:var(--hh,92px);z-index:4;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.pie{display:block;margin:0 auto;max-width:260px;width:100%}
+.pie path{cursor:pointer;stroke:#fff;stroke-width:2}
+.pl{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #eef3f2;font-size:14px;cursor:pointer}
+.pl i{width:12px;height:12px;border-radius:3px;flex:none}
+.pl .a{flex:1}.pl.on{background:#f1f8f7;font-weight:600}
+.ps{padding:2px 4px 6px 24px;font-size:13px;color:#4b6360}.ps div{display:flex;justify-content:space-between;padding:3px 0}
 .gh{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:#0b5f58;padding:8px 6px 2px}
 .chev{color:#0f766e;font-size:20px;line-height:1;transition:transform .15s;padding:0 4px}
 .chev.open{transform:rotate(90deg)}
@@ -102,7 +109,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.15';
+const VER = '0.16';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -259,6 +266,7 @@ function render() {
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
     <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}`;
+  const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
 }
 
 function renderAuth(el) {
@@ -411,7 +419,7 @@ function treeSvg(root, branches) {
 
 function pageDis() {
   const D = S.data, view = S.dview || 'acc';
-  const ctl = `<div class="card"><div class="tabs"><button class="b ${view === 'acc' ? '' : 's'}" data-act="dview" data-v="acc">Per account</button><button class="b ${view === 'conti' ? '' : 's'}" data-act="dview" data-v="conti">Per conti</button></div>
+  const ctl = `<div class="card stk"><div class="tabs"><button class="b ${view === 'acc' ? '' : 's'}" data-act="dview" data-v="acc">Per account</button><button class="b ${view === 'conti' ? '' : 's'}" data-act="dview" data-v="conti">Per conti</button></div>
     <div class="legend" style="margin:0"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span></div></div>`;
   if (!D.voci.length) return ctl + '<div class="card">Nessuna voce da mostrare. Inseriscile nella pagina Patrimonio.</div>';
   const build = tp => {
@@ -430,7 +438,25 @@ function pageDis() {
     return { label: tp === 'attivo' ? 'Attivi' : 'Passivi', tone: tp === 'attivo' ? 'a' : 'p', sum: total, groups };
   };
   const br = ['attivo', 'passivo'].map(build).filter(Boolean);
-  return ctl + `<div class="card"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(D.voci), br)}
+
+  const pt = S.pie || 'attivo', pb = br.find(b => b.tone === (pt === 'attivo' ? 'a' : 'p')) || br[0];
+  const PAL = pb && pb.tone === 'p' ? ['#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#9f1239', '#be123c', '#fb7185'] : ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'];
+  const sel = S.pieSel != null && pb && pb.groups[S.pieSel] ? S.pieSel : -1;
+  let pieHtml = '';
+  if (pb) {
+    const R = 100, C = 110, tot = pb.sum || 1; let ang = -Math.PI / 2, sl = '';
+    pb.groups.forEach((g, i) => {
+      const fr = g.sum / tot, a2 = ang + fr * 2 * Math.PI, rr = i === sel ? R + 7 : R, big = fr > 0.5 ? 1 : 0;
+      const pt1 = [C + rr * Math.cos(ang), C + rr * Math.sin(ang)], pt2 = [C + rr * Math.cos(a2 - 1e-4), C + rr * Math.sin(a2 - 1e-4)];
+      sl += fr >= 0.9999 ? `<circle cx="${C}" cy="${C}" r="${rr}" fill="${PAL[i % PAL.length]}" data-act="pies" data-v="${i}" style="cursor:pointer"/>` : `<path d="M${C} ${C}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${PAL[i % PAL.length]}" data-act="pies" data-v="${i}"/>`;
+      ang = a2;
+    });
+    const hole = `<circle cx="${C}" cy="${C}" r="52" fill="#fff"/><text x="${C}" y="${C - 4}" text-anchor="middle" font-size="12" fill="#5b7370">${sel >= 0 ? esc(trunc(pb.groups[sel].label, 14)) : pb.label}</text><text x="${C}" y="${C + 16}" text-anchor="middle" font-size="16" font-weight="700" fill="#16302d">${eur0(sel >= 0 ? pb.groups[sel].sum : pb.sum)}</text>`;
+    pieHtml = `<div class="card"><div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>
+    <svg class="pie" viewBox="0 0 220 220">${sl}${hole}</svg>
+    ${pb.groups.map((g, i) => `<div class="pl ${i === sel ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>` + (i === sel ? `<div class="ps">${g.items.map(it => `<div><span>${esc(trunc(it.nome, 24))}</span><span>${eur0(it.val)}</span></div>`).join('')}</div>` : '')).join('')}</div>`;
+  }
+  return ctl + pieHtml + `<div class="card"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(D.voci), br)}
     <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div>`;
 }
 
@@ -606,7 +632,9 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
-    if (a === 'dview') { S.dview = v; return render(); }
+    if (a === 'dview') { S.dview = v; S.pieSel = null; return render(); }
+    if (a === 'piet') { S.pie = v; S.pieSel = null; return render(); }
+    if (a === 'pies') { S.pieSel = S.pieSel === +v ? null : +v; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
     if (a === 'adda') {
       const nm = $('an').value.trim();
@@ -705,6 +733,15 @@ async function act(el) {
   } catch (e) { S.msg = errText(e); render(); }
 }
 
+let tx0 = null, ty0 = 0;
+document.addEventListener('touchstart', e => { const t = e.touches[0]; tx0 = e.target.closest('.tw,input,select,textarea,.ov,.pop,.drawer') ? null : t.clientX; ty0 = t.clientY; }, { passive: true });
+document.addEventListener('touchend', e => {
+  if (tx0 === null || !S.data || S.menu || S.pop) return;
+  const t = e.changedTouches[0], dx = t.clientX - tx0, dy = t.clientY - ty0; tx0 = null;
+  if (Math.abs(dx) < 70 || Math.abs(dy) > 45 || Math.abs(dx) < Math.abs(dy) * 2) return;
+  const ord = ['pat', 'dis', 'and', 'rep'], i = ord.indexOf(S.tab), n = i + (dx < 0 ? 1 : -1);
+  if (i >= 0 && n >= 0 && n < ord.length) { S.tab = ord[n]; render(); window.scrollTo(0, 0); }
+}, { passive: true });
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT') act(el); });
 document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.act) act(e.target); });
 document.addEventListener('keydown', e => {
