@@ -46,6 +46,13 @@ ul.c{padding-left:18px;margin:6px 0}
 ul.c li{margin-bottom:8px}
 svg{width:100%;height:auto}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:6px 0 10px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;text-align:right;border-bottom:1px solid #eef3f2;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:#5b7370;font-weight:500}
 </style>
 </head>
 <body>
@@ -171,13 +178,13 @@ function render() {
     return;
   }
   const D = S.data;
-  const tabs = [['pat', 'Patrimonio'], ['rep', 'Report del mese']];
+  const tabs = [['pat', 'Patrimonio'], ['and', 'Andamento'], ['rep', 'Report del mese']];
   if (isAdmin() && !D.readonly) tabs.push(['adm', 'Amministratore']);
   if (S.tab === 'adm' && !(isAdmin() && !D.readonly)) S.tab = 'pat';
   let body = '';
-  if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
+  if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><h1>P.Finance</h1><span>${esc(S.profile.nome)}</span>
-    <button class="b s sm" data-act="logout">Esci</button></div>
+    <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
     <div class="msg">${esc(S.msg)}</div>${body}</main>`;
@@ -229,6 +236,52 @@ function trendSvg(st) {
     ${st.map((s, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(s.netto).toFixed(1)}" r="4" fill="#0f766e"/>`).join('')}
     <text x="${P}" y="${H - 6}" font-size="12" fill="#5b7370">${esc(monthName(st[0].mese))}</text>
     <text x="${W - P}" y="${H - 6}" font-size="12" fill="#5b7370" text-anchor="end">${esc(monthName(st[st.length - 1].mese))}</text></svg>`;
+}
+
+const compact = v => new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+const shortM = k => { const [y, m] = k.split('-'); return MESI[+m - 1].slice(0, 3) + ' ' + y.slice(2); };
+
+function lineSvg(st, series) {
+  const W = 600, H = 220, L = 50, R = 12, T = 12, B = 28;
+  const all = st.flatMap(s => series.map(x => s[x.k]));
+  let mn = Math.min(0, ...all), mx = Math.max(0, ...all); if (mx === mn) mx = mn + 1;
+  const x = i => L + i * (W - L - R) / (st.length - 1), y = v => T + (mx - v) / (mx - mn) * (H - T - B);
+  const step = Math.ceil(st.length / 6);
+  let o = [mn, (mn + mx) / 2, mx].map(t => `<line x1="${L}" x2="${W - R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="#e2eceb"/><text x="${L - 6}" y="${(y(t) + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`).join('');
+  o += st.map((s, i) => i % step === 0 || i === st.length - 1 ? `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="middle">${shortM(s.mese)}</text>` : '').join('');
+  series.forEach(se => {
+    o += `<polyline points="${st.map((s, i) => x(i).toFixed(1) + ',' + y(s[se.k]).toFixed(1)).join(' ')}" fill="none" stroke="${se.c}" stroke-width="2.5"/>`;
+    if (st.length <= 18) o += st.map((s, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(s[se.k]).toFixed(1)}" r="3.5" fill="${se.c}"/>`).join('');
+  });
+  return `<svg viewBox="0 0 ${W} ${H}">${o}</svg>`;
+}
+
+function barSvg(st) {
+  const d = st.slice(1).map((s, i) => ({ m: s.mese, v: s.netto - st[i].netto }));
+  const W = 600, H = 190, L = 50, R = 12, T = 12, B = 28, mid = T + (H - T - B) / 2, half = (H - T - B) / 2;
+  const mx = Math.max(1, ...d.map(z => Math.abs(z.v))), slot = (W - L - R) / d.length, bw = Math.min(40, slot * 0.6), step = Math.ceil(d.length / 6);
+  let o = [mx, 0, -mx].map(t => `<line x1="${L}" x2="${W - R}" y1="${(mid - t / mx * half).toFixed(1)}" y2="${(mid - t / mx * half).toFixed(1)}" stroke="${t === 0 ? '#9db3af' : '#e2eceb'}"/><text x="${L - 6}" y="${(mid - t / mx * half + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`).join('');
+  d.forEach((z, i) => {
+    const cx = L + slot * (i + 0.5), h = Math.abs(z.v) / mx * half;
+    o += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${(z.v >= 0 ? mid - h : mid).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h, 1).toFixed(1)}" rx="3" fill="${z.v >= 0 ? '#15803d' : '#b91c1c'}"/>`;
+    if (i % step === 0 || i === d.length - 1) o += `<text x="${cx.toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="middle">${shortM(z.m)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}">${o}</svg>`;
+}
+
+function pageAnd() {
+  const all = S.data.storico, r = S.range ?? 12;
+  if (!all.length) return '<div class="card">Nessuno storico disponibile. Inserisci almeno una voce nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
+  const st = r ? all.slice(-r) : all;
+  const sel = `<select data-act="range">${[[6, 'Ultimi 6 mesi'], [12, 'Ultimi 12 mesi'], [0, 'Tutto lo storico']].map(([v, l]) => `<option value="${v}" ${r === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }];
+  const rows = st.map((s, i) => { const p = i ? st[i - 1] : null, d = p ? s.netto - p.netto : null; return { s, d }; }).reverse();
+  return `<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : `
+    <h2>Attivi, passivi e patrimonio netto</h2>
+    <div class="legend">${L.map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}</div>${lineSvg(st, L)}`}</div>
+    ${st.length > 1 ? `<div class="card"><h2>Variazione mensile del patrimonio netto</h2><div class="legend"><span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span></div>${barSvg(st)}</div>` : ''}
+    <div class="card"><h2>Storico mese per mese</h2><div class="tw"><table><tr><th>Mese</th><th>Attivi</th><th>Passivi</th><th>Netto</th><th>Var.</th></tr>
+    ${rows.map(({ s, d }) => `<tr><td>${esc(shortM(s.mese))}</td><td>${eur(s.attivi)}</td><td>${eur(s.passivi)}</td><td><b>${eur(s.netto)}</b></td><td class="${d === null ? '' : cls(d)}">${d === null ? '–' : (d >= 0 ? '+' : '') + eur(d)}</td></tr>`).join('')}</table></div></div>`;
 }
 
 function pageRep() {
@@ -306,6 +359,14 @@ async function act(el) {
     if (a === 'logout') { S.tab = 'pat'; S.mode = 'login'; return signOut(auth); }
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
+    if (a === 'range') { S.range = +el.value; return render(); }
+    if (a === 'share') {
+      const url = location.href.split('#')[0];
+      const data = { title: 'P.Finance', text: 'Prova P.Finance: monitora il tuo patrimonio.', url };
+      if (navigator.share) { try { await navigator.share(data); } catch (_) {} return; }
+      try { await navigator.clipboard.writeText(url); S.msg = 'Link copiato negli appunti.'; } catch (_) { S.msg = 'Link: ' + url; }
+      return render();
+    }
     if (a === 'ftipo') { S.newTipo = el.value; if (S.edit) S.edit = null; return render(); }
     if (a === 'edit') { S.edit = v; return render(); }
     if (a === 'cancel') { S.edit = null; return render(); }
