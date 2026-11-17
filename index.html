@@ -53,9 +53,14 @@ svg{width:100%;height:auto}
 .tw{overflow-x:auto}
 .stk{position:sticky;top:var(--hh,92px);z-index:4;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 .pie{display:block;margin:0 auto;max-width:520px;width:100%}
+.pie .dim{opacity:.35}
+.pie path{transition:opacity .2s}
+.ps2{padding-left:24px;font-size:13px}
+.dgrid{display:block}
+@media(min-width:1000px){.hw,nav,main{max-width:1320px}.dgrid{display:grid;grid-template-columns:minmax(440px,520px) 1fr;gap:14px;align-items:start}.dgrid .card{margin-bottom:0}.pie{max-width:480px}}
 .pie path,.pie circle{cursor:pointer;stroke:#fff;stroke-width:2}
-.pie.anim .pg{animation:pieIn .4s ease-out;transform-origin:180px 150px}
-.pie.anim .sel{animation:selIn .35s ease-out;transform-origin:180px 150px}
+.pie.full .pg{animation:pieIn .4s ease-out;transform-origin:200px 200px}
+.pie.anim .sel{animation:selIn .35s ease-out;transform-origin:200px 200px}
 .pie.anim .lbs{animation:fadeIn .5s ease-out}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slL{from{transform:translateX(36px)}to{transform:none}}
@@ -119,7 +124,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.23';
+const VER = '0.24';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -458,43 +463,41 @@ function pageDis() {
 
   const pt = S.pie || 'attivo', pb = br.find(b => b.tone === (pt === 'attivo' ? 'a' : 'p')) || br[0];
   const PAL = pb && pb.tone === 'p' ? ['#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#9f1239', '#be123c', '#fb7185'] : ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'];
-  const dr = S.pieSel != null && pb && pb.groups[S.pieSel] ? S.pieSel : -1, dg = dr >= 0 ? pb.groups[dr] : null;
-  const slices = dg ? dg.items.map(it => ({ label: it.nome, sum: it.val, pct: it.pct, sub: it.sub })) : pb ? pb.groups.map(g => ({ label: g.label, sum: g.sum, pct: g.pct, n: g.items.length })) : [];
-  const stot = dg ? dg.sum : pb ? pb.sum : 0, sel = dg ? (S.pieSel2 != null && slices[S.pieSel2] ? S.pieSel2 : -1) : -1;
+  const gi = S.pieSel != null && pb && pb.groups[S.pieSel] ? S.pieSel : -1, ii = gi >= 0 && S.pieSel2 != null && pb.groups[gi].items[S.pieSel2] ? S.pieSel2 : -1;
   let pieHtml = '';
   if (pb) {
-    const R = 100, CX = 180, CY = 150, tot = stot || 1; let ang = -Math.PI / 2, sl = '';
-    const act = dg ? 'pies2' : 'pies', L = { l: [], r: [] };
-    slices.forEach((g, i) => {
+    const CX = 200, CY = 200, r0 = 62, r1 = 114, r2 = 120, r3 = 178, tot = pb.sum || 1, P2 = Math.PI * 2;
+    const pt = (r, a) => [(CX + r * Math.cos(a)).toFixed(1), (CY + r * Math.sin(a)).toFixed(1)];
+    const ring = (a0, a1, ra, rb) => {
+      if (a1 - a0 >= P2 - 1e-3) return `M${CX + rb} ${CY}A${rb} ${rb} 0 1 1 ${CX - rb} ${CY}A${rb} ${rb} 0 1 1 ${CX + rb} ${CY}ZM${CX + ra} ${CY}A${ra} ${ra} 0 1 0 ${CX - ra} ${CY}A${ra} ${ra} 0 1 0 ${CX + ra} ${CY}Z`;
+      const big = a1 - a0 > Math.PI ? 1 : 0, p1 = pt(rb, a0), p2 = pt(rb, a1 - 1e-4), p3 = pt(ra, a1 - 1e-4), p4 = pt(ra, a0);
+      return `M${p1[0]} ${p1[1]}A${rb} ${rb} 0 ${big} 1 ${p2[0]} ${p2[1]}L${p3[0]} ${p3[1]}A${ra} ${ra} 0 ${big} 0 ${p4[0]} ${p4[1]}Z`;
+    };
+    let ang = -Math.PI / 2, inner = '', outer = '';
+    pb.groups.forEach((g, i) => {
       const fr = g.sum / tot; if (fr <= 0) return;
-      const a2 = ang + fr * 2 * Math.PI, rr = i === sel ? R + 7 : R, big = fr > 0.5 ? 1 : 0, col = PAL[i % PAL.length];
-      const pt1 = [CX + rr * Math.cos(ang), CY + rr * Math.sin(ang)], pt2 = [CX + rr * Math.cos(a2 - 1e-4), CY + rr * Math.sin(a2 - 1e-4)];
-      const sc = i === sel ? ' class="sel"' : '', am = ang + fr * Math.PI;
-      if (fr >= 0.025) L[Math.cos(am) >= 0 ? 'r' : 'l'].push({ i, am, rr, y: CY + (R + 12) * Math.sin(am), t: trunc(g.label, 10), p: g.pct });
-      sl += fr >= 0.9999 ? `<circle${sc} cx="${CX}" cy="${CY}" r="${rr}" fill="${col}" data-act="${act}" data-v="${i}"/>` : `<path${sc} d="M${CX} ${CY}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${col}" data-act="${act}" data-v="${i}"/>`;
+      const a2 = ang + fr * P2, col = PAL[i % PAL.length], dim = gi >= 0 && gi !== i ? ' dim' : '', on = gi === i;
+      inner += `<path class="${on ? 'sel' : ''}${dim}" d="${ring(ang, a2, r0, on ? r1 + 5 : r1)}" fill="${col}" fill-rule="evenodd" data-act="pies" data-v="${i}"><title>${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}</title></path>`;
+      let ib = ang;
+      g.items.forEach((it, j) => {
+        const f2 = it.val / tot; if (f2 <= 0) return;
+        const ie = ib + f2 * P2, io = on && ii === j;
+        outer += `<path class="${io ? 'sel' : ''}${dim}" d="${ring(ib, ie, r2, io ? r3 + 7 : on ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}"><title>${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}</title></path>`;
+        ib = ie;
+      });
       ang = a2;
     });
-    let lb = '';
-    ['l', 'r'].forEach(sd => {
-      const arr = L[sd].sort((x, y) => x.y - y.y);
-      for (let k = 1; k < arr.length; k++) if (arr[k].y - arr[k - 1].y < 27) arr[k].y = arr[k - 1].y + 27;
-      arr.forEach(o => {
-        const cs = Math.cos(o.am), sn = Math.sin(o.am), x1 = CX + (o.rr - 2) * cs, y1 = CY + (o.rr - 2) * sn, x2 = CX + (R + 7) * cs, y2 = CY + (R + 7) * sn, x3 = CX + (sd === 'r' ? 1 : -1) * (R + 12);
-        const yy = Math.min(Math.max(o.y, 14), 286);
-        lb += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}L${x3.toFixed(1)} ${yy.toFixed(1)}" fill="none" stroke="${PAL[o.i % PAL.length]}" stroke-width="1.3"/><text x="${(x3 + (sd === 'r' ? 3 : -3)).toFixed(1)}" y="${(yy - 1).toFixed(1)}" text-anchor="${sd === 'r' ? 'start' : 'end'}" font-size="11.5" font-weight="${o.i === sel ? 700 : 600}" fill="#16302d">${esc(o.t)}<tspan x="${(x3 + (sd === 'r' ? 3 : -3)).toFixed(1)}" dy="12.5" font-size="11" font-weight="500" fill="#4b6360">${o.p}</tspan></text>`;
-      });
-    });
-    const cl = sel >= 0 ? slices[sel].label : dg ? dg.label : pb.label, cv = sel >= 0 ? slices[sel].sum : stot;
-    const hole = `<circle cx="${CX}" cy="${CY}" r="56" fill="#fff" style="stroke:none;cursor:default"/><text x="${CX}" y="${CY - 4}" text-anchor="middle" font-size="12" fill="#5b7370">${esc(trunc(cl, 13))}</text><text x="${CX}" y="${CY + 15}" text-anchor="middle" font-size="16" font-weight="700" fill="#16302d">${eur0(cv)}</text>`;
-    const top = dg ? `<div class="banner" style="margin-bottom:8px"><span><b>${esc(pb.label)}</b> › ${esc(dg.label)}</span><button class="b sm" data-act="pieb">← Indietro</button></div>`
-      : `<div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>`;
-    pieHtml = `<div class="card">${top}<svg class="pie${S.anim ? ' anim' : ''}" viewBox="0 0 360 300"><g class="pg">${sl}</g>${hole}<g class="lbs">${lb}</g></svg>
-    ${slices.map((g, i) => `<div class="pl ${i === sel ? 'on' : ''}" data-act="${act}" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}${dg ? `<small style="display:block;font-weight:400;color:#5b7370">${esc(g.sub)}</small>` : g.n ? `<small style="color:#5b7370;font-weight:400"> · ${g.n} ${g.n === 1 ? 'voce' : 'voci'}</small>` : ''}</span><span>${eur0(g.sum)} · ${g.pct}</span>${dg ? '' : '<span style="color:#5b7370">›</span>'}</div>`).join('')}
-    ${dg ? '' : '<p class="note">Tocca una fetta per vedere il dettaglio.</p>'}</div>`;
+    const sg = gi >= 0 ? pb.groups[gi] : null, si = ii >= 0 ? sg.items[ii] : null;
+    const cl = si ? si.nome : sg ? sg.label : pb.label, cv = si ? si.val : sg ? sg.sum : pb.sum, cp = si ? si.pct : sg ? sg.pct : '';
+    const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 14))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
+    const top = `<div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>`;
+    pieHtml = `<div class="card">${top}<svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${inner}${outer}</g>${hole}</svg>
+    <p class="note" style="text-align:center;margin:0 0 6px">Anello interno: categorie. Anello esterno: singole voci. Tocca una fetta.</p>
+    ${pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}<small style="color:#5b7370;font-weight:400"> · ${g.items.length} ${g.items.length === 1 ? 'voce' : 'voci'}</small></span><span>${eur0(g.sum)} · ${g.pct}</span></div>` + (i === gi ? g.items.map((it, j) => `<div class="pl ps2 ${j === ii ? 'on' : ''}" data-act="pies2" data-v="${i}-${j}"><span class="a">${esc(it.nome)}<small style="display:block;font-weight:400;color:#5b7370">${esc(it.sub)}</small></span><span>${eur0(it.val)} · ${it.pct}</span></div>`).join('') : '')).join('')}</div>`;
   }
   S.anim = false;
-  return ctl + pieHtml + `<div class="card"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(D.voci), br)}
-    <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div>`;
+  return ctl + `<div class="dgrid">${pieHtml}<div class="card" style="min-width:0"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(D.voci), br)}
+    <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div></div>`;
 }
 
 function trendSvg(st) {
@@ -683,9 +686,8 @@ async function act(el) {
     }
     if (a === 'dview') { S.dview = v; S.pieSel = null; S.pieSel2 = null; return render(); }
     if (a === 'piet') { S.anim = true; S.pie = v; S.pieSel = null; S.pieSel2 = null; return render(); }
-    if (a === 'pies') { S.anim = true; S.pieSel = +v; S.pieSel2 = null; return render(); }
-    if (a === 'pies2') { S.anim = true; S.pieSel2 = S.pieSel2 === +v ? null : +v; return render(); }
-    if (a === 'pieb') { S.anim = true; S.pieSel = null; S.pieSel2 = null; return render(); }
+    if (a === 'pies') { S.anim = 'sel'; S.pieSel = S.pieSel === +v ? null : +v; S.pieSel2 = null; return render(); }
+    if (a === 'pies2') { S.anim = 'sel'; const [g, j] = v.split('-').map(Number); if (S.pieSel === g && S.pieSel2 === j) S.pieSel2 = null; else { S.pieSel = g; S.pieSel2 = j; } return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
     if (a === 'adda') {
       const nm = $('an').value.trim();
