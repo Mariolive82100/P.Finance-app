@@ -97,10 +97,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.8';
+const VER = '0.9';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
-  attivo: ['Conto corrente', 'Conto di investimento', 'Immobile', 'Altro attivo'],
+  attivo: ['Conto corrente', 'Conto di investimento', 'Portafoglio', 'Immobile', 'Altro attivo'],
   passivo: ['Mutuo', 'Prestito', 'Carta di credito', 'Altro debito']
 };
 const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
@@ -244,6 +244,7 @@ function renderAuth(el) {
     ${reg ? '<p class="note">Dopo la registrazione l\'amministratore dovrà approvarti.</p>' : ''}</div>`;
 }
 
+const contoName = v => { const c = S.data.voci.find(x => x.id === v.conto); return c ? c.nome : '—'; };
 const accKey = v => v.account || 'main';
 const accName = v => { const D = S.data; if (!v.account) return D.nome; const a = D.accounts.find(x => x.id === v.account); return a ? a.nome : '(account eliminato)'; };
 
@@ -253,7 +254,16 @@ function pagePat() {
   const g = (id, d) => (S.fd && S.fd[id] !== undefined) ? S.fd[id] : d;
   const tipo = g('ft', ed ? ed.tipo : 'attivo');
   const mod = tipo === 'passivo' ? g('fm', ed ? (ed.piano ? 'piano' : 'manuale') : 'piano') : 'manuale';
-  const det = v => v.piano ? ` · ${eur(piano(v).rata)}/mese · fino al ${fmtD(v.fine)}` : '';
+  const det = v => v.piano ? ` · ${eur(piano(v).rata)}/mese · fino al ${fmtD(v.fine)}`
+    : v.categoria === 'Portafoglio' ? ` · in ${esc(contoName(v))}${v.obiettivo ? ` · obiettivo ${eur(v.obiettivo)} (${Math.round(v.valore / v.obiettivo * 100)}%)` : ''}` : '';
+  const cat = g('fc', ed ? ed.categoria : CATS[tipo][0]);
+  const isPf = tipo === 'attivo' && cat === 'Portafoglio';
+  const conti = D.voci.filter(v => v.tipo === 'attivo' && (v.categoria === 'Conto corrente' || v.categoria === 'Conto di investimento'));
+  const contoSel = g('fcn', ed && ed.conto ? ed.conto : (conti.length ? conti[0].id : 'new'));
+  const pfCampi = isPf ? `<label class="lbl">Dove si trova il portafoglio?</label><select id="fcn" data-act="fcat">${conti.map(c => `<option value="${c.id}" ${contoSel === c.id ? 'selected' : ''}>${esc(c.nome)} (conto già aperto)</option>`).join('')}<option value="new" ${contoSel === 'new' ? 'selected' : ''}>+ Nuovo conto</option></select>
+    ${contoSel === 'new' ? `<label class="lbl">Nome del nuovo conto</label><input id="fcm" maxlength="60" value="${esc(g('fcm', ''))}">` : ''}` : '';
+  const obj = isPf ? `<label class="lbl">Obiettivo in euro (facoltativo)</label><input id="fo" inputmode="decimal" value="${esc(g('fo', ed && ed.obiettivo ? String(ed.obiettivo).replace('.', ',') : ''))}">
+    <p class="note" style="margin-top:0">Il valore del conto non deve già comprendere questo portafoglio, altrimenti verrebbe contato due volte.</p>` : '';
   const accOpts = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
   const list = tp => {
     const items = vis.filter(v => v.tipo === tp).sort((a, b) => b.valore - a.valore);
@@ -273,10 +283,12 @@ function pagePat() {
   const form = D.readonly ? '' : `<div class="card" id="formvoce"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
     <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
     ${selAcc}
-    <label class="lbl">Categoria</label><select id="fc">${CATS[tipo].map(c => `<option ${g('fc', ed ? ed.categoria : '') === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <label class="lbl">Categoria</label><select id="fc" data-act="fcat">${CATS[tipo].map(c => `<option ${g('fc', ed ? ed.categoria : '') === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    ${pfCampi}
     ${selMod}
     <label class="lbl">Nome (es. Conto Fineco, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">
     ${campi}
+    ${obj}
     <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div></div>`;
   return `${filtro}<div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="two"><div class="card at"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
@@ -304,10 +316,11 @@ function popup() {
   if (!v) return '';
   let body;
   const pi = v.piano ? piano(v) : null;
+  const pf = v.categoria === 'Portafoglio' ? `<div class="lbl" style="margin:-6px 0 12px">In: ${esc(contoName(v))}${v.obiettivo ? ` · Obiettivo ${eur(v.obiettivo)} · raggiunto ${Math.round(v.valore / v.obiettivo * 100)}%</div><div style="height:8px;background:#e2eceb;border-radius:6px;margin-bottom:12px"><div style="height:100%;width:${Math.min(100, v.valore / v.obiettivo * 100)}%;background:#0f766e;border-radius:6px"></div>` : ''}</div>` : '';
   if (p.mode === 'upd') body = `<label class="lbl">Nuovo valore in euro</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
   else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(v.nome)}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
   else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
-  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)} · ${esc(accName(v))} · ${eur(v.valore)}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
+  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)} · ${esc(accName(v))} · ${eur(v.valore)}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${pf}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
 }
 
 const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(v || 0);
@@ -356,7 +369,7 @@ function pageDis() {
     vs.forEach(v => {
       const k = view === 'acc' ? accKey(v) : v.categoria;
       const g = G[k] = G[k] || { label: view === 'acc' ? accName(v) : v.categoria, items: [], sum: 0 };
-      g.items.push({ nome: v.nome, val: v.valore, sub: view === 'acc' ? v.categoria : accName(v) });
+      g.items.push({ nome: v.nome, val: v.valore, sub: v.categoria === 'Portafoglio' ? 'in ' + contoName(v) : (view === 'acc' ? v.categoria : accName(v)) });
       g.sum += v.valore;
     });
     const share = x => total > 0 ? (x / total * 100).toFixed(1).replace('.', ',') + '%' : '';
@@ -490,7 +503,7 @@ function pageAdm() {
 function exportCsv() {
   const D = S.data, n = v => String(v).replace('.', ',');
   const q = s => '"' + String(s).replace(/"/g, '""') + '"';
-  let out = 'Tipo;Categoria;Account;Nome;Valore\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(accName(v)), q(v.nome), n(v.valore)].join(';')).join('\n');
+  let out = 'Tipo;Categoria;Account;Nome;Valore;Conto;Obiettivo\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(accName(v)), q(v.nome), n(v.valore), q(v.conto ? contoName(v) : ''), v.obiettivo ? n(v.obiettivo) : ''].join(';')).join('\n');
   out += '\n\nMese;Attivi;Passivi;Netto\n' + D.storico.map(s => [s.mese, n(s.attivi), n(s.passivi), n(s.netto)].join(';')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + out], { type: 'text/csv;charset=utf-8' }));
@@ -498,7 +511,7 @@ function exportCsv() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff'];
+const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fcn', 'fcm', 'fo'];
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
 async function act(el) {
@@ -531,12 +544,14 @@ async function act(el) {
     if (a === 'updsave') {
       const x = D.voci.find(z => z.id === S.pop.id), nv = pnum($('pv').value);
       if (!isFinite(nv) || nv < 0) { S.msg = 'Inserisci un valore valido (zero o più).'; return render(); }
-      const dati = { tipo: x.tipo, categoria: x.categoria, nome: x.nome, account: x.account || '', valore: r2(nv) };
+      const { id: _i, ...rest } = x, dati = { ...rest, valore: r2(nv) };
       await setDoc(doc(db, 'users', D.uid, 'voci', x.id), dati); Object.assign(x, dati);
       await syncStorico(); S.pop = null; S.msg = 'Valore aggiornato.'; return render();
     }
     if (a === 'delok') {
-      const id = S.pop.id; await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
+      const id = S.pop.id;
+      if (D.voci.some(z => z.conto === id)) { S.msg = 'Prima sposta o elimina i portafogli collegati a questo conto.'; return render(); }
+      await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
     if (a === 'dview') { S.dview = v; return render(); }
@@ -588,7 +603,7 @@ async function act(el) {
       try { await navigator.clipboard.writeText(url); S.msg = 'Link copiato negli appunti.'; } catch (_) { S.msg = 'Link: ' + url; }
       return render();
     }
-    if (a === 'ftipo' || a === 'fmod') { S.fd = grabForm(); return render(); }
+    if (a === 'ftipo' || a === 'fmod' || a === 'fcat') { S.fd = grabForm(); return render(); }
     if (a === 'edit') { S.edit = v; return render(); }
     if (a === 'cancel') { S.edit = null; S.fd = null; return render(); }
     if (a === 'export') return exportCsv();
@@ -606,6 +621,20 @@ async function act(el) {
         const valore = pnum($('fv').value);
         if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
         dati = { ...base, valore: r2(valore) };
+        if (tipo === 'attivo' && categoria === 'Portafoglio') {
+          const cn = $('fcn') ? $('fcn').value : 'new', ob = $('fo') ? pnum($('fo').value) : NaN;
+          if (cn === 'new') {
+            const nc = ($('fcm') ? $('fcm').value : '').trim();
+            if (!nc) { S.msg = 'Scrivi il nome del nuovo conto.'; return render(); }
+            const nuovo = { tipo: 'attivo', categoria: 'Conto di investimento', nome: nc, account: base.account, valore: 0 };
+            const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nuovo);
+            D.voci.push({ id: r0.id, ...nuovo }); dati.conto = r0.id;
+          } else {
+            const c = D.voci.find(x => x.id === cn);
+            dati.conto = cn; dati.account = c ? (c.account || '') : base.account;
+          }
+          if (isFinite(ob) && ob > 0) dati.obiettivo = r2(ob);
+        }
       }
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
       else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
