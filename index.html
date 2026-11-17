@@ -55,6 +55,9 @@ svg{width:100%;height:auto}
 .pie{display:block;margin:0 auto;max-width:520px;width:100%}
 .pie .dim{opacity:.35}
 .row.cat .n,.row.cat .v{font-weight:700}
+.pga{position:fixed;top:55%;z-index:6;width:30px;height:54px;border:0;background:rgba(15,118,110,.55);color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:0}
+.pga:hover{background:rgba(15,118,110,.85)}
+.pga.l{left:0;border-radius:0 14px 14px 0}.pga.r{right:0;border-radius:14px 0 0 14px}
 .terms h3{font-size:15px;margin:14px 0 4px}.terms p{margin:0 0 6px;line-height:1.45}
 .tip{position:fixed;display:none;z-index:50;background:#16302d;color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:260px}
 .pie path{transition:opacity .2s}
@@ -127,7 +130,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.29';
+const VER = '0.30';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -280,6 +283,11 @@ function termsGate() {
 function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="note">Hai accettato la versione ${S.profile && S.profile.termini ? S.profile.termini : TERMS_V}.</p></div>`; }
 
 /* ---------- Schermate ---------- */
+const ORD = ['pat', 'dis', 'and', 'rep'];
+function arrows() {
+  const i = ORD.indexOf(S.tab); if (i < 0 || S.menu || S.pop) return '';
+  return (i > 0 ? '<button class="pga l" data-act="pg" data-v="-1" aria-label="Pagina precedente">‹</button>' : '') + (i < ORD.length - 1 ? '<button class="pga r" data-act="pg" data-v="1" aria-label="Pagina successiva">›</button>' : '');
+}
 function render() {
   const el = $('app');
   if (S.loading) { el.innerHTML = '<div class="auth card">Caricamento…</div>'; return; }
@@ -302,7 +310,7 @@ function render() {
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
-    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${arrows()}`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
 }
 
@@ -663,6 +671,13 @@ async function act(el) {
       await updateDoc(doc(db, 'users', S.user.uid), { termini: TERMS_V, terminiAt: serverTimestamp() });
       S.profile.termini = TERMS_V; S.msg = ''; return render();
     }
+    if (a === 'pg') {
+      const i = ORD.indexOf(S.tab), n = i + (+v); if (i < 0 || n < 0 || n >= ORD.length) return;
+      S.tab = ORD[n]; render(); window.scrollTo(0, 0);
+      const mn = document.querySelector('main'); if (mn) mn.classList.add(+v > 0 ? 'slL' : 'slR');
+      const on = document.querySelector('nav button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+      return;
+    }
     if (a === 'mode') { S.mode = v; return render(); }
     if (a === 'login' || a === 'register') {
       const n = $('nm').value.trim(), p = $('pn').value.trim();
@@ -817,26 +832,6 @@ const tip = document.createElement('div'); tip.className = 'tip'; document.body.
 const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
 document.addEventListener('mousemove', e => tipAt(e, e.target.closest ? e.target.closest('[data-tip]') : null));
 document.addEventListener('mouseleave', () => tipAt(null, null));
-let sw = null;
-document.addEventListener('touchstart', e => {
-  if (e.touches.length !== 1) { sw = null; return; }
-  const t = e.touches[0];
-  const tg = e.target; sw = (tg.closest('.ov,.pop,.drawer') || (tg === document.activeElement && /^(INPUT|TEXTAREA)$/.test(tg.tagName))) ? null : { x: t.clientX, y: t.clientY, sc: e.target.closest('.tw,nav') };
-}, { passive: true });
-document.addEventListener('touchcancel', () => { sw = null; }, { passive: true });
-document.addEventListener('touchend', e => {
-  const st = sw; sw = null;
-  if (!st || !S.data || S.menu || S.pop) return;
-  const t = e.changedTouches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
-  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-  if (st.sc) { const m = st.sc.scrollWidth - st.sc.clientWidth; if (m > 4 && (dx < 0 ? st.sc.scrollLeft < m - 4 : st.sc.scrollLeft > 4)) return; }
-  const ord = ['pat', 'dis', 'and', 'rep'], i = ord.indexOf(S.tab), n = i + (dx < 0 ? 1 : -1);
-  if (i >= 0 && n >= 0 && n < ord.length) {
-    S.tab = ord[n]; render(); window.scrollTo(0, 0);
-    const mn = document.querySelector('main'); if (mn) mn.classList.add(dx < 0 ? 'slL' : 'slR');
-    const on = document.querySelector('nav button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });
-  }
-}, { passive: true });
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT') act(el); });
 document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.act) act(e.target); });
 document.addEventListener('keydown', e => {
