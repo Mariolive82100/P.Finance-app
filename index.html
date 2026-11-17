@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<title>P.Finance</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f4;color:#16302d;font-size:16px}
+header{background:#0f766e;color:#fff;position:sticky;top:0;z-index:5}
+.hw{max-width:900px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hw h1{font-size:18px;margin:0;flex:1}
+nav{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:0 14px 8px;overflow-x:auto}
+nav button{background:transparent;color:#d6f2ee;border:0;padding:8px 14px;border-radius:20px;font-size:15px;cursor:pointer}
+nav button.on{background:#fff;color:#0f766e;font-weight:600}
+main{max-width:900px;margin:0 auto;padding:14px}
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.big{font-size:28px;font-weight:700}
+.lbl{font-size:13px;color:#5b7370}
+.pos{color:#15803d}.neg{color:#b91c1c}
+h2{font-size:17px;margin:0 0 10px}
+input,select{width:100%;padding:11px;border:1px solid #c5d5d2;border-radius:10px;font-size:16px;margin:4px 0 10px;background:#fff}
+button.b{background:#0f766e;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:15px;cursor:pointer}
+button.b.s{background:#e2eceb;color:#0f766e}
+button.b.r{background:#fee2e2;color:#b91c1c}
+button.b.sm{padding:6px 10px;font-size:13px}
+.row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #eef3f2}
+.row:last-child{border:0}
+.row .n{flex:1;min-width:0}
+.row .n small{display:block;color:#5b7370}
+.row .v{font-weight:600;white-space:nowrap}
+.msg{color:#b91c1c;min-height:20px;font-size:14px}
+.ok{color:#15803d}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1}
+.auth{max-width:380px;margin:40px auto}
+.banner{background:#fef3c7;color:#92400e;border-radius:10px;padding:10px 12px;margin-bottom:14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.note{font-size:13px;color:#5b7370;margin-top:8px}
+ul.c{padding-left:18px;margin:6px 0}
+ul.c li{margin-bottom:8px}
+svg{width:100%;height:auto}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA6D6lvqErC4rXALCu9Tp_4_iI6fwjjR5k",
+  authDomain: "p-finance-app.firebaseapp.com",
+  projectId: "p-finance-app",
+  storageBucket: "p-finance-app.firebasestorage.app",
+  messagingSenderId: "157182448469",
+  appId: "1:157182448469:web:bf091bf38a027e004115dc"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const ADMIN_EMAIL = 'mariot@pfinance.app';
+const CATS = {
+  attivo: ['Conto corrente', 'Conto di investimento', 'Immobile', 'Altro attivo'],
+  passivo: ['Mutuo', 'Prestito', 'Carta di credito', 'Altro debito']
+};
+const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mailOf = n => n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '') + '@pfinance.app';
+const eur = v => new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', maximumFractionDigits:2}).format(v || 0);
+const pct = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(1).replace('.', ',') + '%';
+const monthKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+const monthName = k => { const [y, m] = k.split('-'); return MESI[+m - 1] + ' ' + y; };
+const totals = voci => {
+  const a = voci.filter(v => v.tipo === 'attivo').reduce((s, v) => s + v.valore, 0);
+  const p = voci.filter(v => v.tipo === 'passivo').reduce((s, v) => s + v.valore, 0);
+  return { attivi: a, passivi: p, netto: a - p };
+};
+const cls = v => v >= 0 ? 'pos' : 'neg';
+
+const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, pendingName: null, loading: true, msg: '' };
+
+function errText(e) {
+  const c = e && e.code || '';
+  if (c.includes('email-already-in-use')) return 'Questo nome è già registrato.';
+  if (c.includes('invalid-credential') || c.includes('user-not-found') || c.includes('wrong-password')) return 'Nome o PIN errati.';
+  if (c.includes('weak-password')) return 'Il PIN deve avere 6 cifre.';
+  if (c.includes('network')) return 'Connessione assente. Riprova.';
+  if (c.includes('too-many-requests')) return 'Troppi tentativi. Riprova tra qualche minuto.';
+  if (c.includes('permission-denied')) return 'Permesso negato. Chiedi all\'amministratore.';
+  return 'Errore: ' + (c || (e && e.message) || 'sconosciuto');
+}
+
+/* ---------- Dati ---------- */
+async function loadData(uid, nome, readonly) {
+  const [vs, ss] = await Promise.all([
+    getDocs(collection(db, 'users', uid, 'voci')),
+    getDocs(collection(db, 'users', uid, 'storico'))
+  ]);
+  const voci = vs.docs.map(d => ({ id: d.id, ...d.data() }));
+  const storico = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
+  S.data = { uid, nome, readonly, voci, storico };
+  if (!readonly) await syncStorico();
+}
+
+async function syncStorico() {
+  const D = S.data;
+  if (!D || D.readonly) return;
+  const t = totals(D.voci);
+  const mk = monthKey();
+  const cur = D.storico.find(x => x.mese === mk);
+  if (!D.voci.length && !cur) return;
+  if (cur && cur.attivi === t.attivi && cur.passivi === t.passivi) return;
+  await setDoc(doc(db, 'users', D.uid, 'storico', mk), { ...t, aggiornato: serverTimestamp() });
+  if (cur) Object.assign(cur, t); else { D.storico.push({ mese: mk, ...t }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
+}
+
+async function loadUsers() {
+  const q = await getDocs(collection(db, 'users'));
+  S.users = q.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== S.user.uid)
+    .sort((a, b) => (a.approved === b.approved ? (a.nome || '').localeCompare(b.nome || '') : a.approved ? 1 : -1));
+}
+
+/* ---------- Accesso ---------- */
+onAuthStateChanged(auth, async user => {
+  S.user = user; S.msg = '';
+  if (!user) { S.profile = null; S.data = null; S.loading = false; return render(); }
+  S.loading = true; render();
+  try {
+    const ref = doc(db, 'users', user.uid);
+    let snap = await getDoc(ref);
+    if (!snap.exists()) {
+      const nome = S.pendingName || user.email.split('@')[0];
+      await setDoc(ref, { nome, approved: false, creato: serverTimestamp() });
+      snap = await getDoc(ref);
+    }
+    S.profile = snap.data();
+    if (user.email === ADMIN_EMAIL && !S.profile.approved) {
+      await updateDoc(ref, { approved: true });
+      S.profile.approved = true;
+    }
+    if (S.profile.approved) {
+      await loadData(user.uid, S.profile.nome, false);
+      if (isAdmin()) await loadUsers();
+    }
+  } catch (e) { S.msg = errText(e); }
+  S.loading = false; render();
+});
+const isAdmin = () => S.user && S.user.email === ADMIN_EMAIL;
+
+/* ---------- Schermate ---------- */
+function render() {
+  const el = $('app');
+  if (S.loading) { el.innerHTML = '<div class="auth card">Caricamento…</div>'; return; }
+  if (!S.user) return renderAuth(el);
+  if (!S.profile || !S.profile.approved) {
+    el.innerHTML = `<div class="auth card"><h2>Registrazione ricevuta</h2>
+      <p>Ciao ${esc(S.profile?.nome || '')}. Attendi l'approvazione dell'amministratore.</p>
+      <div class="msg">${esc(S.msg)}</div>
+      <div class="acts"><button class="b" data-act="refresh">Controlla di nuovo</button><button class="b s" data-act="logout">Esci</button></div></div>`;
+    return;
+  }
+  const D = S.data;
+  const tabs = [['pat', 'Patrimonio'], ['rep', 'Report del mese']];
+  if (isAdmin() && !D.readonly) tabs.push(['adm', 'Amministratore']);
+  if (S.tab === 'adm' && !(isAdmin() && !D.readonly)) S.tab = 'pat';
+  let body = '';
+  if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
+  el.innerHTML = `<header><div class="hw"><h1>P.Finance</h1><span>${esc(S.profile.nome)}</span>
+    <button class="b s sm" data-act="logout">Esci</button></div>
+    <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
+    <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
+    <div class="msg">${esc(S.msg)}</div>${body}</main>`;
+}
+
+function renderAuth(el) {
+  const reg = S.mode === 'reg';
+  el.innerHTML = `<div class="auth card"><h2>P.Finance</h2>
+    <div class="tabs"><button class="b ${reg ? 's' : ''}" data-act="mode" data-v="login">Accedi</button>
+    <button class="b ${reg ? '' : 's'}" data-act="mode" data-v="reg">Registrati</button></div>
+    <label class="lbl">Nome</label><input id="nm" autocomplete="username" autocapitalize="words">
+    <label class="lbl">PIN (6 cifre)</label><input id="pn" type="password" inputmode="numeric" maxlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}">
+    <div class="msg" id="am">${esc(S.msg)}</div>
+    <button class="b" style="width:100%" data-act="${reg ? 'register' : 'login'}">${reg ? 'Crea account' : 'Entra'}</button>
+    ${reg ? '<p class="note">Dopo la registrazione l\'amministratore dovrà approvarti.</p>' : ''}</div>`;
+}
+
+function pagePat() {
+  const D = S.data, t = totals(D.voci), ed = S.edit && D.voci.find(v => v.id === S.edit);
+  const tipo = ed ? ed.tipo : (S.newTipo || 'attivo');
+  const list = tp => {
+    const items = D.voci.filter(v => v.tipo === tp).sort((a, b) => b.valore - a.valore);
+    if (!items.length) return '<p class="note">Nessuna voce.</p>';
+    return items.map(v => `<div class="row"><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}</small></div><div class="v">${eur(v.valore)}</div>
+      ${D.readonly ? '' : `<button class="b s sm" data-act="edit" data-v="${v.id}">Modifica</button><button class="b r sm" data-act="del" data-v="${v.id}">✕</button>`}</div>`).join('');
+  };
+  const form = D.readonly ? '' : `<div class="card"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
+    <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
+    <label class="lbl">Categoria</label><select id="fc">${CATS[tipo].map(c => `<option ${ed && ed.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <label class="lbl">Nome (es. Conto Fineco)</label><input id="fn" maxlength="60" value="${esc(ed ? ed.nome : '')}">
+    <label class="lbl">Valore in euro</label><input id="fv" inputmode="decimal" value="${ed ? String(ed.valore).replace('.', ',') : ''}">
+    <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div></div>`;
+  return `<div class="grid"><div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
+    <div class="card"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
+    <div class="card"><div class="lbl">Passivi</div><div class="big">${eur(t.passivi)}</div></div></div>
+    ${form}
+    <div class="card"><h2>Attivi</h2>${list('attivo')}</div>
+    <div class="card"><h2>Passivi</h2>${list('passivo')}</div>
+    <div class="card"><h2>Esporta</h2><button class="b" data-act="export">Scarica i dati (CSV per Excel)</button></div>`;
+}
+
+function trendSvg(st) {
+  if (st.length < 2) return '';
+  const W = 600, H = 160, P = 28, vals = st.map(s => s.netto);
+  const mn = Math.min(...vals), mx = Math.max(...vals), rg = (mx - mn) || 1;
+  const x = i => P + i * (W - 2 * P) / (st.length - 1), y = v => H - P - (v - mn) / rg * (H - 2 * P);
+  const pts = st.map((s, i) => `${x(i).toFixed(1)},${y(s.netto).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="#0f766e" stroke-width="3"/>
+    ${st.map((s, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(s.netto).toFixed(1)}" r="4" fill="#0f766e"/>`).join('')}
+    <text x="${P}" y="${H - 6}" font-size="12" fill="#5b7370">${esc(monthName(st[0].mese))}</text>
+    <text x="${W - P}" y="${H - 6}" font-size="12" fill="#5b7370" text-anchor="end">${esc(monthName(st[st.length - 1].mese))}</text></svg>`;
+}
+
+function pageRep() {
+  const D = S.data, st = D.storico;
+  if (!st.length) return '<div class="card">Nessun dato disponibile. Inserisci almeno una voce nella pagina Patrimonio.</div>';
+  const cur = st[st.length - 1], prev = st.length > 1 ? st[st.length - 2] : null;
+  const dN = prev ? cur.netto - prev.netto : null, dA = prev ? cur.attivi - prev.attivi : null, dP = prev ? cur.passivi - prev.passivi : null;
+  const dpct = prev && prev.netto ? dN / Math.abs(prev.netto) : null;
+  const byCat = tp => {
+    const m = {}; D.voci.filter(v => v.tipo === tp).forEach(v => m[v.categoria] = (m[v.categoria] || 0) + v.valore);
+    const e = Object.entries(m).sort((a, b) => b[1] - a[1]);
+    return e.length ? e.map(([c, v]) => `<div class="row"><div class="n">${esc(c)}</div><div class="v">${eur(v)}</div></div>`).join('') : '<p class="note">Nessuna voce.</p>';
+  };
+  const dl = (l, v) => v === null ? '' : `<div class="row"><div class="n">${l}</div><div class="v ${l === 'Passivi' ? cls(-v) : cls(v)}">${v >= 0 ? '+' : ''}${eur(v)}</div></div>`;
+  // commenti educativi
+  const c = [];
+  c.push('Il <b>patrimonio netto</b> è ciò che possiedi meno ciò che devi: è il numero più importante da seguire nel tempo.');
+  if (dN !== null) c.push(dN >= 0
+    ? `Nel mese il patrimonio netto è <b>aumentato</b> di ${eur(dN)}. Può dipendere da risparmio, rimborso di debiti o variazione dei valori.`
+    : `Nel mese il patrimonio netto è <b>diminuito</b> di ${eur(-dN)}. Può dipendere da spese, nuovi debiti o variazione dei valori.`);
+  if (cur.attivi > 0) {
+    const r = cur.passivi / cur.attivi;
+    c.push(`I debiti sono il <b>${(r * 100).toFixed(0)}%</b> di ciò che possiedi. ` + (r < 0.3 ? 'Come regola generale è un livello contenuto.' : r < 0.6 ? 'Come regola generale è un livello medio: conviene tenere d\'occhio le rate.' : 'Come regola generale è un livello alto: le rate pesano molto sul patrimonio.'));
+    const liq = D.voci.filter(v => v.categoria === 'Conto corrente').reduce((s, v) => s + v.valore, 0) / cur.attivi;
+    if (liq > 0.5) c.push('Oltre metà dei tuoi attivi è sui conti correnti: nel tempo l\'inflazione ne riduce il valore reale.');
+    else if (liq < 0.05) c.push('Hai poca liquidità: di solito si consiglia un fondo per imprevisti pari a 3-6 mesi di spese.');
+    const top = Math.max(0, ...D.voci.filter(v => v.tipo === 'attivo').map(v => v.valore)) / cur.attivi;
+    if (top > 0.6) c.push('Una sola voce vale oltre il 60% dei tuoi attivi: avere tutto in un solo posto aumenta il rischio.');
+  }
+  return `<div class="card"><h2>Report di ${esc(monthName(cur.mese))}</h2>
+    <div class="grid"><div><div class="lbl">Patrimonio netto</div><div class="big ${cls(cur.netto)}">${eur(cur.netto)}</div></div>
+    ${dN !== null ? `<div><div class="lbl">Rispetto a ${esc(monthName(prev.mese))}</div><div class="big ${cls(dN)}">${dN >= 0 ? '+' : ''}${eur(dN)}</div>${dpct !== null ? `<div class="lbl">${pct(dpct)}</div>` : ''}</div>` : ''}</div>
+    ${dN !== null ? `<div style="margin-top:12px">${dl('Attivi', dA)}${dl('Passivi', dP)}</div>` : '<p class="note">Il confronto con il mese precedente sarà disponibile dal prossimo mese.</p>'}</div>
+    ${st.length > 1 ? `<div class="card"><h2>Andamento</h2>${trendSvg(st)}</div>` : ''}
+    <div class="grid"><div class="card"><h2>Attivi per categoria</h2>${byCat('attivo')}</div><div class="card"><h2>Passivi per categoria</h2>${byCat('passivo')}</div></div>
+    <div class="card"><h2>Lo sapevi?</h2><ul class="c">${c.map(x => `<li>${x}</li>`).join('')}</ul>
+    <p class="note">Informazioni generali a scopo educativo, non consulenza finanziaria.</p></div>`;
+}
+
+function pageAdm() {
+  const u = S.users, pend = u.filter(x => !x.approved), ok = u.filter(x => x.approved);
+  const row = (x, p) => `<div class="row"><div class="n">${esc(x.nome)}</div>
+    ${p ? `<button class="b sm" data-act="appr" data-v="${x.uid}">Approva</button><button class="b r sm" data-act="rej" data-v="${x.uid}">Rifiuta</button>`
+        : `<button class="b s sm" data-act="view" data-v="${x.uid}">Vedi dati</button><button class="b r sm" data-act="rev" data-v="${x.uid}">Revoca</button>`}</div>`;
+  return `<div class="card"><h2>In attesa di approvazione (${pend.length})</h2>${pend.length ? pend.map(x => row(x, true)).join('') : '<p class="note">Nessuna richiesta.</p>'}</div>
+    <div class="card"><h2>Utenti approvati (${ok.length})</h2>${ok.length ? ok.map(x => row(x, false)).join('') : '<p class="note">Nessun utente.</p>'}</div>
+    <div class="card"><button class="b s" data-act="reload-users">Aggiorna elenco</button></div>`;
+}
+
+/* ---------- Azioni ---------- */
+function exportCsv() {
+  const D = S.data, n = v => String(v).replace('.', ',');
+  const q = s => '"' + String(s).replace(/"/g, '""') + '"';
+  let out = 'Tipo;Categoria;Nome;Valore\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(v.nome), n(v.valore)].join(';')).join('\n');
+  out += '\n\nMese;Attivi;Passivi;Netto\n' + D.storico.map(s => [s.mese, n(s.attivi), n(s.passivi), n(s.netto)].join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + out], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'pfinance_' + D.nome.replace(/[^a-z0-9]/gi, '') + '_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+async function act(el) {
+  const a = el.dataset.act, v = el.dataset.v, D = S.data;
+  S.msg = '';
+  try {
+    if (a === 'mode') { S.mode = v; return render(); }
+    if (a === 'login' || a === 'register') {
+      const n = $('nm').value.trim(), p = $('pn').value.trim();
+      if (mailOf(n).length < 14) { S.msg = 'Inserisci un nome valido.'; return render(); }
+      if (!/^\d{6}$/.test(p)) { S.msg = 'Il PIN deve essere di 6 cifre.'; return render(); }
+      if (a === 'register') { S.pendingName = n; await createUserWithEmailAndPassword(auth, mailOf(n), p); }
+      else await signInWithEmailAndPassword(auth, mailOf(n), p);
+      return;
+    }
+    if (a === 'logout') { S.tab = 'pat'; S.mode = 'login'; return signOut(auth); }
+    if (a === 'refresh') return location.reload();
+    if (a === 'tab') { S.tab = v; return render(); }
+    if (a === 'ftipo') { S.newTipo = el.value; if (S.edit) S.edit = null; return render(); }
+    if (a === 'edit') { S.edit = v; return render(); }
+    if (a === 'cancel') { S.edit = null; return render(); }
+    if (a === 'export') return exportCsv();
+    if (a === 'save') {
+      const tipo = $('ft').value, categoria = $('fc').value, nome = $('fn').value.trim();
+      const valore = parseFloat($('fv').value.replace(/\./g, '').replace(',', '.'));
+      if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
+      const dati = { tipo, categoria, nome, valore: Math.round(valore * 100) / 100 };
+      if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); Object.assign(D.voci.find(x => x.id === S.edit), dati); }
+      else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
+      S.edit = null; await syncStorico(); return render();
+    }
+    if (a === 'del') {
+      if (!confirm('Eliminare questa voce?')) return;
+      await deleteDoc(doc(db, 'users', D.uid, 'voci', v));
+      D.voci = D.voci.filter(x => x.id !== v); await syncStorico(); return render();
+    }
+    if (a === 'appr' || a === 'rev') { await updateDoc(doc(db, 'users', v), { approved: a === 'appr' }); await loadUsers(); return render(); }
+    if (a === 'rej') { if (!confirm('Rifiutare questa richiesta?')) return; await deleteDoc(doc(db, 'users', v)); await loadUsers(); return render(); }
+    if (a === 'reload-users') { await loadUsers(); return render(); }
+    if (a === 'view') {
+      const u = S.users.find(x => x.uid === v);
+      S.own = S.data; await loadData(v, u.nome, true); S.tab = 'pat'; return render();
+    }
+    if (a === 'back') { S.data = S.own; S.tab = 'adm'; return render(); }
+  } catch (e) { S.msg = errText(e); render(); }
+}
+
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT') act(el); });
+document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.act) act(e.target); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && $('pn') && document.activeElement === $('pn')) act(document.querySelector('[data-act="login"],[data-act="register"]')); });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
