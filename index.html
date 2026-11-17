@@ -16,7 +16,7 @@ header{background:#0f766e;color:#fff;position:sticky;top:0;z-index:5}
 .hw{max-width:900px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .hw h1{font-size:18px;margin:0;flex:1}
 nav{display:flex;gap:6px;max-width:900px;margin:0 auto;padding:0 14px 8px;overflow-x:auto}
-nav button{background:transparent;color:#d6f2ee;border:0;padding:8px 14px;border-radius:20px;font-size:15px;cursor:pointer}
+nav button{white-space:nowrap;background:transparent;color:#d6f2ee;border:0;padding:8px 14px;border-radius:20px;font-size:15px;cursor:pointer}
 nav button.on{background:#fff;color:#0f766e;font-weight:600}
 main{max-width:900px;margin:0 auto;padding:14px}
 .card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
@@ -49,6 +49,17 @@ svg{width:100%;height:auto}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:6px 0 10px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .tw{overflow-x:auto}
+.ham{background:transparent;border:0;color:#fff;font-size:26px;cursor:pointer;padding:0 6px;line-height:1}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(320px,85vw);background:#fff;z-index:21;overflow-y:auto;padding:16px;box-shadow:2px 0 12px rgba(0,0,0,.25)}
+.it{display:flex;align-items:center;gap:4px;padding:12px;border-radius:10px;cursor:pointer}
+.it:hover{background:#eef6f5}.it.on{background:#d6f2ee;font-weight:600}
+.it .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ic{background:transparent;border:0;cursor:pointer;font-size:16px;padding:4px 8px;color:#5b7370}
+.plus{display:flex;justify-content:center;margin-top:14px}
+.plus button{width:50px;height:50px;border-radius:50%;font-size:28px;line-height:1;padding:0}
+.pop{position:fixed;z-index:22;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,90vw);background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.row.cl{cursor:pointer;border-radius:8px}.row.cl:hover{background:#f4faf9}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:8px 6px;text-align:right;border-bottom:1px solid #eef3f2;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
@@ -188,11 +199,11 @@ function render() {
   if (S.tab === 'adm' && !(isAdmin() && !D.readonly)) S.tab = 'pat';
   let body = '';
   if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
-  el.innerHTML = `<header><div class="hw"><h1>P.Finance</h1><span>${esc(S.profile.nome)}</span>
+  el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰</button><h1>P.Finance</h1><span>${esc(S.profile.nome)}</span>
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
-    <div class="msg ${/salvato\.$|aggiunto\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}`;
 }
 
 function renderAuth(el) {
@@ -218,31 +229,45 @@ function pagePat() {
   const list = tp => {
     const items = vis.filter(v => v.tipo === tp).sort((a, b) => b.valore - a.valore);
     if (!items.length) return '<p class="note">Nessuna voce.</p>';
-    return items.map(v => `<div class="row"><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${D.accounts.length ? ' · ' + esc(accName(v)) : ''}</small></div><div class="v">${eur(v.valore)}</div>
-      ${D.readonly ? '' : `<button class="b s sm" data-act="edit" data-v="${v.id}">Modifica</button><button class="b r sm" data-act="del" data-v="${v.id}">✕</button>`}</div>`).join('');
+    return items.map(v => `<div class="row${D.readonly ? '' : ' cl'}"${D.readonly ? '' : ` data-act="pop" data-v="${v.id}"`}><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${D.accounts.length ? ' · ' + esc(accName(v)) : ''}</small></div><div class="v">${eur(v.valore)}</div></div>`).join('');
   };
-  const filtro = D.accounts.length ? `<div class="card"><label class="lbl">Mostra account</label><select data-act="facc" style="margin-bottom:0"><option value="all">Tutti gli account</option>${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${fa === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>` : '';
+  const fname = fa === 'all' ? '' : fa === 'main' ? D.nome : ((D.accounts.find(a => a.id === fa) || {}).nome || '');
+  const filtro = fname ? `<div class="banner"><span>Account: <b>${esc(fname)}</b></span><button class="b sm" data-act="facc" data-v="all">Mostra tutti</button></div>` : '';
   const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${(ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
-  const form = D.readonly ? '' : `<div class="card"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
+  const form = D.readonly ? '' : `<div class="card" id="formvoce"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
     <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
     ${selAcc}
     <label class="lbl">Categoria</label><select id="fc">${CATS[tipo].map(c => `<option ${ed && ed.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
     <label class="lbl">Nome (es. Conto Fineco)</label><input id="fn" maxlength="60" value="${esc(ed ? ed.nome : '')}">
     <label class="lbl">Valore in euro</label><input id="fv" inputmode="decimal" value="${ed ? String(ed.valore).replace('.', ',') : ''}">
     <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div></div>`;
-  const accCard = D.readonly ? '' : `<div class="card"><h2>Account (es. componenti della famiglia)</h2>
-    <div class="row"><div class="n">${esc(D.nome)}<small>Account principale</small></div></div>
-    ${D.accounts.map(a => `<div class="row"><div class="n">${esc(a.nome)}</div><button class="b s sm" data-act="rena" data-v="${a.id}">Rinomina</button><button class="b r sm" data-act="dela" data-v="${a.id}">✕</button></div>`).join('')}
-    <label class="lbl" style="display:block;margin-top:10px">Nuovo account</label><input id="an" maxlength="30" placeholder="Es. Anna">
-    <button class="b" data-act="adda">Aggiungi account</button></div>`;
   return `${filtro}<div class="grid"><div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="card"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
     <div class="card"><div class="lbl">Passivi</div><div class="big">${eur(t.passivi)}</div></div></div>
     ${form}
     <div class="card"><h2>Attivi</h2>${list('attivo')}</div>
     <div class="card"><h2>Passivi</h2>${list('passivo')}</div>
-    ${accCard}
     <div class="card"><h2>Esporta</h2><button class="b" data-act="export">Scarica i dati (CSV per Excel)</button></div>`;
+}
+
+function drawer() {
+  const D = S.data, fa = S.fAcc || 'all', ro = D.readonly;
+  const item = (k, n, sub, extra) => `<div class="it ${fa === k ? 'on' : ''}" data-act="facc" data-v="${esc(k)}"><span class="t">${esc(n)}${sub ? `<small class="lbl" style="display:block;font-weight:400">${sub}</small>` : ''}</span>${extra || ''}</div>`;
+  const rows = D.accounts.map(a => item(a.id, a.nome, '', ro ? '' : `<button class="ic" data-act="rena" data-v="${a.id}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${a.id}" aria-label="Elimina account">✕</button>`)).join('');
+  const add = ro ? '' : (S.addAcc
+    ? `<div style="margin-top:14px"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b" data-act="adda">Aggiungi</button><button class="b s" data-act="addc">Annulla</button></div></div>`
+    : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
+  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}</div>`;
+}
+
+function popup() {
+  const D = S.data, p = S.pop, v = D.voci.find(x => x.id === p.id);
+  if (!v) return '';
+  let body;
+  if (p.mode === 'upd') body = `<label class="lbl">Nuovo valore in euro</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
+  else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(v.nome)}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
+  else body = `<div class="acts" style="flex-direction:column"><button class="b" data-act="popupd">Aggiorna</button><button class="b s" data-act="popedit">Modifica</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
+  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)} · ${esc(accName(v))} · ${eur(v.valore)}</div><div class="msg">${esc(S.msg)}</div>${body}</div>`;
 }
 
 const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(v || 0);
@@ -439,10 +464,30 @@ async function act(el) {
       else await signInWithEmailAndPassword(auth, mailOf(n), p);
       return;
     }
-    if (a === 'logout') { S.tab = 'pat'; S.mode = 'login'; return signOut(auth); }
+    if (a === 'logout') { S.tab = 'pat'; S.mode = 'login'; S.menu = false; S.pop = null; S.fAcc = 'all'; return signOut(auth); }
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
-    if (a === 'facc') { S.fAcc = el.value; S.edit = null; return render(); }
+    if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
+    if (a === 'menu') { S.menu = !S.menu; S.addAcc = false; return render(); }
+    if (a === 'addo') { S.addAcc = true; render(); const i = $('an'); if (i) i.focus(); return; }
+    if (a === 'addc') { S.addAcc = false; return render(); }
+    if (a === 'pop') { S.pop = { id: v, mode: 'menu' }; return render(); }
+    if (a === 'popclose') { S.pop = null; return render(); }
+    if (a === 'popback') { S.pop.mode = 'menu'; return render(); }
+    if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
+    if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
+    if (a === 'popedit') { S.edit = S.pop.id; S.pop = null; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
+    if (a === 'updsave') {
+      const x = D.voci.find(z => z.id === S.pop.id), nv = pnum($('pv').value);
+      if (!isFinite(nv) || nv < 0) { S.msg = 'Inserisci un valore valido (zero o più).'; return render(); }
+      const dati = { tipo: x.tipo, categoria: x.categoria, nome: x.nome, account: x.account || '', valore: r2(nv) };
+      await setDoc(doc(db, 'users', D.uid, 'voci', x.id), dati); Object.assign(x, dati);
+      await syncStorico(); S.pop = null; S.msg = 'Valore aggiornato.'; return render();
+    }
+    if (a === 'delok') {
+      const id = S.pop.id; await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
+      D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
+    }
     if (a === 'dview') { S.dview = v; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
     if (a === 'adda') {
@@ -451,7 +496,7 @@ async function act(el) {
       if (D.accounts.length >= 10) { S.msg = 'Massimo 10 account.'; return render(); }
       if ([D.nome, ...D.accounts.map(x => x.nome)].some(x => x.toLowerCase() === nm.toLowerCase())) { S.msg = 'Esiste già un account con questo nome.'; return render(); }
       const r = await addDoc(collection(db, 'users', D.uid, 'account'), { nome: nm });
-      D.accounts.push({ id: r.id, nome: nm }); D.accounts.sort((x, y) => x.nome.localeCompare(y.nome)); S.msg = 'Account aggiunto.'; return render();
+      D.accounts.push({ id: r.id, nome: nm }); D.accounts.sort((x, y) => x.nome.localeCompare(y.nome)); S.addAcc = false; S.msg = 'Account aggiunto.'; return render();
     }
     if (a === 'rena') {
       const ac = D.accounts.find(x => x.id === v), nm = (prompt('Nuovo nome dell\'account', ac.nome) || '').trim();
@@ -515,7 +560,7 @@ async function act(el) {
     if (a === 'reload-users') { await loadUsers(); return render(); }
     if (a === 'view') {
       const u = S.users.find(x => x.uid === v);
-      S.own = S.data; await loadData(v, u.nome, true); S.fAcc = 'all'; S.tab = 'pat'; return render();
+      S.own = S.data; await loadData(v, u.nome, true); S.fAcc = 'all'; S.menu = false; S.tab = 'pat'; return render();
     }
     if (a === 'back') { S.data = S.own; S.fAcc = 'all'; S.tab = 'adm'; return render(); }
   } catch (e) { S.msg = errText(e); render(); }
@@ -523,7 +568,11 @@ async function act(el) {
 
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT') act(el); });
 document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.act) act(e.target); });
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && $('pn') && document.activeElement === $('pn')) act(document.querySelector('[data-act="login"],[data-act="register"]')); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if ($('pn') && document.activeElement === $('pn')) act(document.querySelector('[data-act="login"],[data-act="register"]'));
+  else if ($('an') && document.activeElement === $('an')) act(document.querySelector('[data-act="adda"]'));
+});
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
