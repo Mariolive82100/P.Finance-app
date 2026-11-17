@@ -58,9 +58,9 @@ svg{width:100%;height:auto}
 .pie.anim .sel{animation:selIn .35s ease-out;transform-origin:180px 150px}
 .pie.anim .lbs{animation:fadeIn .5s ease-out}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes slL{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}
-@keyframes slR{from{transform:translateX(-48px);opacity:0}to{transform:none;opacity:1}}
-main.slL{animation:slL .28s ease-out}main.slR{animation:slR .28s ease-out}
+@keyframes slL{from{transform:translateX(36px)}to{transform:none}}
+@keyframes slR{from{transform:translateX(-36px)}to{transform:none}}
+main{overflow-x:clip}main.slL{animation:slL .22s ease-out}main.slR{animation:slR .22s ease-out}
 .pie text{pointer-events:none}
 @keyframes pieIn{from{transform:rotate(-25deg) scale(.82);opacity:.3}to{transform:none;opacity:1}}
 @keyframes selIn{from{transform:scale(.94)}to{transform:scale(1)}}
@@ -119,7 +119,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.22';
+const VER = '0.23';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -788,7 +788,7 @@ let sw = null;
 document.addEventListener('touchstart', e => {
   if (e.touches.length !== 1) { sw = null; return; }
   const t = e.touches[0];
-  sw = e.target.closest('input,select,textarea,.ov,.pop,.drawer') ? null : { x: t.clientX, y: t.clientY, sc: e.target.closest('.tw,nav') };
+  const tg = e.target; sw = (tg.closest('.ov,.pop,.drawer') || (tg === document.activeElement && /^(INPUT|TEXTAREA)$/.test(tg.tagName))) ? null : { x: t.clientX, y: t.clientY, sc: e.target.closest('.tw,nav') };
 }, { passive: true });
 document.addEventListener('touchcancel', () => { sw = null; }, { passive: true });
 document.addEventListener('touchend', e => {
