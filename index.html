@@ -84,7 +84,7 @@ const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mailOf = n => n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '') + '@pfinance.app';
-const eur = v => new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', maximumFractionDigits:2}).format(v || 0);
+const eur = v => new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', maximumFractionDigits:2, useGrouping:'always'}).format(v || 0);
 const pct = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(1).replace('.', ',') + '%';
 const monthKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 const monthName = k => { const [y, m] = k.split('-'); return MESI[+m - 1] + ' ' + y; };
@@ -113,13 +113,15 @@ function errText(e) {
 
 /* ---------- Dati ---------- */
 async function loadData(uid, nome, readonly) {
-  const [vs, ss] = await Promise.all([
+  const [vs, ss, as] = await Promise.all([
     getDocs(collection(db, 'users', uid, 'voci')),
-    getDocs(collection(db, 'users', uid, 'storico'))
+    getDocs(collection(db, 'users', uid, 'storico')),
+    getDocs(collection(db, 'users', uid, 'account'))
   ]);
+  const accounts = as.docs.map(d => ({ id: d.id, nome: d.data().nome })).sort((a, b) => a.nome.localeCompare(b.nome));
   const voci = vs.docs.map(d => ({ id: d.id, ...d.data() }));
   const storico = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
-  S.data = { uid, nome, readonly, voci, storico };
+  S.data = { uid, nome, readonly, voci, storico, accounts };
   if (!readonly) await syncStorico();
 }
 
@@ -181,16 +183,16 @@ function render() {
     return;
   }
   const D = S.data;
-  const tabs = [['pat', 'Patrimonio'], ['and', 'Andamento'], ['rep', 'Report del mese']];
+  const tabs = [['pat', 'Patrimonio'], ['dis', 'Distribuzione'], ['and', 'Andamento'], ['rep', 'Report del mese']];
   if (isAdmin() && !D.readonly) tabs.push(['adm', 'Amministratore']);
   if (S.tab === 'adm' && !(isAdmin() && !D.readonly)) S.tab = 'pat';
   let body = '';
-  if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
+  if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><h1>P.Finance</h1><span>${esc(S.profile.nome)}</span>
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
-    <div class="msg ${/salvato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>`;
 }
 
 function renderAuth(el) {
@@ -205,28 +207,94 @@ function renderAuth(el) {
     ${reg ? '<p class="note">Dopo la registrazione l\'amministratore dovrà approvarti.</p>' : ''}</div>`;
 }
 
+const accKey = v => v.account || 'main';
+const accName = v => { const D = S.data; if (!v.account) return D.nome; const a = D.accounts.find(x => x.id === v.account); return a ? a.nome : '(account eliminato)'; };
+
 function pagePat() {
-  const D = S.data, t = totals(D.voci), ed = S.edit && D.voci.find(v => v.id === S.edit);
+  const D = S.data, fa = S.fAcc || 'all', ed = S.edit && D.voci.find(v => v.id === S.edit);
+  const vis = D.voci.filter(v => fa === 'all' || accKey(v) === fa), t = totals(vis);
   const tipo = ed ? ed.tipo : (S.newTipo || 'attivo');
+  const accOpts = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
   const list = tp => {
-    const items = D.voci.filter(v => v.tipo === tp).sort((a, b) => b.valore - a.valore);
+    const items = vis.filter(v => v.tipo === tp).sort((a, b) => b.valore - a.valore);
     if (!items.length) return '<p class="note">Nessuna voce.</p>';
-    return items.map(v => `<div class="row"><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}</small></div><div class="v">${eur(v.valore)}</div>
+    return items.map(v => `<div class="row"><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${D.accounts.length ? ' · ' + esc(accName(v)) : ''}</small></div><div class="v">${eur(v.valore)}</div>
       ${D.readonly ? '' : `<button class="b s sm" data-act="edit" data-v="${v.id}">Modifica</button><button class="b r sm" data-act="del" data-v="${v.id}">✕</button>`}</div>`).join('');
   };
+  const filtro = D.accounts.length ? `<div class="card"><label class="lbl">Mostra account</label><select data-act="facc" style="margin-bottom:0"><option value="all">Tutti gli account</option>${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${fa === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>` : '';
+  const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${(ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
   const form = D.readonly ? '' : `<div class="card"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
     <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
+    ${selAcc}
     <label class="lbl">Categoria</label><select id="fc">${CATS[tipo].map(c => `<option ${ed && ed.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
     <label class="lbl">Nome (es. Conto Fineco)</label><input id="fn" maxlength="60" value="${esc(ed ? ed.nome : '')}">
     <label class="lbl">Valore in euro</label><input id="fv" inputmode="decimal" value="${ed ? String(ed.valore).replace('.', ',') : ''}">
     <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div></div>`;
-  return `<div class="grid"><div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
+  const accCard = D.readonly ? '' : `<div class="card"><h2>Account (es. componenti della famiglia)</h2>
+    <div class="row"><div class="n">${esc(D.nome)}<small>Account principale</small></div></div>
+    ${D.accounts.map(a => `<div class="row"><div class="n">${esc(a.nome)}</div><button class="b s sm" data-act="rena" data-v="${a.id}">Rinomina</button><button class="b r sm" data-act="dela" data-v="${a.id}">✕</button></div>`).join('')}
+    <label class="lbl" style="display:block;margin-top:10px">Nuovo account</label><input id="an" maxlength="30" placeholder="Es. Anna">
+    <button class="b" data-act="adda">Aggiungi account</button></div>`;
+  return `${filtro}<div class="grid"><div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="card"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
     <div class="card"><div class="lbl">Passivi</div><div class="big">${eur(t.passivi)}</div></div></div>
     ${form}
     <div class="card"><h2>Attivi</h2>${list('attivo')}</div>
     <div class="card"><h2>Passivi</h2>${list('passivo')}</div>
+    ${accCard}
     <div class="card"><h2>Esporta</h2><button class="b" data-act="export">Scarica i dati (CSV per Excel)</button></div>`;
+}
+
+const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(v || 0);
+const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+
+function treeSvg(topLabel, topVal, groups) {
+  const colW = 176, nw = 160, nh = 46, lh = 52, topY = 4, topH = 52, brY = 100, leafY0 = brY + nh + 14;
+  const n = groups.length, W = Math.max(n * colW, 340), off = (W - n * colW) / 2, mid = W / 2;
+  const maxL = Math.max(1, ...groups.map(g => g.items.length)), H = leafY0 + maxL * lh + 6;
+  const cx = i => off + i * colW + colW / 2, colr = v => v < 0 ? '#b91c1c' : '#16302d';
+  const T = (x, y, s, sz, w, f, an = 'middle') => `<text x="${x}" y="${y}" font-size="${sz}" font-weight="${w}" fill="${f}" text-anchor="${an}">${esc(s)}</text>`;
+  let o = '';
+  groups.forEach((g, i) => {
+    const m = (topY + topH + brY) / 2;
+    o += `<path d="M${mid} ${topY + topH} C${mid} ${m} ${cx(i)} ${m} ${cx(i)} ${brY}" fill="none" stroke="#9db3af" stroke-width="2"/>`;
+  });
+  o += `<rect x="${mid - 95}" y="${topY}" width="190" height="${topH}" rx="12" fill="#0f766e"/>` + T(mid, topY + 22, topLabel, 13, 600, '#fff') + T(mid, topY + 42, eur0(topVal), 15, 700, '#fff');
+  groups.forEach((g, i) => {
+    const x = cx(i), bx = x - nw / 2, rail = bx + 12, lx = rail + 12, lw = bx + nw - lx;
+    o += `<rect x="${bx}" y="${brY}" width="${nw}" height="${nh}" rx="10" fill="#d6f2ee" stroke="#0f766e"/>` + T(x, brY + 19, trunc(g.label, 20), 13, 600, '#16302d') + T(x, brY + 36, eur0(g.sum) + (g.pct ? ' · ' + g.pct : ''), 12, 500, colr(g.sum));
+    if (g.items.length) o += `<line x1="${rail}" x2="${rail}" y1="${brY + nh}" y2="${leafY0 + (g.items.length - 1) * lh + 23}" stroke="#9db3af" stroke-width="2"/>`;
+    g.items.forEach((it, j) => {
+      const y = leafY0 + j * lh;
+      o += `<line x1="${rail}" x2="${lx}" y1="${y + 23}" y2="${y + 23}" stroke="#9db3af" stroke-width="2"/><g><title>${esc(it.nome + ' · ' + it.sub + ' · ' + eur(it.val))}</title>`
+        + `<rect x="${lx}" y="${y}" width="${lw}" height="${lh - 6}" rx="8" fill="#fff" stroke="#c5d5d2"/>`
+        + T(lx + 8, y + 15, trunc(it.nome, 17), 12, 600, '#16302d', 'start') + T(lx + 8, y + 28, trunc(it.sub, 20), 10.5, 400, '#5b7370', 'start')
+        + T(lx + 8, y + 41, eur0(it.val) + (it.pct ? ' · ' + it.pct : ''), 11, 600, colr(it.val), 'start') + '</g>';
+    });
+  });
+  return `<div class="tw"><svg viewBox="0 0 ${W} ${H}" style="min-width:${W}px">${o}</svg></div>`;
+}
+
+function pageDis() {
+  const D = S.data, mode = S.dmode || 'attivi', view = S.dview || 'acc';
+  const vs = D.voci.filter(v => mode === 'netto' || v.tipo === (mode === 'attivi' ? 'attivo' : 'passivo'));
+  const val = v => mode === 'netto' && v.tipo === 'passivo' ? -v.valore : v.valore;
+  const ctl = `<div class="card"><div class="tabs"><button class="b ${view === 'acc' ? '' : 's'}" data-act="dview" data-v="acc">Per account</button><button class="b ${view === 'conti' ? '' : 's'}" data-act="dview" data-v="conti">Per conti</button></div>
+    <select data-act="dmode" style="margin-bottom:0">${[['attivi', 'Mostra: Attivi'], ['passivi', 'Mostra: Passivi'], ['netto', 'Mostra: Patrimonio netto']].map(([k, l]) => `<option value="${k}" ${mode === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`;
+  if (!vs.length) return ctl + '<div class="card">Nessuna voce da mostrare. Inseriscile nella pagina Patrimonio.</div>';
+  const total = vs.reduce((s, v) => s + val(v), 0), G = {};
+  vs.forEach(v => {
+    const k = view === 'acc' ? accKey(v) : v.categoria;
+    const g = G[k] = G[k] || { label: view === 'acc' ? accName(v) : v.categoria, items: [], sum: 0 };
+    g.items.push({ nome: v.nome, val: val(v), sub: view === 'acc' ? v.categoria : accName(v) });
+    g.sum += val(v);
+  });
+  const share = x => mode !== 'netto' && total > 0 ? (x / total * 100).toFixed(1).replace('.', ',') + '%' : '';
+  const groups = Object.values(G).sort((a, b) => Math.abs(b.sum) - Math.abs(a.sum));
+  groups.forEach(g => { g.items.sort((a, b) => Math.abs(b.val) - Math.abs(a.val)); g.items.forEach(i => i.pct = share(i.val)); g.pct = share(g.sum); });
+  const top = { attivi: 'Totale attivi', passivi: 'Totale passivi', netto: 'Patrimonio netto' }[mode];
+  return ctl + `<div class="card"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(top, total, groups)}
+    <p class="note">Le percentuali sono sul totale in cima. Scorri di lato se i rami sono molti.</p></div>`;
 }
 
 function trendSvg(st) {
@@ -350,7 +418,7 @@ function pageAdm() {
 function exportCsv() {
   const D = S.data, n = v => String(v).replace('.', ',');
   const q = s => '"' + String(s).replace(/"/g, '""') + '"';
-  let out = 'Tipo;Categoria;Nome;Valore\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(v.nome), n(v.valore)].join(';')).join('\n');
+  let out = 'Tipo;Categoria;Account;Nome;Valore\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(accName(v)), q(v.nome), n(v.valore)].join(';')).join('\n');
   out += '\n\nMese;Attivi;Passivi;Netto\n' + D.storico.map(s => [s.mese, n(s.attivi), n(s.passivi), n(s.netto)].join(';')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + out], { type: 'text/csv;charset=utf-8' }));
@@ -374,6 +442,29 @@ async function act(el) {
     if (a === 'logout') { S.tab = 'pat'; S.mode = 'login'; return signOut(auth); }
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
+    if (a === 'facc') { S.fAcc = el.value; S.edit = null; return render(); }
+    if (a === 'dview') { S.dview = v; return render(); }
+    if (a === 'dmode') { S.dmode = el.value; return render(); }
+    if (a === 'adda') {
+      const nm = $('an').value.trim();
+      if (!nm) { S.msg = 'Scrivi il nome dell\'account.'; return render(); }
+      if (D.accounts.length >= 10) { S.msg = 'Massimo 10 account.'; return render(); }
+      if ([D.nome, ...D.accounts.map(x => x.nome)].some(x => x.toLowerCase() === nm.toLowerCase())) { S.msg = 'Esiste già un account con questo nome.'; return render(); }
+      const r = await addDoc(collection(db, 'users', D.uid, 'account'), { nome: nm });
+      D.accounts.push({ id: r.id, nome: nm }); D.accounts.sort((x, y) => x.nome.localeCompare(y.nome)); S.msg = 'Account aggiunto.'; return render();
+    }
+    if (a === 'rena') {
+      const ac = D.accounts.find(x => x.id === v), nm = (prompt('Nuovo nome dell\'account', ac.nome) || '').trim();
+      if (!nm || nm === ac.nome) return;
+      if ([D.nome, ...D.accounts.filter(x => x.id !== v).map(x => x.nome)].some(x => x.toLowerCase() === nm.toLowerCase())) { S.msg = 'Esiste già un account con questo nome.'; return render(); }
+      await setDoc(doc(db, 'users', D.uid, 'account', v), { nome: nm }); ac.nome = nm; D.accounts.sort((x, y) => x.nome.localeCompare(y.nome)); return render();
+    }
+    if (a === 'dela') {
+      if (D.voci.some(x => x.account === v)) { S.msg = 'Prima sposta o elimina le voci di questo account.'; return render(); }
+      if (!confirm('Eliminare questo account?')) return;
+      await deleteDoc(doc(db, 'users', D.uid, 'account', v)); D.accounts = D.accounts.filter(x => x.id !== v);
+      if (S.fAcc === v) S.fAcc = 'all'; return render();
+    }
     if (a === 'range') { S.range = +el.value; return render(); }
     if (a === 'editm') { S.editM = v; S.draft = null; render(); return window.scrollTo(0, 0); }
     if (a === 'cancelm') { S.editM = null; return render(); }
@@ -409,7 +500,7 @@ async function act(el) {
       const tipo = $('ft').value, categoria = $('fc').value, nome = $('fn').value.trim();
       const valore = parseFloat($('fv').value.replace(/\./g, '').replace(',', '.'));
       if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
-      const dati = { tipo, categoria, nome, valore: Math.round(valore * 100) / 100 };
+      const fv = $('fa'), dati = { tipo, categoria, nome, account: fv && fv.value !== 'main' ? fv.value : '', valore: Math.round(valore * 100) / 100 };
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); Object.assign(D.voci.find(x => x.id === S.edit), dati); }
       else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
       S.edit = null; await syncStorico(); return render();
@@ -424,9 +515,9 @@ async function act(el) {
     if (a === 'reload-users') { await loadUsers(); return render(); }
     if (a === 'view') {
       const u = S.users.find(x => x.uid === v);
-      S.own = S.data; await loadData(v, u.nome, true); S.tab = 'pat'; return render();
+      S.own = S.data; await loadData(v, u.nome, true); S.fAcc = 'all'; S.tab = 'pat'; return render();
     }
-    if (a === 'back') { S.data = S.own; S.tab = 'adm'; return render(); }
+    if (a === 'back') { S.data = S.own; S.fAcc = 'all'; S.tab = 'adm'; return render(); }
   } catch (e) { S.msg = errText(e); render(); }
 }
 
