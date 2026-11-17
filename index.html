@@ -53,7 +53,12 @@ svg{width:100%;height:auto}
 .tw{overflow-x:auto}
 .stk{position:sticky;top:var(--hh,92px);z-index:4;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 .pie{display:block;margin:0 auto;max-width:260px;width:100%}
-.pie path{cursor:pointer;stroke:#fff;stroke-width:2}
+.pie path,.pie circle{cursor:pointer;stroke:#fff;stroke-width:2}
+.pie.anim{animation:pieIn .4s ease-out}
+.pie.anim .sel{animation:selIn .35s ease-out;transform-origin:110px 110px}
+.pie text{pointer-events:none}
+@keyframes pieIn{from{transform:rotate(-25deg) scale(.82);opacity:.3}to{transform:none;opacity:1}}
+@keyframes selIn{from{transform:scale(.94)}to{transform:scale(1)}}
 .pl{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #eef3f2;font-size:14px;cursor:pointer}
 .pl i{width:12px;height:12px;border-radius:3px;flex:none}
 .pl .a{flex:1}.pl.on{background:#f1f8f7;font-weight:600}
@@ -109,7 +114,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.17';
+const VER = '0.18';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -446,23 +451,26 @@ function pageDis() {
   const stot = dg ? dg.sum : pb ? pb.sum : 0, sel = dg ? (S.pieSel2 != null && slices[S.pieSel2] ? S.pieSel2 : -1) : -1;
   let pieHtml = '';
   if (pb) {
-    const R = 100, C = 110, tot = stot || 1; let ang = -Math.PI / 2, sl = '';
+    const R = 100, C = 110, tot = stot || 1; let ang = -Math.PI / 2, sl = '', lb = '';
     const act = dg ? 'pies2' : 'pies';
     slices.forEach((g, i) => {
       const fr = g.sum / tot; if (fr <= 0) return;
       const a2 = ang + fr * 2 * Math.PI, rr = i === sel ? R + 7 : R, big = fr > 0.5 ? 1 : 0, col = PAL[i % PAL.length];
       const pt1 = [C + rr * Math.cos(ang), C + rr * Math.sin(ang)], pt2 = [C + rr * Math.cos(a2 - 1e-4), C + rr * Math.sin(a2 - 1e-4)];
-      sl += fr >= 0.9999 ? `<circle cx="${C}" cy="${C}" r="${rr}" fill="${col}" data-act="${act}" data-v="${i}" style="cursor:pointer"/>` : `<path d="M${C} ${C}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${col}" data-act="${act}" data-v="${i}"/>`;
+      const sc = i === sel ? ' class="sel"' : '', am = ang + fr * Math.PI;
+      if (fr >= 0.07) lb += `<text x="${(C + 78 * Math.cos(am)).toFixed(1)}" y="${(C + 78 * Math.sin(am)).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="600" fill="#fff" stroke="rgba(0,0,0,.5)" stroke-width="2.4" paint-order="stroke"><tspan x="${(C + 78 * Math.cos(am)).toFixed(1)}" dy="-1">${esc(trunc(g.label, 9))}</tspan><tspan x="${(C + 78 * Math.cos(am)).toFixed(1)}" dy="10">${g.pct}</tspan></text>`;
+      sl += fr >= 0.9999 ? `<circle${sc} cx="${C}" cy="${C}" r="${rr}" fill="${col}" data-act="${act}" data-v="${i}" style="cursor:pointer"/>` : `<path${sc} d="M${C} ${C}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${col}" data-act="${act}" data-v="${i}"/>`;
       ang = a2;
     });
     const cl = sel >= 0 ? slices[sel].label : dg ? dg.label : pb.label, cv = sel >= 0 ? slices[sel].sum : stot;
     const hole = `<circle cx="${C}" cy="${C}" r="52" fill="#fff"/><text x="${C}" y="${C - 4}" text-anchor="middle" font-size="12" fill="#5b7370">${esc(trunc(cl, 14))}</text><text x="${C}" y="${C + 16}" text-anchor="middle" font-size="16" font-weight="700" fill="#16302d">${eur0(cv)}</text>`;
     const top = dg ? `<div class="banner" style="margin-bottom:8px"><span><b>${esc(pb.label)}</b> › ${esc(dg.label)}</span><button class="b sm" data-act="pieb">← Indietro</button></div>`
       : `<div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>`;
-    pieHtml = `<div class="card">${top}<svg class="pie" viewBox="0 0 220 220">${sl}${hole}</svg>
+    pieHtml = `<div class="card">${top}<svg class="pie${S.anim ? ' anim' : ''}" viewBox="0 0 220 220">${sl}${hole}${lb}</svg>
     ${slices.map((g, i) => `<div class="pl ${i === sel ? 'on' : ''}" data-act="${act}" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}${dg ? `<small style="display:block;font-weight:400;color:#5b7370">${esc(g.sub)}</small>` : g.n ? `<small style="color:#5b7370;font-weight:400"> · ${g.n} ${g.n === 1 ? 'voce' : 'voci'}</small>` : ''}</span><span>${eur0(g.sum)} · ${g.pct}</span>${dg ? '' : '<span style="color:#5b7370">›</span>'}</div>`).join('')}
     ${dg ? '' : '<p class="note">Tocca una fetta per vedere il dettaglio.</p>'}</div>`;
   }
+  S.anim = false;
   return ctl + pieHtml + `<div class="card"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(D.voci), br)}
     <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div>`;
 }
@@ -640,10 +648,10 @@ async function act(el) {
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
     if (a === 'dview') { S.dview = v; S.pieSel = null; S.pieSel2 = null; return render(); }
-    if (a === 'piet') { S.pie = v; S.pieSel = null; S.pieSel2 = null; return render(); }
-    if (a === 'pies') { S.pieSel = +v; S.pieSel2 = null; return render(); }
-    if (a === 'pies2') { S.pieSel2 = S.pieSel2 === +v ? null : +v; return render(); }
-    if (a === 'pieb') { S.pieSel = null; S.pieSel2 = null; return render(); }
+    if (a === 'piet') { S.anim = true; S.pie = v; S.pieSel = null; S.pieSel2 = null; return render(); }
+    if (a === 'pies') { S.anim = true; S.pieSel = +v; S.pieSel2 = null; return render(); }
+    if (a === 'pies2') { S.anim = true; S.pieSel2 = S.pieSel2 === +v ? null : +v; return render(); }
+    if (a === 'pieb') { S.anim = true; S.pieSel = null; S.pieSel2 = null; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
     if (a === 'adda') {
       const nm = $('an').value.trim();
@@ -742,14 +750,24 @@ async function act(el) {
   } catch (e) { S.msg = errText(e); render(); }
 }
 
-let tx0 = null, ty0 = 0;
-document.addEventListener('touchstart', e => { const t = e.touches[0]; tx0 = e.target.closest('.tw,input,select,textarea,.ov,.pop,.drawer') ? null : t.clientX; ty0 = t.clientY; }, { passive: true });
+let sw = null;
+document.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) { sw = null; return; }
+  const t = e.touches[0];
+  sw = e.target.closest('input,select,textarea,.ov,.pop,.drawer') ? null : { x: t.clientX, y: t.clientY, sc: e.target.closest('.tw,nav') };
+}, { passive: true });
+document.addEventListener('touchcancel', () => { sw = null; }, { passive: true });
 document.addEventListener('touchend', e => {
-  if (tx0 === null || !S.data || S.menu || S.pop) return;
-  const t = e.changedTouches[0], dx = t.clientX - tx0, dy = t.clientY - ty0; tx0 = null;
-  if (Math.abs(dx) < 70 || Math.abs(dy) > 45 || Math.abs(dx) < Math.abs(dy) * 2) return;
+  const st = sw; sw = null;
+  if (!st || !S.data || S.menu || S.pop) return;
+  const t = e.changedTouches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
+  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  if (st.sc) { const m = st.sc.scrollWidth - st.sc.clientWidth; if (m > 4 && (dx < 0 ? st.sc.scrollLeft < m - 4 : st.sc.scrollLeft > 4)) return; }
   const ord = ['pat', 'dis', 'and', 'rep'], i = ord.indexOf(S.tab), n = i + (dx < 0 ? 1 : -1);
-  if (i >= 0 && n >= 0 && n < ord.length) { S.tab = ord[n]; render(); window.scrollTo(0, 0); }
+  if (i >= 0 && n >= 0 && n < ord.length) {
+    S.tab = ord[n]; render(); window.scrollTo(0, 0);
+    const on = document.querySelector('nav button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
 }, { passive: true });
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT') act(el); });
 document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.act) act(e.target); });
