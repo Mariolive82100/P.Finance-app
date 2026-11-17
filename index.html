@@ -52,10 +52,15 @@ svg{width:100%;height:auto}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .tw{overflow-x:auto}
 .stk{position:sticky;top:var(--hh,92px);z-index:4;box-shadow:0 2px 6px rgba(0,0,0,.12)}
-.pie{display:block;margin:0 auto;max-width:260px;width:100%}
+.pie{display:block;margin:0 auto;max-width:420px;width:100%}
 .pie path,.pie circle{cursor:pointer;stroke:#fff;stroke-width:2}
-.pie.anim{animation:pieIn .4s ease-out}
-.pie.anim .sel{animation:selIn .35s ease-out;transform-origin:110px 110px}
+.pie.anim .pg{animation:pieIn .4s ease-out;transform-origin:180px 125px}
+.pie.anim .sel{animation:selIn .35s ease-out;transform-origin:180px 125px}
+.pie.anim .lbs{animation:fadeIn .5s ease-out}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slL{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}
+@keyframes slR{from{transform:translateX(-48px);opacity:0}to{transform:none;opacity:1}}
+main.slL{animation:slL .28s ease-out}main.slR{animation:slR .28s ease-out}
 .pie text{pointer-events:none}
 @keyframes pieIn{from{transform:rotate(-25deg) scale(.82);opacity:.3}to{transform:none;opacity:1}}
 @keyframes selIn{from{transform:scale(.94)}to{transform:scale(1)}}
@@ -114,7 +119,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.18';
+const VER = '0.19';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -451,22 +456,32 @@ function pageDis() {
   const stot = dg ? dg.sum : pb ? pb.sum : 0, sel = dg ? (S.pieSel2 != null && slices[S.pieSel2] ? S.pieSel2 : -1) : -1;
   let pieHtml = '';
   if (pb) {
-    const R = 100, C = 110, tot = stot || 1; let ang = -Math.PI / 2, sl = '', lb = '';
-    const act = dg ? 'pies2' : 'pies';
+    const R = 78, CX = 180, CY = 125, tot = stot || 1; let ang = -Math.PI / 2, sl = '';
+    const act = dg ? 'pies2' : 'pies', L = { l: [], r: [] };
     slices.forEach((g, i) => {
       const fr = g.sum / tot; if (fr <= 0) return;
       const a2 = ang + fr * 2 * Math.PI, rr = i === sel ? R + 7 : R, big = fr > 0.5 ? 1 : 0, col = PAL[i % PAL.length];
-      const pt1 = [C + rr * Math.cos(ang), C + rr * Math.sin(ang)], pt2 = [C + rr * Math.cos(a2 - 1e-4), C + rr * Math.sin(a2 - 1e-4)];
+      const pt1 = [CX + rr * Math.cos(ang), CY + rr * Math.sin(ang)], pt2 = [CX + rr * Math.cos(a2 - 1e-4), CY + rr * Math.sin(a2 - 1e-4)];
       const sc = i === sel ? ' class="sel"' : '', am = ang + fr * Math.PI;
-      if (fr >= 0.07) lb += `<text x="${(C + 78 * Math.cos(am)).toFixed(1)}" y="${(C + 78 * Math.sin(am)).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="600" fill="#fff" stroke="rgba(0,0,0,.5)" stroke-width="2.4" paint-order="stroke"><tspan x="${(C + 78 * Math.cos(am)).toFixed(1)}" dy="-1">${esc(trunc(g.label, 9))}</tspan><tspan x="${(C + 78 * Math.cos(am)).toFixed(1)}" dy="10">${g.pct}</tspan></text>`;
-      sl += fr >= 0.9999 ? `<circle${sc} cx="${C}" cy="${C}" r="${rr}" fill="${col}" data-act="${act}" data-v="${i}" style="cursor:pointer"/>` : `<path${sc} d="M${C} ${C}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${col}" data-act="${act}" data-v="${i}"/>`;
+      if (fr >= 0.025) L[Math.cos(am) >= 0 ? 'r' : 'l'].push({ i, am, rr, y: CY + (R + 20) * Math.sin(am), t: trunc(g.label, 13) + ' ' + g.pct });
+      sl += fr >= 0.9999 ? `<circle${sc} cx="${CX}" cy="${CY}" r="${rr}" fill="${col}" data-act="${act}" data-v="${i}"/>` : `<path${sc} d="M${CX} ${CY}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${col}" data-act="${act}" data-v="${i}"/>`;
       ang = a2;
     });
+    let lb = '';
+    ['l', 'r'].forEach(sd => {
+      const arr = L[sd].sort((x, y) => x.y - y.y);
+      for (let k = 1; k < arr.length; k++) if (arr[k].y - arr[k - 1].y < 14) arr[k].y = arr[k - 1].y + 14;
+      arr.forEach(o => {
+        const cs = Math.cos(o.am), sn = Math.sin(o.am), x1 = CX + (o.rr - 2) * cs, y1 = CY + (o.rr - 2) * sn, x2 = CX + (R + 14) * cs, y2 = CY + (R + 14) * sn, x3 = CX + (sd === 'r' ? 1 : -1) * (R + 24);
+        const yy = Math.min(Math.max(o.y, 10), 245);
+        lb += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}L${x3.toFixed(1)} ${yy.toFixed(1)}" fill="none" stroke="${PAL[o.i % PAL.length]}" stroke-width="1.3"/><text x="${(x3 + (sd === 'r' ? 3 : -3)).toFixed(1)}" y="${(yy + 3.5).toFixed(1)}" text-anchor="${sd === 'r' ? 'start' : 'end'}" font-size="10.5" font-weight="${o.i === sel ? 700 : 500}" fill="#16302d">${esc(o.t)}</text>`;
+      });
+    });
     const cl = sel >= 0 ? slices[sel].label : dg ? dg.label : pb.label, cv = sel >= 0 ? slices[sel].sum : stot;
-    const hole = `<circle cx="${C}" cy="${C}" r="52" fill="#fff"/><text x="${C}" y="${C - 4}" text-anchor="middle" font-size="12" fill="#5b7370">${esc(trunc(cl, 14))}</text><text x="${C}" y="${C + 16}" text-anchor="middle" font-size="16" font-weight="700" fill="#16302d">${eur0(cv)}</text>`;
+    const hole = `<circle cx="${CX}" cy="${CY}" r="42" fill="#fff" style="stroke:none;cursor:default"/><text x="${CX}" y="${CY - 3}" text-anchor="middle" font-size="10.5" fill="#5b7370">${esc(trunc(cl, 12))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="14" font-weight="700" fill="#16302d">${eur0(cv)}</text>`;
     const top = dg ? `<div class="banner" style="margin-bottom:8px"><span><b>${esc(pb.label)}</b> › ${esc(dg.label)}</span><button class="b sm" data-act="pieb">← Indietro</button></div>`
       : `<div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>`;
-    pieHtml = `<div class="card">${top}<svg class="pie${S.anim ? ' anim' : ''}" viewBox="0 0 220 220">${sl}${hole}${lb}</svg>
+    pieHtml = `<div class="card">${top}<svg class="pie${S.anim ? ' anim' : ''}" viewBox="0 0 360 250"><g class="pg">${sl}</g>${hole}<g class="lbs">${lb}</g></svg>
     ${slices.map((g, i) => `<div class="pl ${i === sel ? 'on' : ''}" data-act="${act}" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}${dg ? `<small style="display:block;font-weight:400;color:#5b7370">${esc(g.sub)}</small>` : g.n ? `<small style="color:#5b7370;font-weight:400"> · ${g.n} ${g.n === 1 ? 'voce' : 'voci'}</small>` : ''}</span><span>${eur0(g.sum)} · ${g.pct}</span>${dg ? '' : '<span style="color:#5b7370">›</span>'}</div>`).join('')}
     ${dg ? '' : '<p class="note">Tocca una fetta per vedere il dettaglio.</p>'}</div>`;
   }
@@ -766,6 +781,7 @@ document.addEventListener('touchend', e => {
   const ord = ['pat', 'dis', 'and', 'rep'], i = ord.indexOf(S.tab), n = i + (dx < 0 ? 1 : -1);
   if (i >= 0 && n >= 0 && n < ord.length) {
     S.tab = ord[n]; render(); window.scrollTo(0, 0);
+    const mn = document.querySelector('main'); if (mn) mn.classList.add(dx < 0 ? 'slL' : 'slR');
     const on = document.querySelector('nav button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
 }, { passive: true });
