@@ -54,6 +54,7 @@ svg{width:100%;height:auto}
 .stk{position:sticky;top:var(--hh,92px);z-index:4;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 .pie{display:block;margin:0 auto;max-width:520px;width:100%}
 .pie .dim{opacity:.35}
+.terms h3{font-size:15px;margin:14px 0 4px}.terms p{margin:0 0 6px;line-height:1.45}
 .tip{position:fixed;display:none;z-index:50;background:#16302d;color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:260px}
 .pie path{transition:opacity .2s}
 .ps2{padding-left:24px;font-size:13px}
@@ -125,7 +126,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.26';
+const VER = '0.27';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -261,11 +262,28 @@ onAuthStateChanged(auth, async user => {
 });
 const isAdmin = () => S.user && S.user.email === ADMIN_EMAIL;
 
+const TERMS_V = 1;
+const termsHtml = () => `<h2>Termini e condizioni</h2><p class="lbl">Versione ${TERMS_V} · P.Finance (beta)</p>
+<h3>1. Cos'è questa app</h3><p>Uno strumento per tenere traccia del proprio patrimonio e per imparare i concetti di base della finanza personale. Non è consulenza finanziaria, fiscale o legale: i commenti del report sono informazioni generali a scopo educativo.</p>
+<h3>2. Nessuna garanzia</h3><p>L'app è in versione di prova e può contenere errori o interruzioni. I calcoli dipendono dai dati che inserisci tu, di cui sei responsabile. Il titolare non risponde delle decisioni prese in base a ciò che l'app mostra.</p>
+<h3>3. Titolare e contatti</h3><p>Il titolare è Mario T. Per qualsiasi richiesta (informazioni, correzione o cancellazione dei dati) contattalo direttamente.</p>
+<h3>4. Quali dati vengono salvati</h3><p>Il nome scelto, il PIN (gestito dal servizio di accesso e non leggibile dal titolare), le voci di attivo e passivo, i sotto-account e lo storico mensile. Non vengono raccolti altri dati e non vengono venduti né ceduti a terzi.</p>
+<h3>5. Chi può vedere i tuoi dati</h3><p>Ogni iscritto vede solo i propri dati. Nemmeno l'amministratore può consultarli tramite l'app. Resta un limite tecnico: i dati sono conservati sul servizio Firebase di Google e chi gestisce quel servizio potrebbe accedervi dal suo pannello di controllo. Il titolare si impegna a non farlo.</p>
+<h3>6. Accesso e sicurezza</h3><p>Il PIN è personale: non condividerlo. L'accesso è soggetto ad approvazione e il titolare può sospendere un account.</p>
+<h3>7. Cancellazione</h3><p>Puoi chiedere in qualsiasi momento la cancellazione del tuo account e di tutti i tuoi dati. Puoi anche scaricare i tuoi dati dalla funzione di esportazione.</p>
+<h3>8. Modifiche ai termini</h3><p>Se i termini cambiano, alla successiva apertura dell'app ti verrà chiesto di accettarli di nuovo per continuare a usarla.</p>`;
+function termsGate() {
+  $('app').innerHTML = `<div class="auth card" style="max-width:640px">${termsHtml()}<label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0"><input type="checkbox" id="tc" style="width:auto;margin-top:3px"><span>Ho letto e accetto i termini e condizioni.</span></label><div class="msg">${esc(S.msg)}</div>
+    <div class="acts"><button class="b" data-act="accept">Accetto e continuo</button><button class="b s" data-act="logout">Esci</button></div></div>`;
+}
+function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="note">Hai accettato la versione ${S.profile && S.profile.termini ? S.profile.termini : TERMS_V}.</p></div>`; }
+
 /* ---------- Schermate ---------- */
 function render() {
   const el = $('app');
   if (S.loading) { el.innerHTML = '<div class="auth card">Caricamento…</div>'; return; }
   if (!S.user) return renderAuth(el);
+  if (S.profile && (S.profile.termini || 0) < TERMS_V) return termsGate();
   if (!S.profile || !S.profile.approved) {
     el.innerHTML = `<div class="auth card"><h2>Registrazione ricevuta</h2>
       <p>Ciao ${esc(S.profile?.nome || '')}. Attendi l'approvazione dell'amministratore.</p>
@@ -278,7 +296,7 @@ function render() {
   const pend = isAdmin() && !D.readonly ? S.users.filter(u => !u.approved).length : 0;
   if (S.tab === 'adm' && !(isAdmin() && !D.readonly)) S.tab = 'pat';
   let body = '';
-  if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
+  if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
@@ -389,7 +407,7 @@ function drawer() {
     : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
   const pend = isAdmin() && !ro ? S.users.filter(u => !u.approved).length : 0;
   const adm = isAdmin() && !ro ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
-  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}${adm}</div>`;
+  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
 }
 
 function popup() {
@@ -637,6 +655,12 @@ async function act(el) {
   let a = el.dataset.act; const v = el.dataset.v, D = S.data;
   S.msg = '';
   try {
+    if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
+    if (a === 'accept') {
+      if (!$('tc') || !$('tc').checked) { S.msg = 'Per continuare devi spuntare la casella di accettazione.'; return render(); }
+      await updateDoc(doc(db, 'users', S.user.uid), { termini: TERMS_V, terminiAt: serverTimestamp() });
+      S.profile.termini = TERMS_V; S.msg = ''; return render();
+    }
     if (a === 'mode') { S.mode = v; return render(); }
     if (a === 'login' || a === 'register') {
       const n = $('nm').value.trim(), p = $('pn').value.trim();
