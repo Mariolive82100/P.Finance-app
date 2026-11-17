@@ -58,6 +58,13 @@ svg{width:100%;height:auto}
 .pga{position:fixed;top:55%;z-index:6;width:30px;height:54px;border:0;background:rgba(15,118,110,.55);color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:0}
 .pga:hover{background:rgba(15,118,110,.85)}
 .pga.l{left:0;border-radius:0 14px 14px 0}.pga.r{right:0;border-radius:14px 0 0 14px}
+.chh{display:flex;justify-content:space-between;align-items:center;gap:8px}.chh h2{margin:0}
+.lcw{touch-action:pan-y;user-select:none;-webkit-user-select:none}.lcw svg{display:block;width:100%;height:auto}
+.zc{display:flex;gap:6px;margin:6px 0 2px;flex-wrap:wrap}
+.fs{position:fixed;inset:0;background:#fff;z-index:40;padding:10px 12px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+tr.cl{cursor:pointer}tr.cl:hover{background:#f1f8f7}
+.ib{margin-left:8px;width:20px;height:20px;border-radius:50%;border:1.5px solid #0f766e;background:#fff;color:#0f766e;font-size:12px;font-weight:700;font-style:italic;line-height:1;padding:0;cursor:pointer;vertical-align:middle}
+.ex{background:#f1f8f7;border-radius:8px;padding:8px 10px;margin:2px 0 8px;line-height:1.45}
 .terms h3{font-size:15px;margin:14px 0 4px}.terms p{margin:0 0 6px;line-height:1.45}
 .tip{position:fixed;display:none;z-index:50;background:#16302d;color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:260px}
 .pie path{transition:opacity .2s}
@@ -130,7 +137,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.33';
+const VER = '0.34';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -285,7 +292,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 /* ---------- Schermate ---------- */
 const ORD = ['pat', 'dis', 'and', 'rep'];
 function arrows() {
-  const i = ORD.indexOf(S.tab); if (i < 0 || S.menu || S.pop) return '';
+  const i = ORD.indexOf(S.tab); if (i < 0 || S.menu || S.pop || S.popm || S.fs) return '';
   return (i > 0 ? '<button class="pga l" data-act="pg" data-v="-1" aria-label="Pagina precedente">‹</button>' : '') + (i < ORD.length - 1 ? '<button class="pga r" data-act="pg" data-v="1" aria-label="Pagina successiva">›</button>' : '');
 }
 function render() {
@@ -310,7 +317,7 @@ function render() {
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
-    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${arrows()}`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
 }
 
@@ -544,24 +551,152 @@ function trendSvg(st) {
 const compact = v => new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 const shortM = k => { const [y, m] = k.split('-'); return MESI[+m - 1].slice(0, 3) + ' ' + y.slice(2); };
 
-function lineSvg(st, series) {
-  const W = 600, H = 220, L = 50, R = 12, T = 12, B = 28;
-  const all = st.flatMap(s => series.map(x => s[x.k]));
-  let mn = Math.min(0, ...all), mx = Math.max(0, ...all); if (mx === mn) mx = mn + 1;
-  const x = i => L + i * (W - L - R) / (st.length - 1), y = v => T + (mx - v) / (mx - mn) * (H - T - B);
-  const step = Math.ceil(st.length / 6);
-  let o = [mn, (mn + mx) / 2, mx].map(t => `<line x1="${L}" x2="${W - R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="#e2eceb"/><text x="${L - 6}" y="${(y(t) + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`).join('');
-  o += st.map((s, i) => i % step === 0 || i === st.length - 1 ? `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="middle">${shortM(s.mese)}</text>` : '').join('');
-  series.forEach(se => {
-    o += `<polyline points="${st.map((s, i) => x(i).toFixed(1) + ',' + y(s[se.k]).toFixed(1)).join(' ')}" fill="none" stroke="${se.c}" stroke-width="2.5"/>`;
-    if (st.length <= 18) o += st.map((s, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(s[se.k]).toFixed(1)}" r="3.5" fill="${se.c}"/>`).join('');
+/* ---------- Grafici interattivi ---------- */
+const CH = {}, CHK = {}, CHS = {}, ZM = {};
+const CW = () => Math.max(300, Math.min(innerWidth, 1320) - 62), CHt = w => Math.max(210, Math.min(400, Math.round(w * 0.6)));
+const lcInit = (id, key, pts, series, W, H) => { CH[id] = { pts, series, key, W, H, geom: null }; CHK[key] = CH[id]; };
+function lcSvg(id) {
+  const c = CH[id], pts = c.pts, n = pts.length, W = c.W, H = c.H, L = 50, R = 12, T = 12, B = 28;
+  let z = ZM[c.key]; const sig = pts[0].lab + '|' + pts[n - 1].lab;
+  if (!z || z.n !== n || z.sig !== sig) z = ZM[c.key] = { a: 0, b: Math.max(1, n - 1), n, sig };
+  const a = z.a, b = z.b, zoomed = a > 0.001 || b < n - 1.001;
+  const lo = Math.max(0, Math.ceil(a - 1e-6)), hi = Math.min(n - 1, Math.floor(b + 1e-6));
+  let mn = Infinity, mx = -Infinity;
+  for (let i = lo; i <= hi; i++) c.series.forEach(s => { const v = pts[i][s.k]; if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; } });
+  if (!isFinite(mn)) { mn = 0; mx = 1; }
+  if (!zoomed) { mn = Math.min(0, mn); mx = Math.max(0, mx); } else { const p = (mx - mn) * 0.08 || 1; mn -= p; mx += p; }
+  if (mx === mn) mx = mn + 1;
+  const x = i => L + (i - a) / (b - a) * (W - L - R), y = v => T + (mx - v) / (mx - mn) * (H - T - B);
+  c.geom = { a, b, L, R, T, B, x, n };
+  let o = `<defs><clipPath id="cp${id}"><rect x="${L}" y="${T - 4}" width="${W - L - R}" height="${H - T - B + 8}"/></clipPath></defs>`;
+  for (let k = 0; k < 4; k++) { const t = mn + (mx - mn) * k / 3; o += `<line x1="${L}" x2="${W - R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="#e2eceb"/><text x="${L - 6}" y="${(y(t) + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`; }
+  const vc = hi - lo + 1, step = Math.max(1, Math.ceil(vc / Math.max(2, Math.floor((W - L - R) / 62))));
+  for (let i = lo; i <= hi; i++) if ((i - lo) % step === 0) o += `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="${x(i) > W - R - 22 ? 'end' : 'middle'}">${esc(pts[i].lab)}</text>`;
+  const i0 = Math.max(0, lo - 1), i1 = Math.min(n - 1, hi + 1);
+  c.series.forEach(se => {
+    let seg = [];
+    for (let i = i0; i <= i1; i++) if (pts[i][se.k] != null) seg.push(x(i).toFixed(1) + ',' + y(pts[i][se.k]).toFixed(1));
+    o += `<g clip-path="url(#cp${id})"><polyline points="${seg.join(' ')}" fill="none" stroke="${se.c}" stroke-width="2.5" ${se.dash ? 'stroke-dasharray="6 4"' : ''} stroke-linejoin="round"/>`;
+    if (vc <= 18) for (let i = lo; i <= hi; i++) if (pts[i][se.k] != null) o += `<circle cx="${x(i).toFixed(1)}" cy="${y(pts[i][se.k]).toFixed(1)}" r="3.5" fill="${se.c}"/>`;
+    o += '</g>';
   });
+  c.geom.y = y;
+  return `<svg class="lc" viewBox="0 0 ${W} ${H}">${o}<g class="xh"></g></svg>`;
+}
+function lcBlock(id) { return `<div class="lcw" data-ch="${id}" data-k="${CH[id].key}">${lcSvg(id)}</div>`; }
+const lcLegend = ser => `<div class="legend">${ser.map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}</div>`;
+const lcZoomBar = key => `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
+function lcCard(key, title, pts, series) {
+  CHS[key] = { title, pts, series };
+  lcInit(key, key, pts, series, CW(), CHt(CW()));
+  return `<div class="card"><div class="chh"><h2>${esc(title)}</h2><button class="b s sm" data-act="fs" data-v="${key}" aria-label="Schermo intero">⛶</button></div>${lcLegend(series)}${lcBlock(key)}${lcZoomBar(key)}
+    <p class="note" style="margin:4px 0 0">Scorri il dito sul grafico per vedere i valori. Pizzica con due dita (o Ctrl + rotellina) per ingrandire un periodo.</p></div>`;
+}
+function fsOverlay() {
+  const s = CHS[S.fs]; if (!s) return '';
+  const id = S.fs + 'F';
+  lcInit(id, S.fs, s.pts, s.series, Math.max(320, innerWidth - 24), Math.max(200, innerHeight - 150));
+  return `<div class="fs"><div class="chh"><h2>${esc(s.title)}</h2><button class="b sm" data-act="fs" data-v="">✕ Chiudi</button></div>${lcLegend(s.series)}${lcBlock(id)}${lcZoomBar(S.fs)}</div>`;
+}
+function lcRepaint(key) { document.querySelectorAll('.lcw[data-k="' + key + '"]').forEach(w => { if (CH[w.dataset.ch]) w.innerHTML = lcSvg(w.dataset.ch); }); }
+function lcSet(key, a, b) {
+  const c = CHK[key]; if (!c) return; const n = c.pts.length, mins = Math.min(n - 1, 3);
+  if (b - a < mins) { const m = (a + b) / 2; a = m - mins / 2; b = m + mins / 2; }
+  if (b - a > n - 1) { a = 0; b = n - 1; }
+  if (a < 0) { b -= a; a = 0; } if (b > n - 1) { a -= b - (n - 1); b = n - 1; }
+  ZM[key] = { a: Math.max(0, a), b, n, sig: ZM[key] ? ZM[key].sig : c.pts[0].lab + '|' + c.pts[n - 1].lab };
+}
+function lcZoom(key, f, ci) { const z = ZM[key] || { a: 0, b: CHK[key].pts.length - 1 }; lcSet(key, ci - (ci - z.a) / f, ci + (z.b - ci) / f); lcRepaint(key); }
+function lcPan(key, di) { const z = ZM[key]; if (!z) return; lcSet(key, z.a + di, z.b + di); lcRepaint(key); }
+function lcIdx(w, clientX) {
+  const c = CH[w.dataset.ch], svg = w.querySelector('svg'); if (!c || !c.geom || !svg) return null;
+  const r = svg.getBoundingClientRect(), g = c.geom, px = (clientX - r.left) * c.W / r.width;
+  return g.a + (px - g.L) / (c.W - g.L - g.R) * (g.b - g.a);
+}
+function lcCross(w, clientX) {
+  const c = CH[w.dataset.ch]; if (!c || !c.geom) return; const g = c.geom, fi = lcIdx(w, clientX); if (fi === null) return;
+  const idx = Math.min(Math.floor(g.b + 1e-6), Math.max(Math.ceil(g.a - 1e-6), Math.round(fi))), pt = c.pts[idx], xs = g.x(idx), xh = w.querySelector('.xh'); if (!pt || !xh) return;
+  const rows = c.series.filter(s => pt[s.k] != null), bw = 178, bh = 22 + rows.length * 15, bx = Math.max(4, Math.min(c.W - bw - 4, xs + 10 + bw > c.W - 4 ? xs - 10 - bw : xs + 10));
+  xh.innerHTML = `<line x1="${xs.toFixed(1)}" x2="${xs.toFixed(1)}" y1="${g.T}" y2="${c.H - g.B}" stroke="#5b7370" stroke-dasharray="3 3"/>`
+    + rows.map(s => `<circle cx="${xs.toFixed(1)}" cy="${g.y(pt[s.k]).toFixed(1)}" r="4.5" fill="#fff" stroke="${s.c}" stroke-width="2.5"/>`).join('')
+    + `<rect x="${bx.toFixed(1)}" y="${g.T + 2}" width="${bw}" height="${bh}" rx="6" fill="#16302d" opacity=".93"/><text x="${(bx + 8).toFixed(1)}" y="${g.T + 16}" font-size="11.5" font-weight="700" fill="#fff">${esc(pt.long || pt.lab)}</text>`
+    + rows.map((s, j) => `<text x="${(bx + 8).toFixed(1)}" y="${g.T + 31 + j * 15}" font-size="11" fill="${s.c === '#0f766e' ? '#5eead4' : s.c === '#b91c1c' ? '#fca5a5' : s.c === '#1d4ed8' ? '#93c5fd' : '#e2e8f0'}">${esc(s.l)}: ${eur(pt[s.k])}</text>`).join('');
+}
+const PT = new Map(); let PINCH = null;
+document.addEventListener('pointerdown', e => {
+  const w = e.target.closest && e.target.closest('.lcw');
+  if (e.pointerType === 'touch') { const t = e.target.closest && e.target.closest('[data-tip]'); tipAt(e, t); }
+  if (!w) return;
+  PT.set(e.pointerId, { x: e.clientX, w }); PINCH = null;
+  if (PT.size === 1) lcCross(w, e.clientX);
+});
+document.addEventListener('pointermove', e => {
+  const pr = PT.get(e.pointerId);
+  if (pr) {
+    const prevX = pr.x; pr.x = e.clientX; const w = pr.w, key = w.dataset.k;
+    if (PT.size >= 2) {
+      const [p1, p2] = [...PT.values()], d = Math.abs(p1.x - p2.x), m = (p1.x + p2.x) / 2, fi = lcIdx(w, m);
+      if (PINCH && PINCH.d > 8 && d > 8 && fi !== null) { lcZoom(key, d / PINCH.d, fi); const f2 = lcIdx(w, m); if (f2 !== null) lcPan(key, fi - f2); }
+      PINCH = { d };
+    } else if (e.pointerType === 'mouse' && e.buttons && ZM[key] && (ZM[key].a > 0.001 || ZM[key].b < ZM[key].n - 1.001)) {
+      const f1 = lcIdx(w, prevX), f2 = lcIdx(w, e.clientX); if (f1 !== null && f2 !== null) lcPan(key, f1 - f2);
+    } else lcCross(w, e.clientX);
+  } else if (e.pointerType === 'mouse') { const w = e.target.closest && e.target.closest('.lcw'); if (w) lcCross(w, e.clientX); }
+});
+const pend0 = e => { PT.delete(e.pointerId); PINCH = null; };
+document.addEventListener('pointerup', pend0); document.addEventListener('pointercancel', pend0);
+document.addEventListener('mouseout', e => { const w = e.target.closest && e.target.closest('.lcw'); if (w && !(e.relatedTarget && w.contains(e.relatedTarget))) { const xh = w.querySelector('.xh'); if (xh) xh.innerHTML = ''; } });
+document.addEventListener('wheel', e => {
+  const w = e.target.closest && e.target.closest('.lcw'); if (!w || !(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault(); const fi = lcIdx(w, e.clientX); if (fi !== null) lcZoom(w.dataset.k, e.deltaY < 0 ? 1.25 : 0.8, fi);
+}, { passive: false });
+window.addEventListener('resize', () => { if (S.fs) render(); });
+
+/* confronto periodo su periodo */
+const addMk = (k, d) => { const [y, m] = k.split('-').map(Number); return monthKey(new Date(y, m - 1 + d, 1)); };
+function cmpData(all, mode) {
+  const map = {}; all.forEach(s => map[s.mese] = s.netto);
+  const last = all[all.length - 1].mese; let kA;
+  if (mode === 'y') { const y = +last.slice(0, 4), m = +last.slice(5); kA = Array.from({ length: m }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`); }
+  else { const N = +mode; kA = Array.from({ length: N }, (_, i) => addMk(last, i - N + 1)); }
+  const kB = kA.map(k => addMk(k, mode === 'y' ? -12 : -(+mode)));
+  const dl = k => map[k] != null && map[addMk(k, -1)] != null ? map[k] - map[addMk(k, -1)] : null;
+  const cu = ks => { const base = map[addMk(ks[0], -1)]; return ks.map(k => base != null && map[k] != null ? map[k] - base : null); };
+  return { kA, kB, dA: kA.map(dl), dB: kB.map(dl), cA: cu(kA), cB: cu(kB) };
+}
+function cmpBars(d) {
+  const n = d.kA.length, W = CW(), H = Math.round(CHt(W) * 0.85), L = 50, R = 12, T = 12, B = 28, half = (H - T - B) / 2, mid = T + half;
+  const mx = Math.max(1, ...d.dA.concat(d.dB).filter(v => v != null).map(Math.abs)), slot = (W - L - R) / n, bw = Math.min(18, slot * 0.38), step = Math.ceil(n / 8);
+  let o = [mx, 0, -mx].map(t => `<line x1="${L}" x2="${W - R}" y1="${(mid - t / mx * half).toFixed(1)}" y2="${(mid - t / mx * half).toFixed(1)}" stroke="${t === 0 ? '#9db3af' : '#e2eceb'}"/><text x="${L - 6}" y="${(mid - t / mx * half + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`).join('');
+  const bar = (v, cx, col, tip) => { if (v == null) return ''; const h = Math.abs(v) / mx * half; return `<rect x="${cx.toFixed(1)}" y="${(v >= 0 ? mid - h : mid).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h, 1.5).toFixed(1)}" rx="2.5" fill="${col}" data-tip="${esc(tip)}"/>`; };
+  for (let i = 0; i < n; i++) {
+    const cx = L + slot * (i + 0.5);
+    o += bar(d.dB[i], cx - bw - 1, '#9aa9c7', `${shortM(d.kB[i])}: ${d.dB[i] == null ? '–' : eur(d.dB[i])}`) + bar(d.dA[i], cx + 1, '#1d4ed8', `${shortM(d.kA[i])}: ${d.dA[i] == null ? '–' : eur(d.dA[i])}`);
+    if (i % step === 0 || i === n - 1) o += `<text x="${cx.toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="middle">${shortM(d.kA[i])}</text>`;
+  }
   return `<svg viewBox="0 0 ${W} ${H}">${o}</svg>`;
+}
+const CMP_OPT = [['y', 'Anno in corso vs anno precedente'], ['12', 'Ultimi 12 mesi vs 12 precedenti'], ['6', 'Ultimi 6 mesi vs 6 precedenti'], ['3', 'Ultimi 3 mesi vs 3 precedenti']];
+function cmpCards(all) {
+  const mode = S.cmp || 'y', sel = `<select data-act="cmpm">${CMP_OPT.map(([v, l]) => `<option value="${v}" ${mode === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const d = cmpData(all, mode);
+  if (!d.dB.some(v => v != null) && !d.cB.some(v => v != null)) return `<div class="card"><h2>Confronto tra periodi</h2>${sel}<p class="note">Per questo confronto servono più mesi di storico (anche quelli del periodo precedente).</p></div>`;
+  const lg = [{ k: 'a', c: '#1d4ed8', l: 'Periodo attuale' }, { k: 'b', c: '#9aa9c7', l: 'Periodo precedente', dash: true }];
+  const pts = d.kA.map((k, i) => ({ lab: shortM(k), long: shortM(k) + ' / ' + shortM(d.kB[i]), a: d.cA[i], b: d.cB[i] }));
+  return `<div class="card"><h2>Confronto tra periodi</h2>${sel}<div class="legend"><span><i style="background:#1d4ed8"></i>Periodo attuale</span><span><i style="background:#9aa9c7"></i>Periodo precedente</span></div>
+    <h3 style="font-size:14px;margin:8px 0 2px">Variazione mensile del patrimonio netto</h3>${cmpBars(d)}</div>` + lcCard('cmp', 'Crescita accumulata: periodo attuale e precedente', pts, lg);
+}
+
+function popupM() {
+  const p = S.popm, s = S.data.storico.find(x => x.mese === p.mese); if (!s) return '';
+  const body = p.mode === 'del' ? `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(monthName(s.mese))}</b> dallo storico?</p><div class="acts"><button class="b r" data-act="pmdelok">Sì, elimina</button><button class="b s" data-act="pmback">Annulla</button></div>`
+    : `<div class="acts" style="flex-direction:column"><button class="b" data-act="pmedit">Modifica</button><button class="b r" data-act="pmdel">Elimina</button><button class="b s" data-act="pmclose">Chiudi</button></div>`;
+  return `<div class="ov" data-act="pmclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(monthName(s.mese))}</h2><div class="lbl" style="margin-bottom:12px">Attivi ${eur(s.attivi)} · Passivi ${eur(s.passivi)} · Netto ${eur(s.netto)}</div>${body}</div>`;
 }
 
 function barSvg(st) {
   const d = st.slice(1).map((s, i) => ({ m: s.mese, v: s.netto - st[i].netto }));
-  const W = 600, H = 190, L = 50, R = 12, T = 12, B = 28, mid = T + (H - T - B) / 2, half = (H - T - B) / 2;
+  const W = CW(), H = Math.round(CHt(W) * 0.8), L = 50, R = 12, T = 12, B = 28, mid = T + (H - T - B) / 2, half = (H - T - B) / 2;
   const mx = Math.max(1, ...d.map(z => Math.abs(z.v))), slot = (W - L - R) / d.length, bw = Math.min(40, slot * 0.6), step = Math.ceil(d.length / 6);
   let o = [mx, 0, -mx].map(t => `<line x1="${L}" x2="${W - R}" y1="${(mid - t / mx * half).toFixed(1)}" y2="${(mid - t / mx * half).toFixed(1)}" stroke="${t === 0 ? '#9db3af' : '#e2eceb'}"/><text x="${L - 6}" y="${(mid - t / mx * half + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`).join('');
   d.forEach((z, i) => {
@@ -586,18 +721,47 @@ function formMese() {
 }
 
 function pageAnd() {
-  const all = S.data.storico, r = S.range ?? 12, ro = S.data.readonly;
+  const all = S.data.storico, rg = String(S.range || '12');
   if (!all.length) return formMese() + '<div class="card">Nessuno storico disponibile. Inserisci i mesi passati qui sopra, oppure aggiungi le voci nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
-  const st = r ? all.slice(-r) : all;
-  const sel = `<select data-act="range">${[[6, 'Ultimi 6 mesi'], [12, 'Ultimi 12 mesi'], [0, 'Tutto lo storico']].map(([v, l]) => `<option value="${v}" ${r === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const yy = +monthKey().slice(0, 4);
+  const st = rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
+  const sel = `<select data-act="range">${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }];
-  const rows = st.map((s, i) => { const p = i ? st[i - 1] : null, d = p ? s.netto - p.netto : null; return { s, d }; }).reverse();
-  return `${formMese()}<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : `
-    <h2>Attivi, passivi e patrimonio netto</h2>
-    <div class="legend">${L.map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}</div>${lineSvg(st, L)}`}</div>
+  const pts = st.map(s => ({ lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
+  const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
+  return `${formMese()}<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
+    ${st.length > 1 ? lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L) : ''}
     ${st.length > 1 ? `<div class="card"><h2>Variazione mensile del patrimonio netto</h2><div class="legend"><span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span></div>${barSvg(st)}</div>` : ''}
-    <div class="card"><h2>Storico mese per mese</h2><div class="tw"><table><tr><th>Mese</th><th>Attivi</th><th>Passivi</th><th>Netto</th><th>Var.</th>${ro ? '' : '<th></th>'}</tr>
-    ${rows.map(({ s, d }) => `<tr><td>${esc(shortM(s.mese))}${s.manuale ? ' ✎' : ''}</td><td>${eur(s.attivi)}</td><td>${eur(s.passivi)}</td><td><b>${eur(s.netto)}</b></td><td class="${d === null ? '' : cls(d)}">${d === null ? '–' : (d >= 0 ? '+' : '') + eur(d)}</td>${ro ? '' : `<td>${s.mese < monthKey() ? `<button class="b s sm" data-act="editm" data-v="${s.mese}">Modifica</button> <button class="b r sm" data-act="delm" data-v="${s.mese}">✕</button>` : ''}</td>`}</tr>`).join('')}</table></div></div>`;
+    ${all.length > 1 ? cmpCards(all) : ''}
+    <div class="card"><div class="row cl cat" data-act="exp" data-v="stab" style="border:0;padding:0"><div class="n">Storico mese per mese<small>${all.length} mesi · tocca una riga per modificarla o eliminarla</small></div><span class="chev ${topen ? 'open' : ''}">▸︎</span></div>
+    ${topen ? `<div class="tw" style="margin-top:8px"><table><tr><th>Mese</th><th>Attivi</th><th>Passivi</th><th>Netto</th><th>Var.</th></tr>
+    ${rows.map(({ s, d }) => `<tr${s.mese < monthKey() ? ` class="cl" data-act="rowm" data-v="${s.mese}"` : ''}><td>${esc(shortM(s.mese))}${s.manuale ? ' ✎' : ''}</td><td>${eur(s.attivi)}</td><td>${eur(s.passivi)}</td><td><b>${eur(s.netto)}</b></td><td class="${d === null ? '' : cls(d)}">${d === null ? '–' : (d >= 0 ? '+' : '') + eur(d)}</td></tr>`).join('')}</table></div>` : ''}</div>`;
+}
+
+function indicatori(D, st) {
+  const t = totals(D.voci), cur = st[st.length - 1], map = {}; st.forEach(s => map[s.mese] = s);
+  const att = D.voci.filter(v => v.tipo === 'attivo'), sumC = c => att.filter(v => v.categoria === c).reduce((s, v) => s + v.valore, 0);
+  const P = v => (v * 100).toFixed(1).replace('.', ',') + '%', I = [];
+  if (t.attivi > 0) {
+    const r = t.passivi / t.attivi;
+    I.push(['Indebitamento', P(r), r < 0.3 ? 'pos' : r < 0.6 ? '' : 'neg', 'Quanta parte di ciò che possiedi è coperta da debiti (passivi diviso attivi). Conta perché più è alto, meno margine hai se i valori scendono o le entrate calano. Come regola generale sotto il 30% è contenuto, sopra il 60% va tenuto d\'occhio.']);
+    I.push(['Peso della liquidità', P(sumC('Liquidità') / t.attivi), '', 'Quota dei tuoi attivi tenuta in conti e contanti, disponibile subito. Serve per gli imprevisti: se è troppo bassa rischi di dover vendere gli investimenti nel momento sbagliato, se è troppo alta l\'inflazione ne riduce il valore nel tempo.']);
+    I.push(['Peso degli investimenti', P(sumC('Investimenti') / t.attivi), '', 'Quota degli attivi messa in investimenti. Dice quanto il tuo patrimonio dipende dall\'andamento dei mercati: più è alta, più può crescere ma anche oscillare.']);
+    const top = att.slice().sort((a, b) => b.valore - a.valore)[0];
+    if (top) I.push(['Concentrazione', P(top.valore / t.attivi), top.valore / t.attivi > 0.6 ? 'neg' : '', `Peso della voce più grande (${esc(top.nome)}) sul totale degli attivi. Se una sola voce supera il 60%, il tuo patrimonio dipende troppo da lei: distribuire su più voci riduce il rischio.`]);
+  }
+  const yr = cur.mese.slice(0, 4), prevs = st.filter(s => s.mese < yr + '-01'), b0 = prevs[prevs.length - 1];
+  if (b0 && b0.netto) { const d = cur.netto - b0.netto; I.push(['Crescita da inizio anno', `${d >= 0 ? '+' : ''}${eur0(d)} (${pct(d / Math.abs(b0.netto))})`, cls(d), 'Quanto è cambiato il patrimonio netto dall\'ultimo mese dell\'anno scorso. Comprende ciò che hai risparmiato, i debiti rimborsati e la variazione dei valori: non è un rendimento puro, ma dice se nell\'anno stai avanzando.']); }
+  const m12 = map[addMk(cur.mese, -12)];
+  if (m12 && m12.netto) { const d = cur.netto - m12.netto; I.push(['Crescita ultimi 12 mesi', `${d >= 0 ? '+' : ''}${eur0(d)} (${pct(d / Math.abs(m12.netto))})`, cls(d), 'Confronto con lo stesso mese di un anno fa. Elimina l\'effetto delle stagioni (tredicesime, vacanze, tasse) ed è il modo più pulito per capire il ritmo reale di crescita.']); I.push(['Variazione media mensile', `${d >= 0 ? '+' : ''}${eur0(d / 12)}`, cls(d), 'Di quanto cresce in media il patrimonio ogni mese negli ultimi 12 mesi. Serve a capire se il ritmo è costante e a stimare i tempi per raggiungere un obiettivo.']); }
+  const f = st[0], mths = (+cur.mese.slice(0, 4) - +f.mese.slice(0, 4)) * 12 + (+cur.mese.slice(5) - +f.mese.slice(5));
+  if (mths >= 12 && f.netto > 0 && cur.netto > 0) { const g = Math.pow(cur.netto / f.netto, 12 / mths) - 1; I.push(['Crescita annua media (CAGR)', pct(g), cls(g), 'Tasso di crescita annuo composto: di quanto è cresciuto in media ogni anno il patrimonio, come se la crescita fosse stata costante. Permette di confrontare periodi diversi. Include anche i tuoi versamenti, quindi non è il rendimento dei soli investimenti.']); }
+  let pk = -Infinity, pkm = '', worst = 0, wm = '';
+  st.forEach(s => { if (s.netto > pk) { pk = s.netto; pkm = s.mese; } if (pk > 0) { const dd = (s.netto - pk) / pk; if (dd < worst) { worst = dd; wm = s.mese; } } });
+  if (st.length > 2) I.push(['Calo massimo', worst < 0 ? `${P(worst)} (${shortM(wm)})` : 'Nessun calo', worst < -0.1 ? 'neg' : '', 'La discesa più forte dal punto più alto a quello più basso successivo. Mostra quanto hai "sofferto" nei momenti peggiori: serve a capire se il rischio che stai prendendo è sopportabile.']);
+  const ob = att.filter(v => v.obiettivo > 0);
+  if (ob.length) { const o = ob.reduce((s, v) => s + v.obiettivo, 0), g = ob.reduce((s, v) => s + v.valore, 0); I.push(['Avanzamento obiettivi', P(g / o), '', 'Quanta parte degli obiettivi fissati sugli investimenti è già raggiunta (valore attuale diviso obiettivo). Aiuta a capire quanta strada manca.']); }
+  return `<div class="card"><h2>Indicatori patrimoniali</h2>${I.map(([l, v, c, ex], i) => `<div class="row"><div class="n">${l}<button class="ib" data-act="exp" data-v="i:${i}" aria-label="Spiegazione">i</button></div><div class="v ${c}">${v}</div></div>${S.exp && S.exp['i:' + i] ? `<p class="note ex">${ex}</p>` : ''}`).join('')}<p class="note">Tocca la "i" per capire a cosa serve ogni indicatore. Informazioni generali a scopo educativo.</p></div>`;
 }
 
 function pageRep() {
@@ -631,6 +795,7 @@ function pageRep() {
     <div class="grid"><div><div class="lbl">Patrimonio netto</div><div class="big ${cls(cur.netto)}">${eur(cur.netto)}</div></div>
     ${dN !== null ? `<div><div class="lbl">Rispetto a ${esc(monthName(prev.mese))}</div><div class="big ${cls(dN)}">${dN >= 0 ? '+' : ''}${eur(dN)}</div>${dpct !== null ? `<div class="lbl">${pct(dpct)}</div>` : ''}</div>` : ''}</div>
     ${dN !== null ? `<div style="margin-top:12px">${dl('Attivi', dA)}${dl('Passivi', dP)}</div>` : '<p class="note">Il confronto con il mese precedente sarà disponibile dal prossimo mese.</p>'}</div>
+    ${indicatori(D, st)}
     ${st.length > 1 ? `<div class="card"><h2>Andamento</h2>${trendSvg(st)}</div>` : ''}
     <div class="grid"><div class="card"><h2>Attivi per categoria</h2>${byCat('attivo')}</div><div class="card"><h2>Passivi per categoria</h2>${byCat('passivo')}</div></div>
     <div class="card"><h2>Lo sapevi?</h2><ul class="c">${c.map(x => `<li>${x}</li>`).join('')}</ul>
@@ -751,7 +916,20 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'account', v)); D.accounts = D.accounts.filter(x => x.id !== v);
       if (S.fAcc === v) S.fAcc = 'all'; return render();
     }
-    if (a === 'range') { S.range = +el.value; return render(); }
+    if (a === 'range') { S.range = el.value; return render(); }
+    if (a === 'cmpm') { S.cmp = el.value; return render(); }
+    if (a === 'fs') { S.fs = v || null; return render(); }
+    if (a === 'zm') {
+      const k = el.dataset.k, c = CHK[k]; if (!c) return; const z = ZM[k] || { a: 0, b: c.pts.length - 1 }, sp = z.b - z.a, m = (z.a + z.b) / 2;
+      if (v === '0') { delete ZM[k]; lcRepaint(k); } else if (v === 'in') lcZoom(k, 1.6, m); else if (v === 'out') lcZoom(k, 1 / 1.6, m); else lcPan(k, (v === 'l' ? -1 : 1) * sp * 0.35);
+      return;
+    }
+    if (a === 'rowm') { S.popm = { mese: v, mode: 'menu' }; return render(); }
+    if (a === 'pmclose') { S.popm = null; return render(); }
+    if (a === 'pmback') { S.popm.mode = 'menu'; return render(); }
+    if (a === 'pmdel') { S.popm.mode = 'del'; return render(); }
+    if (a === 'pmedit') { S.editM = S.popm.mese; S.draft = null; S.popm = null; render(); return window.scrollTo(0, 0); }
+    if (a === 'pmdelok') { const m = S.popm.mese; await deleteDoc(doc(db, 'users', D.uid, 'storico', m)); D.storico = D.storico.filter(x => x.mese !== m); S.popm = null; return render(); }
     if (a === 'editm') { S.editM = v; S.draft = null; render(); return window.scrollTo(0, 0); }
     if (a === 'cancelm') { S.editM = null; return render(); }
     if (a === 'delm') {
