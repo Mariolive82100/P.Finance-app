@@ -94,6 +94,9 @@ const totals = voci => {
   return { attivi: a, passivi: p, netto: a - p };
 };
 const cls = v => v >= 0 ? 'pos' : 'neg';
+const pnum = s => parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
+const r2 = v => Math.round(v * 100) / 100;
+const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
 
 const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, pendingName: null, loading: true, msg: '' };
 
@@ -187,7 +190,7 @@ function render() {
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
-    <div class="msg">${esc(S.msg)}</div>${body}</main>`;
+    <div class="msg ${/salvato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>`;
 }
 
 function renderAuth(el) {
@@ -269,19 +272,31 @@ function barSvg(st) {
   return `<svg viewBox="0 0 ${W} ${H}">${o}</svg>`;
 }
 
+function formMese() {
+  const D = S.data; if (D.readonly) return '';
+  const e = S.editM && D.storico.find(x => x.mese === S.editM), dr = S.draft || {};
+  const f = v => String(v).replace('.', ',');
+  return `<div class="card"><h2>${e ? 'Modifica mese' : 'Ricostruisci lo storico'}</h2>
+    <p class="note" style="margin-top:0">Inserisci i totali di un mese passato. Ripeti per ogni mese che vuoi aggiungere.</p>
+    <label class="lbl">Mese (formato AAAA-MM, es. 2026-03)</label><input id="mm" type="month" placeholder="AAAA-MM" max="${prevMonth()}" value="${esc(e ? e.mese : dr.mm || '')}" ${e ? 'readonly' : ''}>
+    <label class="lbl">Totale attivi (€)</label><input id="ma" inputmode="decimal" value="${esc(e ? f(e.attivi) : dr.ma || '')}">
+    <label class="lbl">Totale passivi (€)</label><input id="mp" inputmode="decimal" value="${esc(e ? f(e.passivi) : dr.mp || '')}">
+    <div class="acts"><button class="b" data-act="savem">Salva mese</button>${e ? '<button class="b s" data-act="cancelm">Annulla</button>' : ''}</div></div>`;
+}
+
 function pageAnd() {
-  const all = S.data.storico, r = S.range ?? 12;
-  if (!all.length) return '<div class="card">Nessuno storico disponibile. Inserisci almeno una voce nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
+  const all = S.data.storico, r = S.range ?? 12, ro = S.data.readonly;
+  if (!all.length) return formMese() + '<div class="card">Nessuno storico disponibile. Inserisci i mesi passati qui sopra, oppure aggiungi le voci nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
   const st = r ? all.slice(-r) : all;
   const sel = `<select data-act="range">${[[6, 'Ultimi 6 mesi'], [12, 'Ultimi 12 mesi'], [0, 'Tutto lo storico']].map(([v, l]) => `<option value="${v}" ${r === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }];
   const rows = st.map((s, i) => { const p = i ? st[i - 1] : null, d = p ? s.netto - p.netto : null; return { s, d }; }).reverse();
-  return `<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : `
+  return `${formMese()}<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : `
     <h2>Attivi, passivi e patrimonio netto</h2>
     <div class="legend">${L.map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}</div>${lineSvg(st, L)}`}</div>
     ${st.length > 1 ? `<div class="card"><h2>Variazione mensile del patrimonio netto</h2><div class="legend"><span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span></div>${barSvg(st)}</div>` : ''}
-    <div class="card"><h2>Storico mese per mese</h2><div class="tw"><table><tr><th>Mese</th><th>Attivi</th><th>Passivi</th><th>Netto</th><th>Var.</th></tr>
-    ${rows.map(({ s, d }) => `<tr><td>${esc(shortM(s.mese))}</td><td>${eur(s.attivi)}</td><td>${eur(s.passivi)}</td><td><b>${eur(s.netto)}</b></td><td class="${d === null ? '' : cls(d)}">${d === null ? '–' : (d >= 0 ? '+' : '') + eur(d)}</td></tr>`).join('')}</table></div></div>`;
+    <div class="card"><h2>Storico mese per mese</h2><div class="tw"><table><tr><th>Mese</th><th>Attivi</th><th>Passivi</th><th>Netto</th><th>Var.</th>${ro ? '' : '<th></th>'}</tr>
+    ${rows.map(({ s, d }) => `<tr><td>${esc(shortM(s.mese))}${s.manuale ? ' ✎' : ''}</td><td>${eur(s.attivi)}</td><td>${eur(s.passivi)}</td><td><b>${eur(s.netto)}</b></td><td class="${d === null ? '' : cls(d)}">${d === null ? '–' : (d >= 0 ? '+' : '') + eur(d)}</td>${ro ? '' : `<td>${s.mese < monthKey() ? `<button class="b s sm" data-act="editm" data-v="${s.mese}">Modifica</button> <button class="b r sm" data-act="delm" data-v="${s.mese}">✕</button>` : ''}</td>`}</tr>`).join('')}</table></div></div>`;
 }
 
 function pageRep() {
@@ -360,6 +375,25 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'range') { S.range = +el.value; return render(); }
+    if (a === 'editm') { S.editM = v; S.draft = null; render(); return window.scrollTo(0, 0); }
+    if (a === 'cancelm') { S.editM = null; return render(); }
+    if (a === 'delm') {
+      if (!confirm('Eliminare questo mese dallo storico?')) return;
+      await deleteDoc(doc(db, 'users', D.uid, 'storico', v));
+      D.storico = D.storico.filter(x => x.mese !== v); return render();
+    }
+    if (a === 'savem') {
+      const mm = $('mm').value.trim(), at = pnum($('ma').value), pa = pnum($('mp').value);
+      S.draft = S.editM ? null : { mm, ma: $('ma').value, mp: $('mp').value };
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mm)) { S.msg = 'Inserisci il mese nel formato AAAA-MM (es. 2026-03).'; return render(); }
+      if (mm >= monthKey()) { S.msg = 'Puoi inserire solo mesi passati: il mese in corso si aggiorna da solo.'; return render(); }
+      if (!isFinite(at) || !isFinite(pa) || at < 0 || pa < 0) { S.msg = 'Inserisci attivi e passivi validi (zero o più).'; return render(); }
+      const dati = { attivi: r2(at), passivi: r2(pa), netto: r2(at - pa) };
+      await setDoc(doc(db, 'users', D.uid, 'storico', mm), { ...dati, manuale: true, aggiornato: serverTimestamp() });
+      const ex = D.storico.find(x => x.mese === mm);
+      if (ex) Object.assign(ex, dati, { manuale: true }); else { D.storico.push({ mese: mm, ...dati, manuale: true }); D.storico.sort((x, y) => x.mese.localeCompare(y.mese)); }
+      S.editM = null; S.draft = null; S.msg = 'Mese salvato.'; return render();
+    }
     if (a === 'share') {
       const url = location.href.split('#')[0];
       const data = { title: 'P.Finance', text: 'Prova P.Finance: monitora il tuo patrimonio.', url };
