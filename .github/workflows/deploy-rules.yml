@@ -1,0 +1,27 @@
+name: Pubblica regole di sicurezza Firestore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+      - 'firebase.json'
+      - '.github/workflows/deploy-rules.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Prepara la chiave di accesso
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+      - name: Pubblica le regole
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/key.json
+        run: npx --yes firebase-tools@latest deploy --only firestore:rules --project p-finance-app

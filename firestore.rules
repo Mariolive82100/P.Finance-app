@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function loggato() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return loggato() && request.auth.token.email == 'mariot@pfinance.app';
+    }
+    function isOwner(uid) {
+      return loggato() && request.auth.uid == uid;
+    }
+    function approvato(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.approved == true;
+    }
+
+    // Profilo utente (nome + stato approvazione)
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid)
+        && request.resource.data.approved == false
+        && request.resource.data.keys().hasOnly(['nome', 'approved', 'creato']);
+      allow update, delete: if isAdmin();
+
+      // Attivi e passivi
+      match /voci/{voceId} {
+        allow read, write: if isOwner(uid) && approvato(uid);
+        allow read: if isAdmin();
+      }
+
+      // Storico mensile del patrimonio
+      match /storico/{meseId} {
+        allow read, write: if isOwner(uid) && approvato(uid);
+        allow read: if isAdmin();
+      }
+
+      // NOVITA': sotto-account (es. componenti della famiglia)
+      match /account/{accId} {
+        allow read, write: if isOwner(uid) && approvato(uid);
+        allow read: if isAdmin();
+      }
+    }
+
+    // Tutto il resto: vietato
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
