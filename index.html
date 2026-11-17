@@ -56,7 +56,8 @@ svg{width:100%;height:auto}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .two .card{margin-bottom:0}
 .two .big{font-size:clamp(18px,5.4vw,28px)}
-.ham{background:transparent;border:0;color:#fff;font-size:26px;cursor:pointer;padding:0 6px;line-height:1}
+.dot{position:absolute;top:0;right:2px;width:10px;height:10px;border-radius:50%;background:#f87171;border:2px solid #0f766e}
+.ham{position:relative;background:transparent;border:0;color:#fff;font-size:26px;cursor:pointer;padding:0 6px;line-height:1}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20}
 .drawer{position:fixed;top:0;bottom:0;left:0;width:min(320px,85vw);background:#fff;z-index:21;overflow-y:auto;padding:16px;box-shadow:2px 0 12px rgba(0,0,0,.25)}
 .it{display:flex;align-items:center;gap:4px;padding:12px;border-radius:10px;cursor:pointer}
@@ -92,7 +93,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.6';
+const VER = '0.7';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Conto corrente', 'Conto di investimento', 'Immobile', 'Altro attivo'],
@@ -115,6 +116,19 @@ const totals = voci => {
 const cls = v => v >= 0 ? 'pos' : 'neg';
 const pnum = s => parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
 const r2 = v => Math.round(v * 100) / 100;
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmtD = s => s.split('-').reverse().join('/');
+const addM = (d, k) => { const x = new Date(d.getFullYear(), d.getMonth() + k, 1); const last = new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate(); x.setDate(Math.min(d.getDate(), last)); return x; };
+const cnt = (a, b) => { let k = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()); while (k > 0 && addM(a, k) > b) k--; while (addM(a, k + 1) <= b) k++; return Math.max(0, k); };
+/* Piano di rimborso: solo quota capitale, rate mensili uguali dalla data di inizio alla data di fine */
+function piano(v, oggi = new Date()) {
+  const a = parseD(v.inizio), f = parseD(v.fine), t = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+  const N = Math.max(1, cnt(a, f)), rata = r2(v.capitale / N);
+  if (t < a) return { N, k: 0, rata, residuo: 0, partito: false };
+  const k = Math.min(N, cnt(a, t));
+  return { N, k, rata, residuo: r2(v.capitale * (N - k) / N), partito: true };
+}
+const applyPiano = v => { if (v.piano) v.valore = piano(v).residuo; return v; };
 const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
 
 const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, pendingName: null, loading: true, msg: '' };
@@ -138,7 +152,7 @@ async function loadData(uid, nome, readonly) {
     getDocs(collection(db, 'users', uid, 'account'))
   ]);
   const accounts = as.docs.map(d => ({ id: d.id, nome: d.data().nome })).sort((a, b) => a.nome.localeCompare(b.nome));
-  const voci = vs.docs.map(d => ({ id: d.id, ...d.data() }));
+  const voci = vs.docs.map(d => applyPiano({ id: d.id, ...d.data() }));
   const storico = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
   S.data = { uid, nome, readonly, voci, storico, accounts };
   if (!readonly) await syncStorico();
@@ -203,11 +217,11 @@ function render() {
   }
   const D = S.data;
   const tabs = [['pat', 'Patrimonio'], ['dis', 'Distribuzione'], ['and', 'Andamento'], ['rep', 'Report del mese']];
-  if (isAdmin() && !D.readonly) tabs.push(['adm', 'Amministratore']);
+  const pend = isAdmin() && !D.readonly ? S.users.filter(u => !u.approved).length : 0;
   if (S.tab === 'adm' && !(isAdmin() && !D.readonly)) S.tab = 'pat';
   let body = '';
   if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else body = pageAdm();
-  el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
+  el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     <nav>${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</nav></header>
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
@@ -232,22 +246,33 @@ const accName = v => { const D = S.data; if (!v.account) return D.nome; const a 
 function pagePat() {
   const D = S.data, fa = S.fAcc || 'all', ed = S.edit && D.voci.find(v => v.id === S.edit);
   const vis = D.voci.filter(v => fa === 'all' || accKey(v) === fa), t = totals(vis);
-  const tipo = ed ? ed.tipo : (S.newTipo || 'attivo');
+  const g = (id, d) => (S.fd && S.fd[id] !== undefined) ? S.fd[id] : d;
+  const tipo = g('ft', ed ? ed.tipo : 'attivo');
+  const mod = tipo === 'passivo' ? g('fm', ed ? (ed.piano ? 'piano' : 'manuale') : 'piano') : 'manuale';
+  const det = v => v.piano ? ` · ${eur(piano(v).rata)}/mese · fino al ${fmtD(v.fine)}` : '';
   const accOpts = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
   const list = tp => {
     const items = vis.filter(v => v.tipo === tp).sort((a, b) => b.valore - a.valore);
     if (!items.length) return '<p class="note">Nessuna voce.</p>';
-    return items.map(v => `<div class="row${D.readonly ? '' : ' cl'}"${D.readonly ? '' : ` data-act="pop" data-v="${v.id}"`}><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${D.accounts.length ? ' · ' + esc(accName(v)) : ''}</small></div><div class="v${tp === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`).join('');
+    return items.map(v => `<div class="row${D.readonly ? '' : ' cl'}"${D.readonly ? '' : ` data-act="pop" data-v="${v.id}"`}><div class="n">${esc(v.nome)}<small>${esc(v.categoria)}${det(v)}${D.accounts.length ? ' · ' + esc(accName(v)) : ''}</small></div><div class="v${tp === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`).join('');
   };
   const fname = fa === 'all' ? '' : fa === 'main' ? D.nome : ((D.accounts.find(a => a.id === fa) || {}).nome || '');
   const filtro = fname ? `<div class="banner"><span>Account: <b>${esc(fname)}</b></span><button class="b sm" data-act="facc" data-v="all">Mostra tutti</button></div>` : '';
-  const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${(ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
+  const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${g('fa', ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
+  const campi = mod === 'piano'
+    ? `<label class="lbl">Importo preso a prestito (€)</label><input id="fk" inputmode="decimal" value="${esc(g('fk', ed && ed.piano ? String(ed.capitale).replace('.', ',') : ''))}">
+    <label class="lbl">Data di inizio</label><input id="fi" type="date" value="${esc(g('fi', ed && ed.piano ? ed.inizio : ''))}">
+    <label class="lbl">Data di fine</label><input id="ff" type="date" value="${esc(g('ff', ed && ed.piano ? ed.fine : ''))}">
+    <p class="note" style="margin-top:0">Il debito residuo scende da solo ogni mese della sola quota capitale (importo diviso per i mesi). Gli interessi sono un costo e non vengono considerati.</p>`
+    : `<label class="lbl">Valore in euro</label><input id="fv" inputmode="decimal" value="${esc(g('fv', ed && !ed.piano ? String(ed.valore).replace('.', ',') : ''))}">`;
+  const selMod = tipo === 'passivo' ? `<label class="lbl">Come vuoi inserire il debito?</label><select id="fm" data-act="fmod"><option value="piano" ${mod === 'piano' ? 'selected' : ''}>Piano di rimborso (calcolo automatico)</option><option value="manuale" ${mod === 'manuale' ? 'selected' : ''}>Residuo inserito a mano</option></select>` : '';
   const form = D.readonly ? '' : `<div class="card" id="formvoce"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
     <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
     ${selAcc}
-    <label class="lbl">Categoria</label><select id="fc">${CATS[tipo].map(c => `<option ${ed && ed.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
-    <label class="lbl">Nome (es. Conto Fineco)</label><input id="fn" maxlength="60" value="${esc(ed ? ed.nome : '')}">
-    <label class="lbl">Valore in euro</label><input id="fv" inputmode="decimal" value="${ed ? String(ed.valore).replace('.', ',') : ''}">
+    <label class="lbl">Categoria</label><select id="fc">${CATS[tipo].map(c => `<option ${g('fc', ed ? ed.categoria : '') === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    ${selMod}
+    <label class="lbl">Nome (es. Conto Fineco, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">
+    ${campi}
     <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div></div>`;
   return `${filtro}<div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="two"><div class="card"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
@@ -265,17 +290,20 @@ function drawer() {
   const add = ro ? '' : (S.addAcc
     ? `<div style="margin-top:14px"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b" data-act="adda">Aggiungi</button><button class="b s" data-act="addc">Annulla</button></div></div>`
     : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
-  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}</div>`;
+  const pend = isAdmin() && !ro ? S.users.filter(u => !u.approved).length : 0;
+  const adm = isAdmin() && !ro ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
+  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}${adm}</div>`;
 }
 
 function popup() {
   const D = S.data, p = S.pop, v = D.voci.find(x => x.id === p.id);
   if (!v) return '';
   let body;
+  const pi = v.piano ? piano(v) : null;
   if (p.mode === 'upd') body = `<label class="lbl">Nuovo valore in euro</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
   else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(v.nome)}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
-  else body = `<div class="acts" style="flex-direction:column"><button class="b" data-act="popupd">Aggiorna</button><button class="b s" data-act="popedit">Modifica</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
-  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)} · ${esc(accName(v))} · ${eur(v.valore)}</div><div class="msg">${esc(S.msg)}</div>${body}</div>`;
+  else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
+  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)} · ${esc(accName(v))} · ${eur(v.valore)}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
 }
 
 const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(v || 0);
@@ -459,6 +487,9 @@ function exportCsv() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
+const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff'];
+function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
+
 async function act(el) {
   const a = el.dataset.act, v = el.dataset.v, D = S.data;
   S.msg = '';
@@ -476,6 +507,7 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
+    if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'menu') { S.menu = !S.menu; S.addAcc = false; return render(); }
     if (a === 'addo') { S.addAcc = true; render(); const i = $('an'); if (i) i.focus(); return; }
     if (a === 'addc') { S.addAcc = false; return render(); }
@@ -484,7 +516,7 @@ async function act(el) {
     if (a === 'popback') { S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
-    if (a === 'popedit') { S.edit = S.pop.id; S.pop = null; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
+    if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
     if (a === 'updsave') {
       const x = D.voci.find(z => z.id === S.pop.id), nv = pnum($('pv').value);
       if (!isFinite(nv) || nv < 0) { S.msg = 'Inserisci un valore valido (zero o più).'; return render(); }
@@ -545,18 +577,28 @@ async function act(el) {
       try { await navigator.clipboard.writeText(url); S.msg = 'Link copiato negli appunti.'; } catch (_) { S.msg = 'Link: ' + url; }
       return render();
     }
-    if (a === 'ftipo') { S.newTipo = el.value; if (S.edit) S.edit = null; return render(); }
+    if (a === 'ftipo' || a === 'fmod') { S.fd = grabForm(); return render(); }
     if (a === 'edit') { S.edit = v; return render(); }
-    if (a === 'cancel') { S.edit = null; return render(); }
+    if (a === 'cancel') { S.edit = null; S.fd = null; return render(); }
     if (a === 'export') return exportCsv();
     if (a === 'save') {
-      const tipo = $('ft').value, categoria = $('fc').value, nome = $('fn').value.trim();
-      const valore = parseFloat($('fv').value.replace(/\./g, '').replace(',', '.'));
-      if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
-      const fv = $('fa'), dati = { tipo, categoria, nome, account: fv && fv.value !== 'main' ? fv.value : '', valore: Math.round(valore * 100) / 100 };
-      if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); Object.assign(D.voci.find(x => x.id === S.edit), dati); }
+      S.fd = grabForm();
+      const tipo = $('ft').value, categoria = $('fc').value, nome = $('fn').value.trim(), fm = $('fm'), fa2 = $('fa');
+      const base = { tipo, categoria, nome, account: fa2 && fa2.value !== 'main' ? fa2.value : '' };
+      let dati;
+      if (tipo === 'passivo' && fm && fm.value === 'piano') {
+        const cap = pnum($('fk').value), ini = $('fi').value, fin = $('ff').value;
+        if (!nome || !isFinite(cap) || cap <= 0) { S.msg = 'Inserisci un nome e l\'importo preso a prestito.'; return render(); }
+        if (!ini || !fin || fin <= ini) { S.msg = 'Inserisci le date: la fine deve essere dopo l\'inizio.'; return render(); }
+        dati = applyPiano({ ...base, piano: true, capitale: r2(cap), inizio: ini, fine: fin, valore: 0 });
+      } else {
+        const valore = pnum($('fv').value);
+        if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
+        dati = { ...base, valore: r2(valore) };
+      }
+      if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
       else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
-      S.edit = null; await syncStorico(); return render();
+      S.edit = null; S.fd = null; await syncStorico(); return render();
     }
     if (a === 'del') {
       if (!confirm('Eliminare questa voce?')) return;
