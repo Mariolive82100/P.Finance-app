@@ -119,7 +119,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.20';
+const VER = '0.21';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -203,8 +203,10 @@ async function loadData(uid, nome, readonly) {
   const voci = vs.docs.map(d => ({ id: d.id, ...d.data() }));
   if (!readonly) await migraCategorie(uid, voci);
   voci.forEach(applyPiano);
+  const arch = voci.filter(v => v.archiviata);
+  for (let i = voci.length - 1; i >= 0; i--) if (voci[i].archiviata) voci.splice(i, 1);
   const storico = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
-  S.data = { uid, nome, readonly, voci, storico, accounts };
+  S.data = { uid, nome, readonly, voci, arch, storico, accounts };
   if (!readonly) await syncStorico();
 }
 
@@ -335,6 +337,8 @@ function pagePat() {
     }).join('');
   };
   const listPassivi = () => { const it = vis.filter(v => v.tipo === 'passivo').sort((a, b) => b.valore - a.valore); return it.length ? it.map(v => rowHtml(v, 'passivo', true)).join('') : '<p class="note">Nessuna voce.</p>'; };
+  const ar = (D.arch || []).slice().sort((x, y) => x.tipo.localeCompare(y.tipo) || x.nome.localeCompare(y.nome)), aop = S.exp && S.exp.arch;
+  const archSec = ar.length ? `<div class="card"><div class="row cl" data-act="exp" data-v="arch"><div class="n">Archiviati<small>${ar.length} ${ar.length === 1 ? 'voce' : 'voci'} · non contano nei totali</small></div><span class="chev ${aop ? 'open' : ''}">▸︎</span></div>${aop ? `<div class="sub">${ar.map(v => `<div class="row${rcl}"${clk(v.id)}><div class="n">${esc(v.nome)}<small>${esc(v.tipo === 'attivo' ? 'Attivo' : 'Passivo')} · ${esc(v.categoria)}</small></div><div class="v${v.tipo === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`).join('')}</div>` : ''}</div>` : '';
   const fname = fa === 'all' ? '' : fa === 'main' ? D.nome : ((D.accounts.find(a => a.id === fa) || {}).nome || '');
   const filtro = fname ? `<div class="banner"><span>Account: <b>${esc(fname)}</b></span><button class="b sm" data-act="facc" data-v="all">Mostra tutti</button></div>` : '';
   const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${g('fa', ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
@@ -365,6 +369,7 @@ function pagePat() {
     <div class="card pa"><div class="lbl">Passivi</div><div class="big neg">${eur(t.passivi)}</div></div></div>
     <div class="card at"><h2>Attivi</h2>${listAttivi()}</div>
     <div class="card pa"><h2>Passivi</h2>${listPassivi()}</div>
+    ${archSec}
     ${form}
     <div class="card"><h2>Esporta</h2><button class="b" data-act="export">Scarica i dati (CSV per Excel)</button></div>`;
 }
@@ -382,15 +387,16 @@ function drawer() {
 }
 
 function popup() {
-  const D = S.data, p = S.pop, v = D.voci.find(x => x.id === p.id);
+  const D = S.data, p = S.pop, v = D.voci.find(x => x.id === p.id) || (D.arch || []).find(x => x.id === p.id), isA = !!v && !D.voci.includes(v);
   if (!v) return '';
   const pi = v.piano ? piano(v) : null;
   const ob = v.obiettivo ? `<div class="lbl" style="margin:-6px 0 6px">Obiettivo ${eur(v.obiettivo)} · raggiunto ${Math.round(v.valore / v.obiettivo * 100)}%</div><div style="height:8px;background:#e2eceb;border-radius:6px;margin-bottom:12px"><div style="height:100%;width:${Math.min(100, v.valore / v.obiettivo * 100)}%;background:#0f766e;border-radius:6px"></div></div>` : '';
   let body;
   if (p.mode === 'upd') body = `<label class="lbl">${v.categoria === 'Liquidità' ? 'Nuovo saldo in euro' : 'Nuovo valore in euro'}</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
   else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(v.nome)}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
-  else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
-  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)}${v.dove && v.dove !== v.nome ? ' · su ' + esc(v.dove) : ''} · ${esc(accName(v))} · ${eur(v.valore)}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${ob}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
+  else if (isA) body = `<div class="acts" style="flex-direction:column"><button class="b" data-act="popres">Ripristina</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
+  else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b s" data-act="poparch">Archivia</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
+  return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(v.nome)}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)}${v.dove && v.dove !== v.nome ? ' · su ' + esc(v.dove) : ''} · ${esc(accName(v))} · ${eur(v.valore)}${isA ? ' · archiviato' : ''}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${ob}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
 }
 
 const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(v || 0);
@@ -657,8 +663,15 @@ async function act(el) {
       await setDoc(doc(db, 'users', D.uid, 'voci', x.id), dati); Object.assign(x, dati);
       await syncStorico(); S.pop = null; S.msg = 'Valore aggiornato.'; return render();
     }
+    if (a === 'poparch' || a === 'popres') {
+      const id = S.pop.id, to = a === 'poparch', from = to ? D.voci : D.arch, dest = to ? D.arch : D.voci, i = from.findIndex(z => z.id === id);
+      if (i < 0) return;
+      await updateDoc(doc(db, 'users', D.uid, 'voci', id), { archiviata: to });
+      const [x] = from.splice(i, 1); x.archiviata = to; if (!to) applyPiano(x); dest.push(x);
+      await syncStorico(); S.pop = null; S.msg = to ? 'Archiviato. Non conta più nei totali, lo storico resta.' : 'Ripristinato.'; return render();
+    }
     if (a === 'delok') {
-      const id = S.pop.id;
+      const id = S.pop.id; D.arch = (D.arch || []).filter(z => z.id !== id);
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
