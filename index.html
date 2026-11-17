@@ -71,7 +71,7 @@ svg{width:100%;height:auto}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slL{from{transform:translateX(36px)}to{transform:none}}
 @keyframes slR{from{transform:translateX(-36px)}to{transform:none}}
-main{overflow-x:clip}main.slL{animation:slL .22s ease-out}main.slR{animation:slR .22s ease-out}
+
 .pie text{pointer-events:none}
 @keyframes pieIn{from{transform:rotate(-25deg) scale(.82);opacity:.3}to{transform:none;opacity:1}}
 @keyframes selIn{from{transform:scale(.94)}to{transform:scale(1)}}
@@ -130,7 +130,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.30';
+const VER = '0.31';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -674,8 +674,7 @@ async function act(el) {
     if (a === 'pg') {
       const i = ORD.indexOf(S.tab), n = i + (+v); if (i < 0 || n < 0 || n >= ORD.length) return;
       S.tab = ORD[n]; render(); window.scrollTo(0, 0);
-      const mn = document.querySelector('main'); if (mn) mn.classList.add(+v > 0 ? 'slL' : 'slR');
-      const on = document.querySelector('nav button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+      const nv = document.querySelector('nav'), on = nv && nv.querySelector('button.on'); if (on) nv.scrollLeft = on.offsetLeft - (nv.clientWidth - on.offsetWidth) / 2;
       return;
     }
     if (a === 'mode') { S.mode = v; return render(); }
