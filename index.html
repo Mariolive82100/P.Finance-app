@@ -54,6 +54,7 @@ svg{width:100%;height:auto}
 .stk{position:sticky;top:var(--hh,92px);z-index:4;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 .pie{display:block;margin:0 auto;max-width:520px;width:100%}
 .pie .dim{opacity:.35}
+.row.cat .n,.row.cat .v{font-weight:700}
 .terms h3{font-size:15px;margin:14px 0 4px}.terms p{margin:0 0 6px;line-height:1.45}
 .tip{position:fixed;display:none;z-index:50;background:#16302d;color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:260px}
 .pie path{transition:opacity .2s}
@@ -126,7 +127,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.27';
+const VER = '0.28';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -357,12 +358,12 @@ function pagePat() {
         } else inner = [...s.items].sort((a, b) => b.valore - a.valore).map(v => rowHtml(v, 'attivo', false)).join('');
         inner = `<div class="sub">${inner}</div>`;
       }
-      return `<div class="row cl" data-act="exp" data-v="${esc(key)}"><div class="n">${esc(s.c)}<small>${n} ${n === 1 ? 'voce' : 'voci'}</small></div><div class="v">${eur(sumOf(s.items))}</div><span class="chev ${open ? 'open' : ''}">▸︎</span></div>${inner}`;
+      return `<div class="row cl cat" data-act="exp" data-v="${esc(key)}"><div class="n">${esc(s.c)}<small>${n} ${n === 1 ? 'voce' : 'voci'}</small></div><div class="v">${eur(sumOf(s.items))}</div><span class="chev ${open ? 'open' : ''}">▸︎</span></div>${inner}`;
     }).join('');
   };
   const listPassivi = () => { const it = vis.filter(v => v.tipo === 'passivo').sort((a, b) => b.valore - a.valore); return it.length ? it.map(v => rowHtml(v, 'passivo', true)).join('') : '<p class="note">Nessuna voce.</p>'; };
   const ar = (D.arch || []).slice().sort((x, y) => x.tipo.localeCompare(y.tipo) || x.nome.localeCompare(y.nome)), aop = S.exp && S.exp.arch;
-  const archSec = ar.length ? `<div class="card"><div class="row cl" data-act="exp" data-v="arch"><div class="n">Archiviati<small>${ar.length} ${ar.length === 1 ? 'voce' : 'voci'} · non contano nei totali</small></div><span class="chev ${aop ? 'open' : ''}">▸︎</span></div>${aop ? `<div class="sub">${ar.map(v => `<div class="row${rcl}"${clk(v.id)}><div class="n">${esc(v.nome)}<small>${esc(v.tipo === 'attivo' ? 'Attivo' : 'Passivo')} · ${esc(v.categoria)}</small></div><div class="v${v.tipo === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`).join('')}</div>` : ''}</div>` : '';
+  const archSec = ar.length ? `<div class="card"><div class="row cl cat" data-act="exp" data-v="arch"><div class="n">Archiviati<small>${ar.length} ${ar.length === 1 ? 'voce' : 'voci'} · non contano nei totali</small></div><span class="chev ${aop ? 'open' : ''}">▸︎</span></div>${aop ? `<div class="sub">${ar.map(v => `<div class="row${rcl}"${clk(v.id)}><div class="n">${esc(v.nome)}<small>${esc(v.tipo === 'attivo' ? 'Attivo' : 'Passivo')} · ${esc(v.categoria)}</small></div><div class="v${v.tipo === 'passivo' ? ' neg' : ''}">${eur(v.valore)}</div></div>`).join('')}</div>` : ''}</div>` : '';
   const fname = fa === 'all' ? '' : fa === 'main' ? D.nome : ((D.accounts.find(a => a.id === fa) || {}).nome || '');
   const filtro = fname ? `<div class="banner"><span>Account: <b>${esc(fname)}</b></span><button class="b sm" data-act="facc" data-v="all">Mostra tutti</button></div>` : '';
   const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${g('fa', ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
@@ -380,14 +381,15 @@ function pagePat() {
     <p class="note" style="margin-top:0">Il debito residuo scende da solo ogni mese della sola quota capitale (importo diviso per i mesi). Gli interessi sono un costo e non vengono considerati.</p>`
     : `<label class="lbl">${tipo === 'attivo' && cat === 'Liquidità' ? 'Saldo in euro' : 'Valore in euro'}</label><input id="fv" inputmode="decimal" value="${num('fv', ed && !ed.piano ? String(ed.valore).replace('.', ',') : '')}">${invCampi}`;
   const selMod = tipo === 'passivo' ? `<label class="lbl">Come vuoi inserire il debito?</label><select id="fm" data-act="fmod"><option value="piano" ${mod === 'piano' ? 'selected' : ''}>Piano di rimborso (calcolo automatico)</option><option value="manuale" ${mod === 'manuale' ? 'selected' : ''}>Residuo inserito a mano</option></select>` : '';
-  const form = D.readonly ? '' : `<div class="card" id="formvoce"><h2>${ed ? 'Modifica voce' : 'Nuova voce'}</h2>
+  const fopen = !!ed || !!(S.exp && S.exp.form);
+  const form = D.readonly ? '' : `<div class="card" id="formvoce"><div class="row cl cat" data-act="exp" data-v="form" style="border:0;padding:0"><div class="n">${ed ? 'Modifica voce' : 'Aggiungi conto'}</div><span class="chev ${fopen ? 'open' : ''}">▸︎</span></div>${fopen ? `
     <label class="lbl">Tipo</label><select id="ft" data-act="ftipo"><option value="attivo" ${tipo === 'attivo' ? 'selected' : ''}>Attivo (ciò che possiedi)</option><option value="passivo" ${tipo === 'passivo' ? 'selected' : ''}>Passivo (ciò che devi)</option></select>
     ${selAcc}
     <label class="lbl">Categoria</label><select id="fc" data-act="fcat">${CATS[tipo].map(c => `<option ${cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
     ${selMod}
     ${isInv ? '' : `<label class="lbl">Nome (es. Conto Fineco, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">`}
     ${campi}
-    <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div></div>`;
+    <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div>` : ''}</div>`;
   return `${filtro}<div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="two"><div class="card at"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
     <div class="card pa"><div class="lbl">Passivi</div><div class="big neg">${eur(t.passivi)}</div></div></div>
@@ -793,7 +795,7 @@ async function act(el) {
       }
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
       else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
-      S.edit = null; S.fd = null; await syncStorico(); return render();
+      S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; await syncStorico(); return render();
     }
     if (a === 'del') {
       if (!confirm('Eliminare questa voce?')) return;
