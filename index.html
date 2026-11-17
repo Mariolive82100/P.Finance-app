@@ -109,7 +109,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.16';
+const VER = '0.17';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -441,20 +441,27 @@ function pageDis() {
 
   const pt = S.pie || 'attivo', pb = br.find(b => b.tone === (pt === 'attivo' ? 'a' : 'p')) || br[0];
   const PAL = pb && pb.tone === 'p' ? ['#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#9f1239', '#be123c', '#fb7185'] : ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'];
-  const sel = S.pieSel != null && pb && pb.groups[S.pieSel] ? S.pieSel : -1;
+  const dr = S.pieSel != null && pb && pb.groups[S.pieSel] ? S.pieSel : -1, dg = dr >= 0 ? pb.groups[dr] : null;
+  const slices = dg ? dg.items.map(it => ({ label: it.nome, sum: it.val, pct: it.pct, sub: it.sub })) : pb ? pb.groups.map(g => ({ label: g.label, sum: g.sum, pct: g.pct, n: g.items.length })) : [];
+  const stot = dg ? dg.sum : pb ? pb.sum : 0, sel = dg ? (S.pieSel2 != null && slices[S.pieSel2] ? S.pieSel2 : -1) : -1;
   let pieHtml = '';
   if (pb) {
-    const R = 100, C = 110, tot = pb.sum || 1; let ang = -Math.PI / 2, sl = '';
-    pb.groups.forEach((g, i) => {
-      const fr = g.sum / tot, a2 = ang + fr * 2 * Math.PI, rr = i === sel ? R + 7 : R, big = fr > 0.5 ? 1 : 0;
+    const R = 100, C = 110, tot = stot || 1; let ang = -Math.PI / 2, sl = '';
+    const act = dg ? 'pies2' : 'pies';
+    slices.forEach((g, i) => {
+      const fr = g.sum / tot; if (fr <= 0) return;
+      const a2 = ang + fr * 2 * Math.PI, rr = i === sel ? R + 7 : R, big = fr > 0.5 ? 1 : 0, col = PAL[i % PAL.length];
       const pt1 = [C + rr * Math.cos(ang), C + rr * Math.sin(ang)], pt2 = [C + rr * Math.cos(a2 - 1e-4), C + rr * Math.sin(a2 - 1e-4)];
-      sl += fr >= 0.9999 ? `<circle cx="${C}" cy="${C}" r="${rr}" fill="${PAL[i % PAL.length]}" data-act="pies" data-v="${i}" style="cursor:pointer"/>` : `<path d="M${C} ${C}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${PAL[i % PAL.length]}" data-act="pies" data-v="${i}"/>`;
+      sl += fr >= 0.9999 ? `<circle cx="${C}" cy="${C}" r="${rr}" fill="${col}" data-act="${act}" data-v="${i}" style="cursor:pointer"/>` : `<path d="M${C} ${C}L${pt1[0].toFixed(1)} ${pt1[1].toFixed(1)}A${rr} ${rr} 0 ${big} 1 ${pt2[0].toFixed(1)} ${pt2[1].toFixed(1)}Z" fill="${col}" data-act="${act}" data-v="${i}"/>`;
       ang = a2;
     });
-    const hole = `<circle cx="${C}" cy="${C}" r="52" fill="#fff"/><text x="${C}" y="${C - 4}" text-anchor="middle" font-size="12" fill="#5b7370">${sel >= 0 ? esc(trunc(pb.groups[sel].label, 14)) : pb.label}</text><text x="${C}" y="${C + 16}" text-anchor="middle" font-size="16" font-weight="700" fill="#16302d">${eur0(sel >= 0 ? pb.groups[sel].sum : pb.sum)}</text>`;
-    pieHtml = `<div class="card"><div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>
-    <svg class="pie" viewBox="0 0 220 220">${sl}${hole}</svg>
-    ${pb.groups.map((g, i) => `<div class="pl ${i === sel ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>` + (i === sel ? `<div class="ps">${g.items.map(it => `<div><span>${esc(trunc(it.nome, 24))}</span><span>${eur0(it.val)}</span></div>`).join('')}</div>` : '')).join('')}</div>`;
+    const cl = sel >= 0 ? slices[sel].label : dg ? dg.label : pb.label, cv = sel >= 0 ? slices[sel].sum : stot;
+    const hole = `<circle cx="${C}" cy="${C}" r="52" fill="#fff"/><text x="${C}" y="${C - 4}" text-anchor="middle" font-size="12" fill="#5b7370">${esc(trunc(cl, 14))}</text><text x="${C}" y="${C + 16}" text-anchor="middle" font-size="16" font-weight="700" fill="#16302d">${eur0(cv)}</text>`;
+    const top = dg ? `<div class="banner" style="margin-bottom:8px"><span><b>${esc(pb.label)}</b> › ${esc(dg.label)}</span><button class="b sm" data-act="pieb">← Indietro</button></div>`
+      : `<div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>`;
+    pieHtml = `<div class="card">${top}<svg class="pie" viewBox="0 0 220 220">${sl}${hole}</svg>
+    ${slices.map((g, i) => `<div class="pl ${i === sel ? 'on' : ''}" data-act="${act}" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}${dg ? `<small style="display:block;font-weight:400;color:#5b7370">${esc(g.sub)}</small>` : g.n ? `<small style="color:#5b7370;font-weight:400"> · ${g.n} ${g.n === 1 ? 'voce' : 'voci'}</small>` : ''}</span><span>${eur0(g.sum)} · ${g.pct}</span>${dg ? '' : '<span style="color:#5b7370">›</span>'}</div>`).join('')}
+    ${dg ? '' : '<p class="note">Tocca una fetta per vedere il dettaglio.</p>'}</div>`;
   }
   return ctl + pieHtml + `<div class="card"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(D.voci), br)}
     <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div>`;
@@ -632,9 +639,11 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
-    if (a === 'dview') { S.dview = v; S.pieSel = null; return render(); }
-    if (a === 'piet') { S.pie = v; S.pieSel = null; return render(); }
-    if (a === 'pies') { S.pieSel = S.pieSel === +v ? null : +v; return render(); }
+    if (a === 'dview') { S.dview = v; S.pieSel = null; S.pieSel2 = null; return render(); }
+    if (a === 'piet') { S.pie = v; S.pieSel = null; S.pieSel2 = null; return render(); }
+    if (a === 'pies') { S.pieSel = +v; S.pieSel2 = null; return render(); }
+    if (a === 'pies2') { S.pieSel2 = S.pieSel2 === +v ? null : +v; return render(); }
+    if (a === 'pieb') { S.pieSel = null; S.pieSel2 = null; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
     if (a === 'adda') {
       const nm = $('an').value.trim();
