@@ -102,7 +102,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.14';
+const VER = '0.15';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -322,7 +322,10 @@ function pagePat() {
   const selAcc = D.accounts.length ? `<label class="lbl">Account</label><select id="fa">${accOpts.map(([k, n]) => `<option value="${esc(k)}" ${g('fa', ed ? accKey(ed) : (fa !== 'all' ? fa : 'main')) === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : '';
   const num = (id, dflt) => esc(g(id, dflt));
   const suggest = [...new Set(D.voci.filter(v => v.categoria === 'Liquidità').map(v => v.nome))];
-  const invCampi = isInv ? `<label class="lbl">Conto di riferimento (se non c'è in elenco viene creato anche tra la liquidità)</label><input id="fw" list="dl" maxlength="60" value="${num('fw', ed && ed.dove ? ed.dove : '')}"><datalist id="dl">${suggest.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+  const cur = g('fw', ed && ed.dove ? ed.dove : (suggest[0] || '__new'));
+  const opts = [...new Set([...suggest, ...(ed && ed.dove ? [ed.dove] : [])])];
+  const invCampi = isInv ? `<label class="lbl">Conto di riferimento</label><select id="fw" data-act="fcat">${opts.map(o => `<option value="${esc(o)}" ${cur === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}<option value="__new" ${cur === '__new' || !opts.includes(cur) ? 'selected' : ''}>＋ Nuovo conto…</option></select>
+    ${cur === '__new' || !opts.includes(cur) ? `<input id="fwn" maxlength="60" placeholder="Nome del nuovo conto (verrà creato anche tra la liquidità)" value="${num('fwn', '')}">` : ''}
     <label class="lbl">Obiettivo in euro (facoltativo)</label><input id="fo" inputmode="decimal" value="${num('fo', ed && ed.obiettivo ? String(ed.obiettivo).replace('.', ',') : '')}">` : '';
   const campi = mod === 'piano'
     ? `<label class="lbl">Importo preso a prestito (€)</label><input id="fk" inputmode="decimal" value="${num('fk', ed && ed.piano ? String(ed.capitale).replace('.', ',') : '')}">
@@ -560,7 +563,7 @@ function exportCsv() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fo'];
+const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo'];
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
 async function act(el) {
@@ -669,7 +672,7 @@ async function act(el) {
       } else {
         const valore = pnum($('fv').value);
         const isI = tipo === 'attivo' && categoria === 'Investimenti';
-        if (isI) { nome = ($('fw') ? $('fw').value.trim() : ''); base.nome = nome; if (!nome) { S.msg = 'Indica il conto di riferimento.'; return render(); } }
+        if (isI) { nome = ($('fw') ? ($('fw').value === '__new' ? ($('fwn') ? $('fwn').value.trim() : '') : $('fw').value) : ''); base.nome = nome; if (!nome) { S.msg = 'Scegli il conto di riferimento o scrivi il nome del nuovo conto.'; return render(); } }
         if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
         dati = { ...base, valore: r2(valore) };
         if (tipo === 'attivo' && categoria === 'Investimenti') {
