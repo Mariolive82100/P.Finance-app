@@ -137,7 +137,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.40';
+const VER = '0.41';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -666,7 +666,7 @@ document.addEventListener('pointermove', e => {
       const [p1, p2] = [...PT.values()], d = Math.abs(p1.x - p2.x), m = (p1.x + p2.x) / 2, fi = lcIdx(w, m);
       if (PINCH && PINCH.d > 8 && d > 8 && fi !== null) { lcZoom(key, d / PINCH.d, fi); const f2 = lcIdx(w, m); if (f2 !== null) lcPan(key, fi - f2); }
       PINCH = { d };
-    } else if (e.pointerType === 'mouse' && e.buttons && ZM[key] && (ZM[key].a > 0.001 || ZM[key].b < ZM[key].n - 1.001)) {
+    } else if ((e.pointerType !== 'mouse' || e.buttons) && ZM[key] && (ZM[key].a > 0.001 || ZM[key].b < ZM[key].n - 1.001)) {
       const f1 = lcIdx(w, prevX), f2 = lcIdx(w, e.clientX); if (f1 !== null && f2 !== null) lcPan(key, f1 - f2);
     } else lcCross(w, e.clientX);
   } else if (e.pointerType === 'mouse') { const w = e.target.closest && e.target.closest('.lcw'); if (w) lcCross(w, e.clientX); }
