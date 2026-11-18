@@ -1,4 +1,4 @@
-const C = 'pf-v3';
+const C = 'pf-v4';
 const FILES = ['./', './index.html', './style.css', './firebase.js', './base.js', './pagine.js', './grafici.js', './azioni.js', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -18,7 +18,7 @@ self.addEventListener('fetch', e => {
   }
   if (u.origin !== location.origin) return;
   // File dell'app: prima la rete (così gli aggiornamenti arrivano subito), poi la copia salvata
-  e.respondWith(fetch(r).then(x => {
+  e.respondWith(fetch(r, { cache: 'no-cache' }).then(x => {
     const cp = x.clone(); caches.open(C).then(c => c.put(r, cp)); return x;
   }).catch(() => caches.match(r)));
 });

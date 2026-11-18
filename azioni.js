@@ -214,7 +214,7 @@ document.addEventListener('keydown', e => {
   if ($('an') && document.activeElement === $('an')) act(document.querySelector('[data-act="adda"]'));
 });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
 /* ---------- Accesso ---------- */
 onAuthStateChanged(auth, async user => {
