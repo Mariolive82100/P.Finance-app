@@ -137,7 +137,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.39';
+const VER = '0.40';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -562,13 +562,14 @@ const shortM = k => { const [y, m] = k.split('-'); return MESI[+m - 1].slice(0, 
 /* ---------- Grafici interattivi ---------- */
 const CH = {}, CHK = {}, CHS = {}, ZM = {};
 const CW = () => Math.max(300, Math.min(innerWidth, 1320) - 62), CHt = w => Math.max(210, Math.min(400, Math.round(w * 0.6)));
-const lcInit = (id, key, pts, series, W, H) => { CH[id] = { pts, series, key, W, H, geom: null }; CHK[key] = CH[id]; };
+const lcInit = (id, key, pts, series, W, H) => { CH[id] = { pts, raw: pts, series, key, W, H, geom: null }; CHK[key] = CH[id]; };
 function lcSvg(id) {
-  const c = CH[id], pts = c.pts, n = pts.length, W = c.W, H = c.H, L = 50, R = 12, T = 12, B = 28;
+  const c = CH[id]; let pts = c.raw, n = pts.length; const W = c.W, H = c.H, L = 50, R = 12, T = 12, B = 28;
   let z = ZM[c.key]; const sig = pts[0].lab + '|' + pts[n - 1].lab;
   if (!z || z.n !== n || z.sig !== sig) z = ZM[c.key] = { a: 0, b: Math.max(1, n - 1), n, sig };
   const a = z.a, b = z.b, zoomed = a > 0.001 || b < n - 1.001;
   const lo = Math.max(0, Math.ceil(a - 1e-6)), hi = Math.min(n - 1, Math.floor(b + 1e-6));
+  if (c.series.some(q => q.rebase)) { const base = c.raw[lo].abs; pts = c.pts = c.raw.map(p => ({ ...p, var: p.abs - base })); } else c.pts = pts;
   let mn = Infinity, mx = -Infinity;
   for (let i = lo; i <= hi; i++) c.series.forEach(s => { const v = pts[i][s.k]; if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; } });
   if (!isFinite(mn)) { mn = 0; mx = 1; }
@@ -579,6 +580,7 @@ function lcSvg(id) {
   let o = `<defs><clipPath id="cp${id}"><rect x="${L}" y="${T - 4}" width="${W - L - R}" height="${H - T - B + 8}"/></clipPath></defs>`;
   for (let k = 0; k < 4; k++) { const t = mn + (mx - mn) * k / 3; o += `<line x1="${L}" x2="${W - R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="#e2eceb"/><text x="${L - 6}" y="${(y(t) + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`; }
   const vc = hi - lo + 1, step = Math.max(1, Math.ceil(vc / Math.max(2, Math.floor((W - L - R) / 62))));
+  for (let i = lo; i <= hi; i++) if (vc <= 40 || (i - lo) % step === 0) { const yr = i > 0 && pts[i].lab.slice(-2) !== pts[i - 1].lab.slice(-2); o += `<line x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}" y1="${T}" y2="${H - B}" stroke="${yr ? '#b7c7c4' : '#e9f0ef'}" stroke-width="${yr ? 1.4 : 1}"/>`; }
   for (let i = lo; i <= hi; i++) if ((i - lo) % step === 0) o += `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="${x(i) > W - R - 22 ? 'end' : 'middle'}">${esc(pts[i].lab)}</text>`;
   const i0 = Math.max(0, lo - 1), i1 = Math.min(n - 1, hi + 1);
   if (mn <= 0 && mx >= 0) {
@@ -752,14 +754,16 @@ function pageAnd() {
   const all = S.data.storico, rg = String(S.range || '12');
   if (!all.length) return formMese(true) + '<div class="card">Nessuno storico disponibile. Inserisci i mesi passati qui sopra, oppure aggiungi le voci nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
   const yy = +monthKey().slice(0, 4);
-  const st = rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
-  const sel = `<select data-act="range">${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const rF = S.rFrom || all[0].mese, rT = S.rTo || all[all.length - 1].mese, lo_ = rF <= rT ? rF : rT, hi_ = rF <= rT ? rT : rF;
+  const st = rg === 'custom' ? all.filter(s => s.mese >= lo_ && s.mese <= hi_) : rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
+  const sel = `<select data-act="range">${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico'], ['custom', 'Periodo personalizzato']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }];
   const pts = st.map(s => ({ lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
-  return `<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
+  const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
+  return `<div class="card">${sel}${cust}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
     ${st.length > 1 ? lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L) : ''}
-    ${st.length > 1 ? lcCard('net', 'Variazione totale del patrimonio netto nel periodo', st.map(x => ({ lab: shortM(x.mese), long: monthName(x.mese), var: x.netto - st[0].netto })), [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese del periodo', zero: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]) : ''}
+    ${st.length > 1 ? lcCard('net', 'Variazione totale del patrimonio netto nel periodo', st.map(x => ({ lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 })), [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]) : ''}
     ${st.length > 1 ? `<div class="card"><h2>Variazione mensile del patrimonio netto</h2><div class="legend"><span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span></div>${barSvg(st)}</div>` : ''}
     ${all.length > 1 ? cmpCards(all) : ''}
     <div class="card"><div class="row cl cat" data-act="exp" data-v="stab" style="border:0;padding:0"><div class="n">Storico mese per mese<small>${all.length} mesi · tocca una riga per modificarla o eliminarla</small></div><span class="chev ${topen ? 'open' : ''}">▸︎</span></div>
@@ -946,6 +950,7 @@ async function act(el) {
       if (S.fAcc === v) S.fAcc = 'all'; return render();
     }
     if (a === 'range') { S.range = el.value; return render(); }
+    if (a === 'rfrom' || a === 'rto') { if (!/^\d{4}-\d{2}$/.test(el.value)) return; if (a === 'rfrom') S.rFrom = el.value; else S.rTo = el.value; return render(); }
     if (a === 'cmpm') { S.cmp = el.value; return render(); }
     if (a === 'fs') { S.fs = v || null; return render(); }
     if (a === 'zm') {
@@ -1059,8 +1064,8 @@ document.addEventListener('change', async e => {
     S.msg = `Importati ${ok} mesi.` + (skip ? ` Saltati ${skip} (mese in corso o già registrato dall'app).` : '') + (bad ? ` Righe non valide: ${bad}.` : ''); render();
   } catch (er) { if (box) box.textContent = errText(er); }
 });
-document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT') act(el); });
-document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.act) act(e.target); });
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT' && el.tagName !== 'INPUT') act(el); });
+document.addEventListener('change', e => { if ((e.target.tagName === 'SELECT' || e.target.type === 'month') && e.target.dataset.act) act(e.target); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   if ($('pn') && document.activeElement === $('pn')) act(document.querySelector('[data-act="login"],[data-act="register"]'));
