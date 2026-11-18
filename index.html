@@ -139,7 +139,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.42';
+const VER = '0.43';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -744,7 +744,8 @@ function formMese(force) {
   if (!open) return `<div class="card"><div class="row cl cat" data-act="exp" data-v="fm" style="border:0;padding:0"><div class="n">Ricostruisci lo storico<small>aggiungi i mesi passati a mano o da file</small></div><span class="chev">▸︎</span></div></div>`;
   const e = S.editM && D.storico.find(x => x.mese === S.editM), dr = S.draft || {};
   const f = v => String(v).replace('.', ',');
-  return `<div class="card" id="formm"><h2>${e ? 'Modifica mese' : 'Ricostruisci lo storico'}</h2><div class="msg">${esc(S.msg)}</div>
+  const hd = !force && !e ? `<div class="row cl cat" data-act="exp" data-v="fm" style="border:0;padding:0"><h2 style="margin:0">Ricostruisci lo storico</h2><span class="chev open">▸︎</span></div>` : `<h2>${e ? 'Modifica mese' : 'Ricostruisci lo storico'}</h2>`;
+  return `<div class="card" id="formm">${hd}<div class="msg">${esc(S.msg)}</div>
     <p class="note" style="margin-top:0">Inserisci i totali di un mese passato. Ripeti per ogni mese che vuoi aggiungere.</p>
     <label class="lbl">Mese (formato AAAA-MM, es. 2026-03)</label><input id="mm" type="month" placeholder="AAAA-MM" max="${prevMonth()}" value="${esc(e ? e.mese : dr.mm || '')}" ${e ? 'readonly' : ''}>
     <label class="lbl">Totale attivi (€)</label><input id="ma" inputmode="decimal" value="${esc(e ? f(e.attivi) : dr.ma || '')}">
