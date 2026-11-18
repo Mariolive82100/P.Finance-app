@@ -139,7 +139,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.44';
+const VER = '0.45';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -618,7 +618,7 @@ function lcSvg(id) {
   return `<svg class="lc" viewBox="0 0 ${W} ${H}">${o}<g class="xh"></g></svg>`;
 }
 function lcBlock(id) { return `<div class="lcw" data-ch="${id}" data-k="${CH[id].key}">${lcSvg(id)}</div>`; }
-const lcLegend = ser => `<div class="legend">${ser.filter(x => !x.bar).map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : '<span><i style="background:#15803d;border-radius:50%"></i>Massimo</span><span><i style="background:#b91c1c;border-radius:50%"></i>Minimo</span>'}</div>`;
+const lcLegend = ser => `<div class="legend">${ser.filter(x => !x.bar).map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : ''}</div>`;
 const lcZoomBar = key => `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
 function lcCard(key, title, pts, series) {
   CHS[key] = { title, pts, series };
@@ -765,16 +765,35 @@ function pageAnd() {
   if (!all.length) return formMese(true) + '<div class="card">Nessuno storico disponibile. Inserisci i mesi passati qui sopra, oppure aggiungi le voci nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
   const yy = +monthKey().slice(0, 4);
   const rF = S.rFrom || all[0].mese, rT = S.rTo || all[all.length - 1].mese, lo_ = rF <= rT ? rF : rT, hi_ = rF <= rT ? rT : rF;
-  const st = rg === 'custom' ? all.filter(s => s.mese >= lo_ && s.mese <= hi_) : rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
-  const sel = `<select data-act="range">${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico'], ['custom', 'Periodo personalizzato']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const yrs = [...new Set(all.map(s => s.mese.slice(0, 4)))].reverse(), yr = yrs.includes(S.yr) ? S.yr : yrs[0];
+  const st = rg === 'year' ? all.filter(s => s.mese.slice(0, 4) === yr) : rg === 'custom' ? all.filter(s => s.mese >= lo_ && s.mese <= hi_) : rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
+  const sel = `<select data-act="range">${rg === 'year' ? '<option value="" selected disabled>Periodo…</option>' : ''}${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico'], ['custom', 'Periodo personalizzato']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const sel2 = `<select data-act="yrsel">${rg === 'year' ? '' : '<option value="" selected disabled>Anno…</option>'}${yrs.map(y => `<option value="${y}" ${rg === 'year' && y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
   const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }];
-  const pts = st.map(s => ({ lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
+  const pts = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
   const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
-  return `<div class="card">${sel}${cust}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
-    ${st.length > 1 ? lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L) : ''}
-    ${st.length > 1 ? lcCard('net', 'Variazione totale del patrimonio netto nel periodo', st.map(x => ({ lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 })), [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]) : ''}
-    ${st.length > 1 ? lcCard('bar', 'Variazione mensile del patrimonio netto', st.slice(1).map((x, i) => ({ lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - st[i].netto })), [{ k: 'v', c: '#15803d', l: 'Variazione mensile', bar: 1 }]) : ''}
+  const ch = all.length > 1 ? {
+    main: lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L),
+    net: lcCard('net', 'Variazione totale del patrimonio netto nel periodo', all.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 })), [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]),
+    bar: lcCard('bar', 'Variazione mensile del patrimonio netto', all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto })), [{ k: 'v', c: '#15803d', l: 'Variazione mensile', bar: 1 }])
+  } : null;
+  const wsig = [rg, lo_, hi_, yr, all.length].join('|');
+  if (ch && S.wsig !== wsig) {
+    S.wsig = wsig;
+    ['main', 'net', 'bar'].forEach(k => {
+      const c = CHK[k], n = c.pts.length, m = c.pts.map(q => q.mese);
+      if (!st.length || rg === '0') { delete ZM[k]; return; }
+      let ia = m.findIndex(x => x >= st[0].mese), ib = m.length - 1 - [...m].reverse().findIndex(x => x <= st[st.length - 1].mese);
+      if (ia < 0) ia = 0; if (ib >= n || ib < 0) ib = n - 1;
+      if (ia <= 0 && ib >= n - 1) { delete ZM[k]; return; }
+      ZM[k] = { a: ia, b: ib, n, sig: c.pts[0].lab + '|' + c.pts[n - 1].lab }; lcSet(k, ia, ib);
+    });
+  }
+  return `<div class="card"><div class="grid">${sel}${sel2}</div>${cust}${all.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
+    ${ch ? ch.main : ''}
+    ${ch ? ch.net : ''}
+    ${ch ? ch.bar : ''}
     ${all.length > 1 ? cmpCards(all) : ''}
     <div class="card"><div class="row cl cat" data-act="exp" data-v="stab" style="border:0;padding:0"><div class="n">Storico mese per mese<small>${all.length} mesi · tocca una riga per modificarla o eliminarla</small></div><span class="chev ${topen ? 'open' : ''}">▸︎</span></div>
     ${topen ? `<div class="tw" style="margin-top:8px"><table><tr><th>Mese</th><th>Attivi</th><th>Passivi</th><th>Netto</th><th>Var.</th></tr>
@@ -959,6 +978,7 @@ async function act(el) {
       if (S.fAcc === v) S.fAcc = 'all'; return render();
     }
     if (a === 'range') { S.range = el.value; return render(); }
+    if (a === 'yrsel') { if (!el.value) return; S.yr = el.value; S.range = 'year'; return render(); }
     if (a === 'rfrom' || a === 'rto') { if (!/^\d{4}-\d{2}$/.test(el.value)) return; if (a === 'rfrom') S.rFrom = el.value; else S.rTo = el.value; return render(); }
     if (a === 'cmpm') { S.cmp = el.value; return render(); }
     if (a === 'fs') { S.fs = v || null; return render(); }
