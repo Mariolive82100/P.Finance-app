@@ -139,7 +139,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.46';
+const VER = '0.47';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -540,8 +540,8 @@ function pageDis() {
       let ib = ang;
       g.items.forEach((it, j) => {
         const f2 = it.val / tot; if (f2 <= 0) return;
-        const ie = ib + f2 * P2, io = on && ii === j;
-        outer += `<path class="${io ? 'sel' : ''}${dim}" d="${ring(ib, ie, r2, io ? r3 + 7 : on ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}" data-tip="${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}"></path>`;
+        const ie = ib + f2 * P2, io = on && ii === j, dimO = gi >= 0 && (gi !== i || (ii >= 0 && ii !== j)) ? ' dim' : '';
+        outer += `<path class="${io ? 'sel' : ''}${dimO}" d="${ring(ib, ie, r2, io ? r3 + 7 : on && ii < 0 ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}" data-tip="${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}"></path>`;
         ib = ie;
       });
       ang = a2;
