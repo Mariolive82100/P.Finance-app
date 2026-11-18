@@ -137,7 +137,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.38';
+const VER = '0.39';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -581,18 +581,33 @@ function lcSvg(id) {
   const vc = hi - lo + 1, step = Math.max(1, Math.ceil(vc / Math.max(2, Math.floor((W - L - R) / 62))));
   for (let i = lo; i <= hi; i++) if ((i - lo) % step === 0) o += `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="${x(i) > W - R - 22 ? 'end' : 'middle'}">${esc(pts[i].lab)}</text>`;
   const i0 = Math.max(0, lo - 1), i1 = Math.min(n - 1, hi + 1);
+  if (mn <= 0 && mx >= 0) {
+    const z0 = y(0); o += `<line x1="${L}" x2="${W - R}" y1="${z0.toFixed(1)}" y2="${z0.toFixed(1)}" stroke="#475569" stroke-width="1.6"/>`;
+    if (c.series.some(q => q.zero) && Math.abs(z0 - y(mn)) > 12 && Math.abs(z0 - y(mx)) > 12) o += `<text x="${L - 6}" y="${(z0 + 4).toFixed(1)}" font-size="11" font-weight="700" fill="#475569" text-anchor="end">0</text>`;
+  }
+  const y0c = Math.max(T - 4, Math.min(H - B + 4, y(0)));
   c.series.forEach(se => {
+    if (se.ghost) return;
     let seg = [];
     for (let i = i0; i <= i1; i++) if (pts[i][se.k] != null) seg.push(x(i).toFixed(1) + ',' + y(pts[i][se.k]).toFixed(1));
-    o += `<g clip-path="url(#cp${id})"><polyline points="${seg.join(' ')}" fill="none" stroke="${se.c}" stroke-width="2.5" ${se.dash ? 'stroke-dasharray="6 4"' : ''} stroke-linejoin="round"/>`;
-    if (vc <= 18) for (let i = lo; i <= hi; i++) if (pts[i][se.k] != null) o += `<circle cx="${x(i).toFixed(1)}" cy="${y(pts[i][se.k]).toFixed(1)}" r="3.5" fill="${se.c}"/>`;
+    const pl = col => `<polyline points="${seg.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" ${se.dash ? 'stroke-dasharray="6 4"' : ''} stroke-linejoin="round"/>`;
+    if (se.zero) {
+      o += `<defs><clipPath id="cu${id}"><rect x="${L}" y="${T - 4}" width="${W - L - R}" height="${(y0c - (T - 4)).toFixed(1)}"/></clipPath><clipPath id="cd${id}"><rect x="${L}" y="${y0c.toFixed(1)}" width="${W - L - R}" height="${(H - B + 4 - y0c).toFixed(1)}"/></clipPath></defs><g clip-path="url(#cu${id})">${pl(se.c)}</g><g clip-path="url(#cd${id})">${pl('#b91c1c')}</g>`;
+    } else o += `<g clip-path="url(#cp${id})">${pl(se.c)}</g>`;
+    o += `<g clip-path="url(#cp${id})">`;
+    if (vc <= 18) for (let i = lo; i <= hi; i++) if (pts[i][se.k] != null) o += `<circle cx="${x(i).toFixed(1)}" cy="${y(pts[i][se.k]).toFixed(1)}" r="3.5" fill="${se.zero && pts[i][se.k] < 0 ? '#b91c1c' : se.c}"/>`;
+    if (!se.nm && hi > lo) {
+      let iMin = -1, iMax = -1;
+      for (let i = lo; i <= hi; i++) { const v = pts[i][se.k]; if (v == null) continue; if (iMin < 0 || v < pts[iMin][se.k]) iMin = i; if (iMax < 0 || v > pts[iMax][se.k]) iMax = i; }
+      if (iMin >= 0 && pts[iMin][se.k] !== pts[iMax][se.k]) o += [[iMin, '#b91c1c'], [iMax, '#15803d']].map(([i, col]) => `<circle cx="${x(i).toFixed(1)}" cy="${y(pts[i][se.k]).toFixed(1)}" r="5.5" fill="${col}" stroke="#fff" stroke-width="1.5"/>`).join('');
+    }
     o += '</g>';
   });
   c.geom.y = y;
   return `<svg class="lc" viewBox="0 0 ${W} ${H}">${o}<g class="xh"></g></svg>`;
 }
 function lcBlock(id) { return `<div class="lcw" data-ch="${id}" data-k="${CH[id].key}">${lcSvg(id)}</div>`; }
-const lcLegend = ser => `<div class="legend">${ser.map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}</div>`;
+const lcLegend = ser => `<div class="legend">${ser.map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}<span><i style="background:#15803d;border-radius:50%"></i>Massimo</span><span><i style="background:#b91c1c;border-radius:50%"></i>Minimo</span></div>`;
 const lcZoomBar = key => `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
 function lcCard(key, title, pts, series) {
   CHS[key] = { title, pts, series };
@@ -744,7 +759,7 @@ function pageAnd() {
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
   return `<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
     ${st.length > 1 ? lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L) : ''}
-    ${st.length > 1 ? lcCard('net', 'Andamento del patrimonio netto', st.map(x => { const i = all.indexOf(x); return { lab: shortM(x.mese), long: monthName(x.mese), netto: x.netto, media: i >= 2 ? (all[i].netto + all[i - 1].netto + all[i - 2].netto) / 3 : null }; }), [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }, { k: 'media', c: '#0f766e', l: 'Media 3 mesi', dash: 1 }]) : ''}
+    ${st.length > 1 ? lcCard('net', 'Variazione totale del patrimonio netto nel periodo', st.map(x => ({ lab: shortM(x.mese), long: monthName(x.mese), var: x.netto - st[0].netto })), [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese del periodo', zero: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]) : ''}
     ${st.length > 1 ? `<div class="card"><h2>Variazione mensile del patrimonio netto</h2><div class="legend"><span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span></div>${barSvg(st)}</div>` : ''}
     ${all.length > 1 ? cmpCards(all) : ''}
     <div class="card"><div class="row cl cat" data-act="exp" data-v="stab" style="border:0;padding:0"><div class="n">Storico mese per mese<small>${all.length} mesi · tocca una riga per modificarla o eliminarla</small></div><span class="chev ${topen ? 'open' : ''}">▸︎</span></div>
