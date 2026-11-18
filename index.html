@@ -137,7 +137,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.36';
+const VER = '0.37';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -556,18 +556,6 @@ function pageDis() {
     <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div></div>`;
 }
 
-function trendSvg(st) {
-  if (st.length < 2) return '';
-  const W = 600, H = 160, P = 28, vals = st.map(s => s.netto);
-  const mn = Math.min(...vals), mx = Math.max(...vals), rg = (mx - mn) || 1;
-  const x = i => P + i * (W - 2 * P) / (st.length - 1), y = v => H - P - (v - mn) / rg * (H - 2 * P);
-  const pts = st.map((s, i) => `${x(i).toFixed(1)},${y(s.netto).toFixed(1)}`).join(' ');
-  return `<svg viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="#0f766e" stroke-width="3"/>
-    ${st.map((s, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(s.netto).toFixed(1)}" r="4" fill="#0f766e"/>`).join('')}
-    <text x="${P}" y="${H - 6}" font-size="12" fill="#5b7370">${esc(monthName(st[0].mese))}</text>
-    <text x="${W - P}" y="${H - 6}" font-size="12" fill="#5b7370" text-anchor="end">${esc(monthName(st[st.length - 1].mese))}</text></svg>`;
-}
-
 const compact = v => new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 const shortM = k => { const [y, m] = k.split('-'); return MESI[+m - 1].slice(0, 3) + ' ' + y.slice(2); };
 
@@ -753,6 +741,7 @@ function pageAnd() {
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
   return `<div class="card">${sel}${st.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
     ${st.length > 1 ? lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L) : ''}
+    ${st.length > 1 ? lcCard('net', 'Andamento del patrimonio netto', st.map(x => { const i = all.indexOf(x); return { lab: shortM(x.mese), long: monthName(x.mese), netto: x.netto, media: i >= 2 ? (all[i].netto + all[i - 1].netto + all[i - 2].netto) / 3 : null }; }), [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }, { k: 'media', c: '#0f766e', l: 'Media 3 mesi', dash: 1 }]) : ''}
     ${st.length > 1 ? `<div class="card"><h2>Variazione mensile del patrimonio netto</h2><div class="legend"><span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span></div>${barSvg(st)}</div>` : ''}
     ${all.length > 1 ? cmpCards(all) : ''}
     <div class="card"><div class="row cl cat" data-act="exp" data-v="stab" style="border:0;padding:0"><div class="n">Storico mese per mese<small>${all.length} mesi · tocca una riga per modificarla o eliminarla</small></div><span class="chev ${topen ? 'open' : ''}">▸︎</span></div>
@@ -819,7 +808,6 @@ function pageRep() {
     ${dN !== null ? `<div><div class="lbl">Rispetto a ${esc(monthName(prev.mese))}</div><div class="big ${cls(dN)}">${dN >= 0 ? '+' : ''}${eur(dN)}</div>${dpct !== null ? `<div class="lbl">${pct(dpct)}</div>` : ''}</div>` : ''}</div>
     ${dN !== null ? `<div style="margin-top:12px">${dl('Attivi', dA)}${dl('Passivi', dP)}</div>` : '<p class="note">Il confronto con il mese precedente sarà disponibile dal prossimo mese.</p>'}</div>
     ${indicatori(D, st)}
-    ${st.length > 1 ? `<div class="card"><h2>Andamento</h2>${trendSvg(st)}</div>` : ''}
     <div class="grid"><div class="card"><h2>Attivi per categoria</h2>${byCat('attivo')}</div><div class="card"><h2>Passivi per categoria</h2>${byCat('passivo')}</div></div>
     <div class="card"><h2>Lo sapevi?</h2><ul class="c">${c.map(x => `<li>${x}</li>`).join('')}</ul>
     <p class="note">Informazioni generali a scopo educativo, non consulenza finanziaria.</p></div>`;
