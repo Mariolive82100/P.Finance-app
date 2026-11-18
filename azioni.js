@@ -3,7 +3,7 @@
 function exportCsv() {
   const D = S.data, n = v => String(v).replace('.', ',');
   const q = s => '"' + String(s).replace(/"/g, '""') + '"';
-  let out = 'Tipo;Categoria;Account;Nome;Valore;Dove;Obiettivo\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(accName(v)), q(v.nome), n(v.valore), q(v.dove || ''), v.obiettivo ? n(v.obiettivo) : ''].join(';')).join('\n');
+  let out = 'Tipo;Categoria;Account;Nome;Valore;Dove;Obiettivo;AssetClass\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(accName(v)), q(v.nome), n(v.valore), q(v.dove || ''), v.obiettivo ? n(v.obiettivo) : '', q(v.assetClass || '')].join(';')).join('\n');
   out += '\n\nMese;Attivi;Passivi;Netto\n' + D.storico.map(s => [s.mese, n(s.attivi), n(s.passivi), n(s.netto)].join(';')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + out], { type: 'text/csv;charset=utf-8' }));
@@ -11,7 +11,7 @@ function exportCsv() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo'];
+const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
 async function act(el) {
@@ -155,12 +155,12 @@ async function act(el) {
       } else {
         const valore = pnum($('fv').value);
         const isI = tipo === 'attivo' && categoria === 'Investimenti';
-        if (isI) { nome = ($('fw') ? ($('fw').value === '__new' ? ($('fwn') ? $('fwn').value.trim() : '') : $('fw').value) : ''); base.nome = nome; if (!nome) { S.msg = 'Scegli il conto di riferimento o scrivi il nome del nuovo conto.'; return render(); } }
+        if (isI) { nome = ($('fw') ? ($('fw').value === '__new' ? ($('fwn') ? $('fwn').value.trim() : '') : $('fw').value) : ''); base.nome = nome; if (!nome) { S.msg = 'Scegli il conto di riferimento o scrivi il nome del nuovo conto.'; return render(); } if (!$('fac') || !$('fac').value) { S.msg = 'Scegli l\'asset class.'; return render(); } }
         if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
         dati = { ...base, valore: r2(valore) };
         if (tipo === 'attivo' && categoria === 'Investimenti') {
           const dove = nome, ob = $('fo') ? pnum($('fo').value) : NaN;
-          dati.dove = dove; dati.nome = dove;
+          dati.dove = dove; dati.nome = dove; dati.assetClass = $('fac').value;
           if (!D.voci.some(x => x.categoria === 'Liquidità' && x.nome.toLowerCase() === dove.toLowerCase())) {
             const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: dove, account: base.account, valore: 0 };
             const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });

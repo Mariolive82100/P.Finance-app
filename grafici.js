@@ -255,7 +255,7 @@ function indicatori(D, st) {
     I.push(['Peso della liquidità', P(sumC('Liquidità') / t.attivi), '', 'Quota dei tuoi attivi tenuta in conti e contanti, disponibile subito. Serve per gli imprevisti: se è troppo bassa rischi di dover vendere gli investimenti nel momento sbagliato, se è troppo alta l\'inflazione ne riduce il valore nel tempo.']);
     I.push(['Peso degli investimenti', P(sumC('Investimenti') / t.attivi), '', 'Quota degli attivi messa in investimenti. Dice quanto il tuo patrimonio dipende dall\'andamento dei mercati: più è alta, più può crescere ma anche oscillare.']);
     const top = att.slice().sort((a, b) => b.valore - a.valore)[0];
-    if (top) I.push(['Concentrazione', P(top.valore / t.attivi), top.valore / t.attivi > 0.6 ? 'neg' : '', `Peso della voce più grande (${esc(top.nome)}) sul totale degli attivi. Se una sola voce supera il 60%, il tuo patrimonio dipende troppo da lei: distribuire su più voci riduce il rischio.`]);
+    if (top) I.push(['Concentrazione', P(top.valore / t.attivi), top.valore / t.attivi > 0.6 ? 'neg' : '', `Peso della voce più grande (${esc(dn(top))}) sul totale degli attivi. Se una sola voce supera il 60%, il tuo patrimonio dipende troppo da lei: distribuire su più voci riduce il rischio.`]);
   }
   const yr = cur.mese.slice(0, 4), prevs = st.filter(s => s.mese < yr + '-01'), b0 = prevs[prevs.length - 1];
   if (b0 && b0.netto) { const d = cur.netto - b0.netto; I.push(['Crescita da inizio anno', `${d >= 0 ? '+' : ''}${eur0(d)} (${pct(d / Math.abs(b0.netto))})`, cls(d), 'Quanto è cambiato il patrimonio netto dall\'ultimo mese dell\'anno scorso. Comprende ciò che hai risparmiato, i debiti rimborsati e la variazione dei valori: non è un rendimento puro, ma dice se nell\'anno stai avanzando.']); }
