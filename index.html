@@ -137,7 +137,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.34';
+const VER = '0.35';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -319,7 +319,27 @@ function render() {
     <main>${D.readonly ? `<div class="banner"><span>Stai vedendo i dati di <b>${esc(D.nome)}</b> (sola lettura)</span><button class="b sm" data-act="back">Torna ai miei</button></div>` : ''}
     <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
+  navSync();
 }
+
+/* ---------- Gesto/tasto "indietro" ---------- */
+let navLast = null;
+const navKey = () => S.tab + '|' + (S.menu ? 'm' : S.pop ? 'p' : S.popm ? 'q' : S.fs ? 'f' : '');
+function navSync() {
+  const k = navKey();
+  if (navLast === null) { history.replaceState({ k }, ''); navLast = k; return; }
+  if (k === navLast) return;
+  const [t0, o0] = navLast.split('|'), [t1, o1] = k.split('|');
+  navLast = k;
+  if (o0 && !o1 && t0 === t1) history.back(); else history.pushState({ k }, '');
+}
+window.addEventListener('popstate', e => {
+  if (!S.user || !S.profile || !S.profile.approved || !e.state || !e.state.k) return;
+  const t = e.state.k.split('|')[0], changed = t !== S.tab;
+  S.tab = t; S.menu = false; S.pop = null; S.popm = null; S.fs = null; S.addAcc = false;
+  navLast = t + '|';
+  render(); if (changed) window.scrollTo(0, 0);
+});
 
 function renderAuth(el) {
   const reg = S.mode === 'reg';
