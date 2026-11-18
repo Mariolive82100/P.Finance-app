@@ -139,7 +139,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.48';
+const VER = '0.49';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -501,10 +501,13 @@ function treeSvg(root, branches) {
 function pageDis() {
   const D = S.data, view = S.dview || 'acc';
   const ctl = `<div class="card stk"><div class="tabs"><button class="b ${view === 'acc' ? '' : 's'}" data-act="dview" data-v="acc">Per account</button><button class="b ${view === 'conti' ? '' : 's'}" data-act="dview" data-v="conti">Per conti</button></div>
-    <div class="legend" style="margin:0"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span></div></div>`;
+    <select data-act="dcat" style="margin-top:8px"><option value="">Tutte le categorie</option><optgroup label="Attivi">${CATS.attivo.map(c => `<option ${S.dcat === c ? 'selected' : ''}>${c}</option>`).join('')}</optgroup><optgroup label="Passivi">${CATS.passivo.map(c => `<option ${S.dcat === c ? 'selected' : ''}>${c}</option>`).join('')}</optgroup></select>
+    <div class="legend" style="margin:8px 0 0"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span></div></div>`;
   if (!D.voci.length) return ctl + '<div class="card">Nessuna voce da mostrare. Inseriscile nella pagina Patrimonio.</div>';
+  const vv = S.dcat ? D.voci.filter(v => v.categoria === S.dcat) : D.voci;
+  if (!vv.length) return ctl + '<div class="card">Nessuna voce in questa categoria.</div>';
   const build = tp => {
-    const vs = D.voci.filter(v => v.tipo === tp);
+    const vs = vv.filter(v => v.tipo === tp);
     if (!vs.length) return null;
     const total = vs.reduce((s, v) => s + v.valore, 0), G = {};
     vs.forEach(v => {
@@ -555,7 +558,7 @@ function pageDis() {
     ${pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}<small style="color:#5b7370;font-weight:400"> · ${g.items.length} ${g.items.length === 1 ? 'voce' : 'voci'}</small></span><span>${eur0(g.sum)} · ${g.pct}</span></div>` + (i === gi ? g.items.map((it, j) => `<div class="pl ps2 ${j === ii ? 'on' : ''}" data-act="pies2" data-v="${i}-${j}"><span class="a">${esc(it.nome)}<small style="display:block;font-weight:400;color:#5b7370">${esc(it.sub)}</small></span><span>${eur0(it.val)} · ${it.pct}</span></div>`).join('') : '')).join('')}</div>`;
   }
   S.anim = false;
-  return ctl + `<div class="dgrid">${pieHtml}<div class="card" style="min-width:0"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(D.voci), br)}
+  return ctl + `<div class="dgrid">${pieHtml}<div class="card" style="min-width:0"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(vv), br)}
     <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div></div>`;
 }
 
@@ -920,7 +923,7 @@ async function act(el) {
       else await signInWithEmailAndPassword(auth, mailOf(n), p);
       return;
     }
-    if (a === 'logout') { S.tab = 'pat'; S.mode = 'login'; S.menu = false; S.pop = null; S.fAcc = 'all'; return signOut(auth); }
+    if (a === 'logout') { S.dcat = ''; S.tab = 'pat'; S.mode = 'login'; S.menu = false; S.pop = null; S.fAcc = 'all'; return signOut(auth); }
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
@@ -959,6 +962,7 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
+    if (a === 'dcat') { S.dcat = el.value; S.pieSel = null; S.pieSel2 = null; S.anim = true; return render(); }
     if (a === 'dview') { S.dview = v; S.pieSel = null; S.pieSel2 = null; return render(); }
     if (a === 'piet') { S.anim = true; S.pie = v; S.pieSel = null; S.pieSel2 = null; return render(); }
     if (a === 'pies') { S.anim = 'sel'; S.pieSel = S.pieSel === +v ? null : +v; S.pieSel2 = null; return render(); }
