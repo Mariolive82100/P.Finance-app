@@ -124,7 +124,7 @@ th{color:#5b7370;font-weight:500}
 <div id="app"></div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, linkWithPopup, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, doc, getDoc, setDoc as _setDoc, updateDoc as _updateDoc, deleteDoc as _deleteDoc, addDoc as _addDoc, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -144,7 +144,7 @@ catch (e) { db = initializeFirestore(app, {}); }
 const wr = f => (...a) => navigator.onLine ? f(...a) : Promise.reject(Object.assign(new Error('offline'), { code: 'network-offline' }));
 const setDoc = wr(_setDoc), updateDoc = wr(_updateDoc), deleteDoc = wr(_deleteDoc), addDoc = wr(_addDoc);
 
-const VER = '0.50';
+const VER = '0.51';
 const ADMIN_UID = '29kFEZwmKPZvHFjQ9M65ERhIbhG3';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -154,7 +154,6 @@ const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const mailOf = n => n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '') + '@pfinance.app';
 const eur = v => new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', maximumFractionDigits: 0, useGrouping:'always'}).format(v || 0);
 const pct = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(1).replace('.', ',') + '%';
 const monthKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
@@ -213,7 +212,6 @@ function errText(e) {
   if (c.includes('credential-already-in-use')) return 'Questo account Google è già collegato a un altro profilo.';
   if (c.includes('unauthorized-domain')) return 'Indirizzo dell\'app non autorizzato in Firebase.';
   if (c.includes('operation-not-allowed')) return 'Accesso con Google non ancora attivato.';
-  if (c.includes('invalid-credential') || c.includes('user-not-found') || c.includes('wrong-password')) return 'Nome o PIN errati.';
   if (c.includes('network')) return 'Connessione assente. Riprova.';
   if (c.includes('too-many-requests')) return 'Troppi tentativi. Riprova tra qualche minuto.';
   if (c.includes('permission-denied')) return 'Permesso negato. Chiedi all\'amministratore.';
@@ -328,7 +326,7 @@ function render() {
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     </header>
     <main>
-    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|collegato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
   navSync();
 }
@@ -356,12 +354,7 @@ function renderAuth(el) {
   el.innerHTML = `<div class="auth card"><h2>P.Finance <span class="ver">v${VER} beta</span></h2>
     <button class="b" style="width:100%" data-act="google">Accedi con Google</button>
     <p class="note">Al primo accesso l'amministratore dovrà approvarti.</p>
-    <div class="msg" id="am">${esc(S.msg)}</div>
-    <details style="margin-top:14px" ${S.legacy ? 'open' : ''}><summary class="note">Ho già un account con nome e PIN</summary>
-    <label class="lbl">Nome</label><input id="nm" autocomplete="username" autocapitalize="words">
-    <label class="lbl">PIN (6 cifre)</label><input id="pn" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password">
-    <button class="b s" style="width:100%;margin-top:8px" data-act="login">Entra</button>
-    <p class="note">Dopo l'accesso collega Google dal menu: poi non ti servirà più il PIN.</p></details></div>`;
+    <div class="msg" id="am">${esc(S.msg)}</div></div>`;
 }
 
 const accKey = v => v.account || 'main';
@@ -453,10 +446,9 @@ function drawer() {
   const add = (S.addAcc
     ? `<div style="margin-top:14px"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b" data-act="adda">Aggiungi</button><button class="b s" data-act="addc">Annulla</button></div></div>`
     : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
-  const gl = S.user.providerData.some(x => x.providerId === 'google.com') ? '' : `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it" data-act="link"><span class="t">Collega Google<small class="lbl" style="display:block;font-weight:400">Per accedere senza PIN</small></span></div>`;
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   const adm = isAdmin() ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
-  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}${gl}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
+  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
 }
 
 function popup() {
@@ -925,16 +917,7 @@ async function act(el) {
     }
     if (a === 'mode') { S.mode = v; return render(); }
     if (a === 'google') { await signInWithPopup(auth, new GoogleAuthProvider()); return; }
-    if (a === 'link') { await linkWithPopup(S.user, new GoogleAuthProvider()); S.menu = false; S.msg = 'Google collegato.'; return render(); }
-    if (a === 'login') {
-      S.legacy = true;
-      const n = $('nm').value.trim(), p = $('pn').value.trim();
-      if (mailOf(n).length < 14) { S.msg = 'Inserisci un nome valido.'; return render(); }
-      if (!/^\d{6}$/.test(p)) { S.msg = 'Il PIN deve essere di 6 cifre.'; return render(); }
-      await signInWithEmailAndPassword(auth, mailOf(n), p);
-      return;
-    }
-    if (a === 'logout') { S.dcat = ''; S.tab = 'pat'; S.mode = 'login'; S.menu = false; S.pop = null; S.fAcc = 'all'; await signOut(auth); try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {} return location.reload(); }
+    if (a === 'logout') { S.dcat = ''; S.tab = 'pat'; S.menu = false; S.pop = null; S.fAcc = 'all'; await signOut(auth); try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {} return location.reload(); }
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
@@ -1114,8 +1097,7 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-act
 document.addEventListener('change', e => { if ((e.target.tagName === 'SELECT' || e.target.type === 'month') && e.target.dataset.act) act(e.target); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
-  if ($('pn') && document.activeElement === $('pn')) act(document.querySelector('[data-act="login"]'));
-  else if ($('an') && document.activeElement === $('an')) act(document.querySelector('[data-act="adda"]'));
+  if ($('an') && document.activeElement === $('an')) act(document.querySelector('[data-act="adda"]'));
 });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
