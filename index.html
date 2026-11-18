@@ -139,7 +139,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.45';
+const VER = '0.46';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -773,23 +773,29 @@ function pageAnd() {
   const pts = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
   const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
-  const ch = all.length > 1 ? {
-    main: lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L),
-    net: lcCard('net', 'Variazione totale del patrimonio netto nel periodo', all.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 })), [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]),
-    bar: lcCard('bar', 'Variazione mensile del patrimonio netto', all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto })), [{ k: 'v', c: '#15803d', l: 'Variazione mensile', bar: 1 }])
-  } : null;
+  const dNet = all.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 }));
+  const dBar = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
   const wsig = [rg, lo_, hi_, yr, all.length].join('|');
-  if (ch && S.wsig !== wsig) {
+  if (all.length > 1 && S.wsig !== wsig) {
     S.wsig = wsig;
-    ['main', 'net', 'bar'].forEach(k => {
-      const c = CHK[k], n = c.pts.length, m = c.pts.map(q => q.mese);
+    [['main', pts], ['net', dNet], ['bar', dBar]].forEach(([k, d]) => {
+      const n = d.length, m = d.map(q => q.mese);
       if (!st.length || rg === '0') { delete ZM[k]; return; }
       let ia = m.findIndex(x => x >= st[0].mese), ib = m.length - 1 - [...m].reverse().findIndex(x => x <= st[st.length - 1].mese);
       if (ia < 0) ia = 0; if (ib >= n || ib < 0) ib = n - 1;
+      const mins = Math.min(n - 1, 3);
+      if (ib - ia < mins) { const c0 = (ia + ib) / 2; ia = c0 - mins / 2; ib = c0 + mins / 2; }
+      if (ia < 0) { ib -= ia; ia = 0; } if (ib > n - 1) { ia -= ib - (n - 1); ib = n - 1; }
+      ia = Math.max(0, ia);
       if (ia <= 0 && ib >= n - 1) { delete ZM[k]; return; }
-      ZM[k] = { a: ia, b: ib, n, sig: c.pts[0].lab + '|' + c.pts[n - 1].lab }; lcSet(k, ia, ib);
+      ZM[k] = { a: ia, b: ib, n, sig: d[0].lab + '|' + d[n - 1].lab };
     });
   }
+  const ch = all.length > 1 ? {
+    main: lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L),
+    net: lcCard('net', 'Variazione totale del patrimonio netto nel periodo', dNet, [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]),
+    bar: lcCard('bar', 'Variazione mensile del patrimonio netto', dBar, [{ k: 'v', c: '#15803d', l: 'Variazione mensile', bar: 1 }])
+  } : null;
   return `<div class="card"><div class="grid">${sel}${sel2}</div>${cust}${all.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
     ${ch ? ch.main : ''}
     ${ch ? ch.net : ''}
