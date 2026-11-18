@@ -137,7 +137,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.37';
+const VER = '0.38';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -621,9 +621,12 @@ function lcIdx(w, clientX) {
   const r = svg.getBoundingClientRect(), g = c.geom, px = (clientX - r.left) * c.W / r.width;
   return g.a + (px - g.L) / (c.W - g.L - g.R) * (g.b - g.a);
 }
-function lcCross(w, clientX) {
+function lcCross(w, clientX, tap) {
   const c = CH[w.dataset.ch]; if (!c || !c.geom) return; const g = c.geom, fi = lcIdx(w, clientX); if (fi === null) return;
   const idx = Math.min(Math.floor(g.b + 1e-6), Math.max(Math.ceil(g.a - 1e-6), Math.round(fi))), pt = c.pts[idx], xs = g.x(idx), xh = w.querySelector('.xh'); if (!pt || !xh) return;
+  if (tap && w._sel === idx && xh.innerHTML) { xh.innerHTML = ''; w._sel = null; w._hid = idx; return; }
+  if (!tap && w._hid === idx) return;
+  w._hid = null; w._sel = idx;
   const rows = c.series.filter(s => pt[s.k] != null), bw = 178, bh = 22 + rows.length * 15, bx = Math.max(4, Math.min(c.W - bw - 4, xs + 10 + bw > c.W - 4 ? xs - 10 - bw : xs + 10));
   xh.innerHTML = `<line x1="${xs.toFixed(1)}" x2="${xs.toFixed(1)}" y1="${g.T}" y2="${c.H - g.B}" stroke="#5b7370" stroke-dasharray="3 3"/>`
     + rows.map(s => `<circle cx="${xs.toFixed(1)}" cy="${g.y(pt[s.k]).toFixed(1)}" r="4.5" fill="#fff" stroke="${s.c}" stroke-width="2.5"/>`).join('')
@@ -636,7 +639,7 @@ document.addEventListener('pointerdown', e => {
   if (e.pointerType === 'touch') { const t = e.target.closest && e.target.closest('[data-tip]'); tipAt(e, t); }
   if (!w) return;
   PT.set(e.pointerId, { x: e.clientX, w }); PINCH = null;
-  if (PT.size === 1) lcCross(w, e.clientX);
+  if (PT.size === 1) lcCross(w, e.clientX, true);
 });
 document.addEventListener('pointermove', e => {
   const pr = PT.get(e.pointerId);
@@ -653,7 +656,7 @@ document.addEventListener('pointermove', e => {
 });
 const pend0 = e => { PT.delete(e.pointerId); PINCH = null; };
 document.addEventListener('pointerup', pend0); document.addEventListener('pointercancel', pend0);
-document.addEventListener('mouseout', e => { const w = e.target.closest && e.target.closest('.lcw'); if (w && !(e.relatedTarget && w.contains(e.relatedTarget))) { const xh = w.querySelector('.xh'); if (xh) xh.innerHTML = ''; } });
+document.addEventListener('mouseout', e => { const w = e.target.closest && e.target.closest('.lcw'); if (w && !(e.relatedTarget && w.contains(e.relatedTarget))) { const xh = w.querySelector('.xh'); if (xh) xh.innerHTML = ''; w._sel = null; w._hid = null; } });
 document.addEventListener('wheel', e => {
   const w = e.target.closest && e.target.closest('.lcw'); if (!w || !(e.ctrlKey || e.metaKey)) return;
   e.preventDefault(); const fi = lcIdx(w, e.clientX); if (fi !== null) lcZoom(w.dataset.k, e.deltaY < 0 ? 1.25 : 0.8, fi);
