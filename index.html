@@ -139,7 +139,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const VER = '0.47';
+const VER = '0.48';
 const ADMIN_EMAIL = 'mariot@pfinance.app';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -660,9 +660,10 @@ function lcCross(w, clientX, tap) {
     + rows.map((s, j) => `<text x="${(bx + 8).toFixed(1)}" y="${g.T + 31 + j * 15}" font-size="11" fill="${s.c === '#0f766e' ? '#5eead4' : s.c === '#b91c1c' ? '#fca5a5' : s.c === '#1d4ed8' ? '#93c5fd' : '#e2e8f0'}">${esc(s.l)}: ${eur(pt[s.k])}</text>`).join('');
 }
 const PT = new Map(); let PINCH = null;
+let PTYPE = '';
 document.addEventListener('pointerdown', e => {
   const w = e.target.closest && e.target.closest('.lcw');
-  if (e.pointerType === 'touch') { const t = e.target.closest && e.target.closest('[data-tip]'); tipAt(e, t); }
+  PTYPE = e.pointerType; if (e.pointerType === 'touch') { const t = e.target.closest && e.target.closest('[data-tip]'); tipAt(e, t && !t.closest('.pie') ? t : null); }
   if (!w) return;
   PT.set(e.pointerId, { x: e.clientX, w }); PINCH = null;
   if (PT.size === 1) lcCross(w, e.clientX, true);
@@ -1077,7 +1078,7 @@ async function act(el) {
 
 const tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
 const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
-document.addEventListener('mousemove', e => tipAt(e, e.target.closest ? e.target.closest('[data-tip]') : null));
+document.addEventListener('mousemove', e => { const t = e.target.closest ? e.target.closest('[data-tip]') : null; tipAt(e, PTYPE === 'touch' && t && t.closest('.pie') ? null : t); });
 document.addEventListener('mouseleave', () => tipAt(null, null));
 document.addEventListener('change', async e => {
   if (e.target.id !== 'impf' || !e.target.files[0]) return;
