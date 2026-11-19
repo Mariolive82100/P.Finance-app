@@ -106,17 +106,3 @@ table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:8px 6px;text-align:right;border-bottom:1px solid #eef3f2;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 th{color:#5b7370;font-weight:500}
-
-.tr{display:flex;align-items:center;gap:8px;padding:0 10px;height:48px;border:1.5px solid;border-radius:10px;box-sizing:border-box}
-.tr.clk{cursor:pointer}.tr.foc{box-shadow:0 0 0 3px rgba(15,118,110,.35)}
-.tr .tm{width:14px;text-align:center;font-weight:700;flex:none}
-.tr .tl{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tr .tl small,.tr .tv small{display:block;font-size:11px;font-weight:400;color:#5b7370;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tr .tv{text-align:right;font-size:14px;font-weight:700;white-space:nowrap;flex:none}
-.tk{margin-left:9px}
-.tk>.tb{position:relative;padding:12px 0 0 18px}
-.tk>.tb::before{content:'';position:absolute;left:0;top:36px;width:18px;border-top:2.5px solid var(--ln)}
-.tk>.tb::after{content:'';position:absolute;left:0;top:0;bottom:0;border-left:2.5px solid var(--ln)}
-.tk>.tb:last-child::after{bottom:auto;height:36px}
-.tk>.tb:first-child{padding-top:10px}
-.tk>.tb:first-child::before{top:34px}.tk>.tb:first-child:last-child::after{height:34px}
