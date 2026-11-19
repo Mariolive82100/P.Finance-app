@@ -14,6 +14,7 @@ function exportCsv() {
 const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
+const keepTT = () => { const t = document.querySelector('.tt'); if (t && S.ttl != null) t.scrollLeft = S.ttl; };
 async function act(el) {
   let a = el.dataset.act; const v = el.dataset.v, D = S.data;
   S.msg = '';
@@ -41,8 +42,9 @@ async function act(el) {
     if (a === 'addo') { S.addAcc = true; render(); const i = $('an'); if (i) i.focus(); return; }
     if (a === 'addc') { S.addAcc = false; return render(); }
     if (a === 'pop') { S.pop = { id: v, mode: 'menu' }; return render(); }
-    if (a === 'popclose') { S.pop = null; return render(); }
-    if (a === 'popback') { S.pop.mode = 'menu'; return render(); }
+    if (a === 'popclose') { S.pop = null; render(); return keepTT(); }
+    if (a === 'tleaf') { const t = document.querySelector('.tt'); S.ttl = t ? t.scrollLeft : null; S.pop = { id: v, mode: 'upd', only: true }; render(); return keepTT(); }
+    if (a === 'popback') { if (S.pop.only) { S.pop = null; render(); return keepTT(); } S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
     if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
@@ -51,7 +53,7 @@ async function act(el) {
       if (!isFinite(nv) || nv < 0) { S.msg = 'Inserisci un valore valido (zero o più).'; return render(); }
       const { id: _i, ...rest } = x, dati = { ...rest, valore: r2(nv) };
       await setDoc(doc(db, 'users', D.uid, 'voci', x.id), dati); Object.assign(x, dati);
-      await syncStorico(); S.pop = null; S.msg = 'Valore aggiornato.'; return render();
+      await syncStorico(); S.pop = null; S.msg = 'Valore aggiornato.'; render(); return keepTT();
     }
     if (a === 'poparch') {
       const x0 = D.voci.find(z => z.id === S.pop.id);

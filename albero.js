@@ -10,7 +10,7 @@ function alberoDati(D, mode) {
   const lato = (pid, t, voci, showAcc) => {
     if (!voci.length) return null;
     const tot = sum(voci), cats = [...new Set([...CATS[t === 'a' ? 'attivo' : 'passivo'], ...voci.map(v => v.categoria)])].filter(c => voci.some(v => v.categoria === c));
-    const leaves = (base, arr, ps) => arr.slice().sort((x, y) => y.valore - x.valore).map(v => ({ id: base + '/' + v.id, lv: 'v', tone: t, kids: [], val: v.valore, pct: ps > 0 ? v.valore / ps : null,
+    const leaves = (base, arr, ps) => arr.slice().sort((x, y) => y.valore - x.valore).map(v => ({ id: base + '/' + v.id, lv: 'v', vid: v.piano ? '' : v.id, tone: t, kids: [], val: v.valore, pct: ps > 0 ? v.valore / ps : null,
       label: v.categoria === 'Investimenti' && v.dove ? 'su ' + v.dove : dn(v), sub: showAcc && multi ? accName(v) : '' }));
     const kids = cats.map(c => {
       const a = voci.filter(v => v.categoria === c), cs = sum(a), id = pid + '/' + c; let sub;
@@ -66,9 +66,10 @@ function alberoSvg(root, open, focus) {
     o += `<path d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" stroke="${tsty(c.n).ln}" stroke-width="2.2"/>`; });
   L.nodes.forEach(m => {
     const n = m.n, c = tsty(n), x = X(m.lvl), y = Y(m), pc = n.pct != null ? ' · ' + (n.pct * 100).toFixed(1).replace('.', ',') + '%' : '';
-    o += `<g${m.can ? ` data-act="tn" data-v="${esc(n.id)}" data-l="${m.lvl}" data-p="${esc(m.par)}" style="cursor:pointer"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
+    o += `<g${m.can ? ` data-act="tn" data-v="${esc(n.id)}" data-l="${m.lvl}" data-p="${esc(m.par)}" style="cursor:pointer"` : n.vid ? ` data-act="tleaf" data-v="${esc(n.vid)}" style="cursor:pointer"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
       + `<rect x="${x}" y="${y}" width="${TN.w}" height="${TN.h}" rx="10" fill="${c.f}" stroke="${c.s}" stroke-width="${n.id === focus ? 4 : n.lv === 'v' ? 1.5 : 2}"/>`
       + T(x + 10, y + 19, trunc(n.label, 20), 11, 600, c.t1) + T(x + 10, y + 35, eur0(n.val) + pc, 10.5, 600, n.val < 0 ? '#b91c1c' : c.t2);
+    if (n.vid) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 4, '✎', 12, 700, c.s, 'middle');
     if (m.can) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 5, m.open ? '−' : '+', 15, 700, c.s, 'middle');
     o += '</g>';
   });
@@ -89,7 +90,7 @@ function treeCard(root, focus) {
     ${zeroToggle()}
     <div class="tabs" style="margin-top:8px"><button class="b s sm" data-act="texp">Espandi tutto</button><button class="b s sm" data-act="tcol">Comprimi tutto</button></div>
     <div class="tw tt" style="margin-top:12px">${alberoSvg(root, S.tx, focus)}</div>
-    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Il grafico a torta mostra i rami del riquadro evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p>
+    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Sulle voci finali (con la matita) tocca per aggiornare il valore. Il grafico a torta mostra i rami del riquadro evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p>
     <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
 }
 
