@@ -1,6 +1,5 @@
 'use strict';
 /* ---------- Albero del patrimonio (interattivo) ---------- */
-const TN = { w: 150, h: 46, gx: 44, gy: 12 };
 
 /* Costruisce l'albero: patrimonio netto > (account >) attivi/passivi > macro categorie > (classi, solo per gli investimenti) > voci.
    La stessa classe presente su più conti viene sommata. */
@@ -34,19 +33,6 @@ function alberoDati(D, mode) {
   return { id: 'r', label: 'Patrimonio netto', val: net, pct: null, tone: 'r', lv: 'r', kids: [lato('r/a', 'a', att, true), lato('r/p', 'p', pas, true)].filter(Boolean) };
 }
 
-function alberoLayout(root, open) {
-  const nodes = [], links = [], step = TN.h + TN.gy; let row = 0;
-  const walk = (n, lvl, parent) => {
-    const kids = open.has(n.id) ? n.kids : [], me = { n, lvl, y: 0, can: n.kids.length > 0, open: kids.length > 0, par: parent ? parent.n.id : '' };
-    nodes.push(me);
-    if (kids.length) { const ys = kids.map(k => walk(k, lvl + 1, me)); me.y = (ys[0] + ys[ys.length - 1]) / 2; } else me.y = row++ * step;
-    if (parent) links.push([parent, me]);
-    return me.y;
-  };
-  walk(root, 0, null);
-  return { nodes, links, rows: row, depth: Math.max(...nodes.map(x => x.lvl)) + 1 };
-}
-
 const TSTY = {
   r: { f: '#1f3b38', s: '#1f3b38', t1: '#d6f2ee', t2: '#ffffff', ln: '#8aa5a2' },
   u: { f: '#e8eefb', s: '#1d4ed8', t1: '#16302d', t2: '#1d4ed8', ln: '#7d97d6' },
@@ -57,23 +43,20 @@ const TSTY = {
 };
 const tsty = n => n.lv === 'r' || n.lv === 'u' ? TSTY[n.lv] : TSTY[n.lv === 's' ? 's' + n.tone : n.lv === 'm' ? 'm' + n.tone : n.lv === 'c' ? 'c' + n.tone : 'v' + n.tone];
 
-function alberoSvg(root, open, focus) {
-  const L = alberoLayout(root, open), W = L.depth * (TN.w + TN.gx) - TN.gx + 4, H = Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
-  const X = lvl => 2 + lvl * (TN.w + TN.gx), Y = m => 2 + m.y;
-  const T = (x, y, s, sz, w, f, an = 'start') => `<text x="${x}" y="${y}" font-size="${sz}" font-weight="${w}" fill="${f}" text-anchor="${an}">${esc(s)}</text>`;
+/* Albero verticale: una riga per voce, rientro per livello */
+function alberoLista(root, open, focus) {
   let o = '';
-  L.links.forEach(([p, c]) => { const x1 = X(p.lvl) + TN.w, y1 = Y(p) + TN.h / 2, x2 = X(c.lvl), y2 = Y(c) + TN.h / 2, mx = (x1 + x2) / 2;
-    o += `<path d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" stroke="${tsty(c.n).ln}" stroke-width="2.2"/>`; });
-  L.nodes.forEach(m => {
-    const n = m.n, c = tsty(n), x = X(m.lvl), y = Y(m), pc = n.pct != null ? ' · ' + (n.pct * 100).toFixed(1).replace('.', ',') + '%' : '';
-    o += `<g${m.can ? ` data-act="tn" data-v="${esc(n.id)}" data-l="${m.lvl}" data-p="${esc(m.par)}" style="cursor:pointer"` : n.vid ? ` data-act="tleaf" data-v="${esc(n.vid)}" style="cursor:pointer"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
-      + `<rect x="${x}" y="${y}" width="${TN.w}" height="${TN.h}" rx="10" fill="${c.f}" stroke="${c.s}" stroke-width="${n.id === focus ? 4 : n.lv === 'v' ? 1.5 : 2}"/>`
-      + T(x + 10, y + 19, trunc(n.label, 20), 11, 600, c.t1) + T(x + 10, y + 35, eur0(n.val) + pc, 10.5, 600, n.val < 0 ? '#b91c1c' : c.t2);
-    if (n.vid) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 4, '✎', 12, 700, c.s, 'middle');
-    if (m.can) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 5, m.open ? '−' : '+', 15, 700, c.s, 'middle');
-    o += '</g>';
-  });
-  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="min-width:${W}px">${o}</svg>`;
+  const walk = (n, lvl, par) => {
+    const c = tsty(n), can = n.kids.length > 0, isOpen = can && open.has(n.id), pc = n.pct != null ? (n.pct * 100).toFixed(1).replace('.', ',') + '%' : '';
+    const act = can ? ` data-act="tn" data-v="${esc(n.id)}" data-p="${esc(par)}"` : n.vid ? ` data-act="tleaf" data-v="${esc(n.vid)}"` : '';
+    const mark = can ? (isOpen ? '▾' : '▸') : n.vid ? '✎' : '';
+    o += `<div class="tr${n.id === focus ? ' foc' : ''}${act ? ' clk' : ''}"${act} style="margin-left:${lvl * 14}px;background:${c.f};border-color:${c.s};color:${c.t1}" title="${esc(n.label)}">`
+      + `<span class="tm" style="color:${c.s}">${mark}</span><span class="tl">${esc(n.label)}${n.sub ? `<small>${esc(n.sub)}</small>` : ''}</span>`
+      + `<span class="tv" style="color:${n.val < 0 ? '#b91c1c' : c.t2}">${eur0(n.val)}${pc ? `<small>${pc}</small>` : ''}</span></div>`;
+    if (isOpen) n.kids.forEach(k => walk(k, lvl + 1, n.id));
+  };
+  walk(root, 0, '');
+  return o;
 }
 
 function alberoTrova(root, id, path = []) {
@@ -88,10 +71,9 @@ function treeCard(root, focus) {
   return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
     ${zeroToggle()}
-    <div class="tabs" style="margin-top:8px"><button class="b s sm" data-act="texp">Espandi tutto</button><button class="b s sm" data-act="tcol">Comprimi tutto</button></div>
-    <div class="tw tt" style="margin-top:12px">${alberoSvg(root, S.tx, focus)}</div>
-    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Sulle voci finali (con la matita) tocca per aggiornare il valore. Il grafico a torta mostra i rami del riquadro evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p>
-    <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
+    <div class="tabs" style="margin-top:8px"><button class="b s sm" data-act="texp">Espandi</button><button class="b s sm" data-act="tcol">Comprimi</button><button class="b s sm" data-act="topie">Grafico ↓</button></div>
+    <div class="tt" style="margin-top:12px">${alberoLista(root, S.tx, focus)}</div>
+    <p class="note">Tocca una riga con la freccia per aprire il ramo e toccala di nuovo per chiuderlo. Sulle voci finali (con la matita) tocca per aggiornare il valore. Il grafico a torta mostra i rami del riquadro evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto.</p></div>`;
 }
 
 /* ---------- Grafico a torta: segue il ramo evidenziato nell'albero ---------- */

@@ -14,7 +14,7 @@ function exportCsv() {
 const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
-const keepTT = () => { const t = document.querySelector('.tt'); if (t && S.ttl != null) t.scrollLeft = S.ttl; };
+const keepTT = () => { if (S.ttl != null) window.scrollTo(0, S.ttl); };
 async function act(el) {
   let a = el.dataset.act; const v = el.dataset.v, D = S.data;
   S.msg = '';
@@ -43,7 +43,7 @@ async function act(el) {
     if (a === 'addc') { S.addAcc = false; return render(); }
     if (a === 'pop') { S.pop = { id: v, mode: 'menu' }; return render(); }
     if (a === 'popclose') { S.pop = null; render(); return keepTT(); }
-    if (a === 'tleaf') { const t = document.querySelector('.tt'); S.ttl = t ? t.scrollLeft : null; S.pop = { id: v, mode: 'upd', only: true }; render(); return keepTT(); }
+    if (a === 'tleaf') { S.ttl = window.scrollY; S.pop = { id: v, mode: 'upd', only: true }; render(); return keepTT(); }
     if (a === 'popback') { if (S.pop.only) { S.pop = null; render(); return keepTT(); } S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
@@ -81,12 +81,9 @@ async function act(el) {
     }
     if (a === 'topie') { const p = $('pie'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (a === 'tn') {
-      const w0 = document.querySelector('.tt'), sl = w0 ? w0.scrollLeft : 0, lv = +el.dataset.l;
-      S.tx = S.tx || new Set(['r']); if (S.tx.has(v)) S.tx.delete(v); else S.tx.add(v);
+      const y = window.scrollY; S.tx = S.tx || new Set(['r']); if (S.tx.has(v)) S.tx.delete(v); else S.tx.add(v);
       S.tf = S.tx.has(v) ? v : (el.dataset.p || 'r'); S.pieSel = null; S.anim = true;
-      render();
-      const w = document.querySelector('.tt');
-      if (w) { const fine = 2 + (lv + 2) * (TN.w + TN.gx) - TN.gx; w.scrollLeft = S.tx.has(v) && fine > sl + w.clientWidth ? fine - w.clientWidth + 6 : sl; }
+      render(); window.scrollTo(0, y);
       return;
     }
     if (a === 'pies') { S.anim = 'sel'; S.pieSel = S.pieSel === +v ? null : +v; return render(); }
