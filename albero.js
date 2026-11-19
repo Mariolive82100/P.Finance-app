@@ -104,7 +104,7 @@ function treeCard(root, focus) {
     <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
 }
 
-/* ---------- Grafico a torta: segue il ramo evidenziato nell'albero ---------- */
+/* ---------- Grafico a torta: si naviga con i tocchi sulle fette (indipendente dall'albero) ---------- */
 const PALS = {
   a: ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'],
   p: ['#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#9f1239', '#be123c', '#fb7185'],
@@ -115,13 +115,14 @@ function pieDati(node) {
   const P = x => total > 0 ? (x / total * 100).toFixed(1).replace('.', ',') + '%' : '';
   const groups = kids.map(k => {
     const pal = PALS[k.tone] || PALS.a, n = cnt[k.tone] = (cnt[k.tone] ?? -1) + 1;
-    return { label: k.label, sum: k.val, pct: P(k.val), col: pal[n % pal.length] };
+    return { id: k.id, can: k.kids.some(x => x.val > 0), label: k.label, sum: k.val, pct: P(k.val), col: pal[n % pal.length] };
   });
   return { sum: node.val, groups, total };
 }
 function pieCard(found) {
   const node = found.node, pb = pieDati(node), path = found.path.map(n => n.label).join(' › ');
-  if (!pb.groups.length) return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2><p class="note" style="margin-top:0">${esc(path)}</p><p>Nessuna voce da mostrare in questo ramo.</p></div>`;
+  const nav = `<div class="tabs" style="margin:0 0 8px"><button class="b s sm" data-act="pback" ${S.pp && S.pp.length > 1 ? '' : 'disabled'}>← Indietro</button><button class="b s sm" data-act="phome" ${S.pp && S.pp.length > 1 ? '' : 'disabled'}>⟲ Torna all'inizio</button></div>`;
+  if (!pb.groups.length) return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p><p>Nessuna voce da mostrare in questo ramo.</p></div>`;
   const gi = S.pieSel != null && pb.groups[S.pieSel] ? S.pieSel : -1;
   const CX = 200, CY = 200, r0 = 84, r1 = 178, tot = pb.total || 1, P2 = Math.PI * 2;
   const pt = (r, a) => [(CX + r * Math.cos(a)).toFixed(1), (CY + r * Math.sin(a)).toFixed(1)];
@@ -140,7 +141,7 @@ function pieCard(found) {
   const cl = sg ? sg.label : node.label, cv = sg ? sg.sum : pb.sum, cp = sg ? sg.pct : '';
   const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 16))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
   const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
-  return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2><p class="note" style="margin-top:0">${esc(path)}</p>
+  return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p>
     <svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${paths}</g>${hole}</svg>
-    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta.</p>${legend}</div>`;
+    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta per selezionarla, tocca di nuovo la stessa fetta per aprirla.</p>${legend}</div>`;
 }

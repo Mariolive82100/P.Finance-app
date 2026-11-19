@@ -177,8 +177,9 @@ function pageDis() {
   const D = S.data;
   if (!D.voci.length) return '<div class="card">Nessuna voce da mostrare. Inseriscile nella pagina Patrimonio.</div>';
   if (!S.tx) S.tx = new Set(['r']);
-  const root = alberoDati({ ...D, voci: vz(D.voci) }, S.tview || 'agg'), found = alberoTrova(root, S.tf || 'r') || alberoTrova(root, 'r');
-  const html = `<div class="dgrid">${treeCard(root, found.node.id)}${pieCard(found)}</div>`;
+  const root = alberoDati({ ...D, voci: vz(D.voci) }, S.tview || 'agg'), found = (S.pp || ['r']).slice().reverse().map(id => alberoTrova(root, id)).find(Boolean) || alberoTrova(root, 'r');
+  S.pp = found.path.map(n => n.id);
+  const html = `<div class="dgrid">${treeCard(root, '')}${pieCard(found)}</div>`;
   S.anim = false;
   return html;
 }
