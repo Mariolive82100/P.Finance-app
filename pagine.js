@@ -64,7 +64,7 @@ const accName = v => { const D = S.data; if (!v.account) return D.nome; const a 
 
 function pagePat() {
   const D = S.data, fa = S.fAcc || 'all', ed = S.edit && D.voci.find(v => v.id === S.edit);
-  const vis = D.voci.filter(v => fa === 'all' || accKey(v) === fa), t = totals(vis);
+  const vis = vz(D.voci).filter(v => fa === 'all' || accKey(v) === fa), t = totals(vis);
   const g = (id, d) => (S.fd && S.fd[id] !== undefined) ? S.fd[id] : d;
   const tipo = g('ft', ed ? ed.tipo : 'attivo');
   const mod = tipo === 'passivo' ? g('fm', ed ? (ed.piano ? 'piano' : 'manuale') : 'piano') : 'manuale';
@@ -135,6 +135,7 @@ function pagePat() {
   return `${filtro}<div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="two"><div class="card at"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
     <div class="card pa"><div class="lbl">Passivi</div><div class="big neg">${eur(t.passivi)}</div></div></div>
+    <div class="card" style="padding-top:4px;padding-bottom:14px">${zeroToggle()}</div>
     <div class="card at"><h2>Attivi</h2>${listAttivi()}</div>
     <div class="card pa"><h2>Passivi</h2>${listPassivi()}</div>
     ${archSec}
@@ -175,9 +176,9 @@ function pageDis() {
   const D = S.data, view = S.dview || 'acc';
   const ctl = `<div class="card stk"><div class="tabs"><button class="b ${view === 'acc' ? '' : 's'}" data-act="dview" data-v="acc">Per account</button><button class="b ${view === 'conti' ? '' : 's'}" data-act="dview" data-v="conti">Per conti</button></div>
     <select data-act="dcat" style="margin-top:8px"><option value="">Tutte le categorie</option><optgroup label="Attivi">${CATS.attivo.map(c => `<option ${S.dcat === c ? 'selected' : ''}>${c}</option>`).join('')}</optgroup><optgroup label="Passivi">${CATS.passivo.map(c => `<option ${S.dcat === c ? 'selected' : ''}>${c}</option>`).join('')}</optgroup></select>
-    <div class="legend" style="margin:8px 0 0"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span></div></div>`;
+    <div class="legend" style="margin:8px 0 0"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span></div>${zeroToggle()}</div>`;
   if (!D.voci.length) return ctl + '<div class="card">Nessuna voce da mostrare. Inseriscile nella pagina Patrimonio.</div>';
-  const vv = S.dcat ? D.voci.filter(v => v.categoria === S.dcat) : D.voci;
+  const vv = vz(S.dcat ? D.voci.filter(v => v.categoria === S.dcat) : D.voci);
   if (!vv.length) return ctl + '<div class="card">Nessuna voce in questa categoria.</div>';
   const build = tp => {
     const vs = vv.filter(v => v.tipo === tp);

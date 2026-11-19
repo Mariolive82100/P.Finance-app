@@ -1,5 +1,9 @@
 'use strict';
-const VER = '0.56';
+const VER = '0.57';
+/* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
+const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
+const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
+const zeroToggle = () => `<label style="display:flex;gap:10px;align-items:center;margin:10px 0 0;font-size:14px"><input type="checkbox" id="zt" style="width:auto" ${showZero() ? 'checked' : ''}><span>Mostra conti a saldo zero</span></label>`;
 const ASSET = ['Azioni', 'Obbligazioni', 'Monetario', 'Oro e materie prime', 'Immobiliare', 'Criptovalute', 'Multi-asset', 'Altro'];
 const dn = v => v.assetClass || v.nome;
 const ADMIN_UID = '29kFEZwmKPZvHFjQ9M65ERhIbhG3';

@@ -80,6 +80,6 @@ function treeCard() {
   if (!S.tx) S.tx = new Set(['r']);
   return `<div class="card" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
-    <div class="tw tt" style="margin-top:12px">${alberoSvg(alberoDati(D, mode), S.tx)}</div>
+    <div class="tw tt" style="margin-top:12px">${alberoSvg(alberoDati({ ...D, voci: vz(D.voci) }, mode), S.tx)}</div>
     <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Dopo Attivi e Passivi trovi le macro categorie; gli investimenti si dividono poi per asset class. Le percentuali sono sul ramo che le contiene. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p></div>`;
 }

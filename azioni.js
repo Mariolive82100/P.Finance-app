@@ -231,6 +231,7 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT' && el.tagName !== 'INPUT') act(el); });
 document.addEventListener('change', e => { if ((e.target.tagName === 'SELECT' || e.target.type === 'month') && e.target.dataset.act) act(e.target); });
+document.addEventListener('change', e => { if (e.target.id === 'zt') { S.showZero = e.target.checked; try { localStorage.setItem('pf_zero', S.showZero ? '1' : '0'); } catch (x) {} render(); } });
 document.addEventListener('change', e => { if (e.target.id === 'pdfhide') { S.pdfHide = e.target.checked; S.pdf = null; render(); } });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
