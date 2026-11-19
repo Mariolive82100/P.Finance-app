@@ -43,20 +43,19 @@ const TSTY = {
 };
 const tsty = n => n.lv === 'r' || n.lv === 'u' ? TSTY[n.lv] : TSTY[n.lv === 's' ? 's' + n.tone : n.lv === 'm' ? 'm' + n.tone : n.lv === 'c' ? 'c' + n.tone : 'v' + n.tone];
 
-/* Albero verticale: una riga per voce, rientro per livello */
+/* Albero verticale con rami collegati da linee */
 function alberoLista(root, open, focus) {
-  let o = '';
-  const walk = (n, lvl, par) => {
+  const walk = (n, par, last) => {
     const c = tsty(n), can = n.kids.length > 0, isOpen = can && open.has(n.id), pc = n.pct != null ? (n.pct * 100).toFixed(1).replace('.', ',') + '%' : '';
     const act = can ? ` data-act="tn" data-v="${esc(n.id)}" data-p="${esc(par)}"` : n.vid ? ` data-act="tleaf" data-v="${esc(n.vid)}"` : '';
     const mark = can ? (isOpen ? '▾' : '▸') : n.vid ? '✎' : '';
-    o += `<div class="tr${n.id === focus ? ' foc' : ''}${act ? ' clk' : ''}"${act} style="margin-left:${lvl * 14}px;background:${c.f};border-color:${c.s};color:${c.t1}" title="${esc(n.label)}">`
+    let o = `<div class="tb${par ? '' : ' tr0'}" style="--ln:${c.ln}"><div class="tr${n.id === focus ? ' foc' : ''}${act ? ' clk' : ''}"${act} style="background:${c.f};border-color:${c.s};color:${c.t1}" title="${esc(n.label)}">`
       + `<span class="tm" style="color:${c.s}">${mark}</span><span class="tl">${esc(n.label)}${n.sub ? `<small>${esc(n.sub)}</small>` : ''}</span>`
       + `<span class="tv" style="color:${n.val < 0 ? '#b91c1c' : c.t2}">${eur0(n.val)}${pc ? `<small>${pc}</small>` : ''}</span></div>`;
-    if (isOpen) n.kids.forEach(k => walk(k, lvl + 1, n.id));
+    if (isOpen) o += `<div class="tk">${n.kids.map((k, i) => walk(k, n.id, i === n.kids.length - 1)).join('')}</div>`;
+    return o + '</div>';
   };
-  walk(root, 0, '');
-  return o;
+  return walk(root, '', true);
 }
 
 function alberoTrova(root, id, path = []) {
