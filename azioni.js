@@ -96,6 +96,7 @@ async function act(el) {
       }
       S.anim = 'sel'; S.pieSel = i; return render();
     }
+    if (a === 'pdes') { if (S.pieSel == null) return; S.pieSel = null; S.anim = 'sel'; return render(); }
     if (a === 'pback') { if (S.pp && S.pp.length > 1) S.pp = S.pp.slice(0, -1); S.pieSel = null; S.anim = true; return render(); }
     if (a === 'phome') { S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
@@ -310,7 +311,7 @@ document.addEventListener('change', async e => {
     S.msg = `Importati ${ok} mesi.` + (skip ? ` Saltati ${skip} (mese in corso o già registrato dall'app).` : '') + (bad ? ` Righe non valide: ${bad}.` : ''); render();
   } catch (er) { if (box) box.textContent = errText(er); }
 });
-document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT' && el.tagName !== 'INPUT') act(el); });
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT' && el.tagName !== 'INPUT') act(el); else if (!el && S.pieSel != null && S.tab === 'dis') { S.pieSel = null; S.anim = 'sel'; render(); } });
 document.addEventListener('change', e => { if ((e.target.tagName === 'SELECT' || e.target.type === 'month') && e.target.dataset.act) act(e.target); });
 document.addEventListener('change', e => { if (e.target.id === 'zt') { S.showZero = e.target.checked; try { localStorage.setItem('pf_zero', S.showZero ? '1' : '0'); } catch (x) {} render(); } });
 document.addEventListener('change', e => { if (e.target.id === 'pdfhide') { S.pdfHide = e.target.checked; S.pdf = null; render(); } });

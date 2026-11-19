@@ -141,7 +141,7 @@ function pieCard(found) {
   const cl = sg ? sg.label : node.label, cv = sg ? sg.sum : pb.sum, cp = sg ? sg.pct : '';
   const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 16))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
   const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
-  return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p>
+  return `<div class="card pcard" id="pie" data-act="pdes"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p>
     <svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${paths}</g>${hole}</svg>
-    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta per selezionarla, tocca di nuovo la stessa fetta per aprirla.</p>${legend}</div>`;
+    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta per selezionarla, tocca di nuovo la stessa fetta per aprirla. Tocca al centro o fuori dalle fette per deselezionare.</p>${legend}</div>`;
 }
