@@ -88,7 +88,7 @@ function treeCard(root, focus) {
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
     ${zeroToggle()}
     <div class="tw tt" style="margin-top:12px">${alberoSvg(root, S.tx, focus)}</div>
-    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Il grafico a torta mostra il ramo evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p>
+    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Il grafico a torta mostra i rami del riquadro evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p>
     <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
 }
 
@@ -103,41 +103,32 @@ function pieDati(node) {
   const P = x => total > 0 ? (x / total * 100).toFixed(1).replace('.', ',') + '%' : '';
   const groups = kids.map(k => {
     const pal = PALS[k.tone] || PALS.a, n = cnt[k.tone] = (cnt[k.tone] ?? -1) + 1;
-    const items = k.kids.filter(x => x.val > 0).map(x => ({ nome: x.label, val: x.val, sub: x.sub || '', pct: P(x.val) }));
-    return { label: k.label, sum: k.val, pct: P(k.val), col: pal[n % pal.length], items };
+    return { label: k.label, sum: k.val, pct: P(k.val), col: pal[n % pal.length] };
   });
   return { sum: node.val, groups, total };
 }
 function pieCard(found) {
   const node = found.node, pb = pieDati(node), path = found.path.map(n => n.label).join(' › ');
   if (!pb.groups.length) return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2><p class="note" style="margin-top:0">${esc(path)}</p><p>Nessuna voce da mostrare in questo ramo.</p></div>`;
-  const gi = S.pieSel != null && pb.groups[S.pieSel] ? S.pieSel : -1, ii = gi >= 0 && S.pieSel2 != null && pb.groups[gi].items[S.pieSel2] ? S.pieSel2 : -1;
-  const single = pb.groups.every(g => !g.items.length);
-  const CX = 200, CY = 200, r0 = 62, r1 = single ? 178 : 114, r2 = 120, r3 = 178, tot = pb.total || 1, P2 = Math.PI * 2;
+  const gi = S.pieSel != null && pb.groups[S.pieSel] ? S.pieSel : -1;
+  const CX = 200, CY = 200, r0 = 84, r1 = 178, tot = pb.total || 1, P2 = Math.PI * 2;
   const pt = (r, a) => [(CX + r * Math.cos(a)).toFixed(1), (CY + r * Math.sin(a)).toFixed(1)];
   const ring = (a0, a1, ra, rb) => {
     if (a1 - a0 >= P2 - 1e-3) return `M${CX + rb} ${CY}A${rb} ${rb} 0 1 1 ${CX - rb} ${CY}A${rb} ${rb} 0 1 1 ${CX + rb} ${CY}ZM${CX + ra} ${CY}A${ra} ${ra} 0 1 0 ${CX - ra} ${CY}A${ra} ${ra} 0 1 0 ${CX + ra} ${CY}Z`;
     const big = a1 - a0 > Math.PI ? 1 : 0, p1 = pt(rb, a0), p2 = pt(rb, a1 - 1e-4), p3 = pt(ra, a1 - 1e-4), p4 = pt(ra, a0);
     return `M${p1[0]} ${p1[1]}A${rb} ${rb} 0 ${big} 1 ${p2[0]} ${p2[1]}L${p3[0]} ${p3[1]}A${ra} ${ra} 0 ${big} 0 ${p4[0]} ${p4[1]}Z`;
   };
-  let ang = -Math.PI / 2, inner = '', outer = '';
+  let ang = -Math.PI / 2, paths = '';
   pb.groups.forEach((g, i) => {
-    const a2 = ang + g.sum / tot * P2, col = g.col, dim = gi >= 0 && gi !== i ? ' dim' : '', on = gi === i;
-    inner += `<path class="${on ? 'sel' : ''}${dim}" d="${ring(ang, a2, r0, on ? r1 + 5 : r1)}" fill="${col}" fill-rule="evenodd" data-act="pies" data-v="${i}" data-tip="${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}"></path>`;
-    let ib = ang;
-    g.items.forEach((it, j) => {
-      const ie = ib + it.val / tot * P2, io = on && ii === j, dimO = gi >= 0 && (gi !== i || (ii >= 0 && ii !== j)) ? ' dim' : '';
-      outer += `<path class="${io ? 'sel' : ''}${dimO}" d="${ring(ib, ie, r2, io ? r3 + 7 : on && ii < 0 ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}" data-tip="${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}"></path>`;
-      ib = ie;
-    });
+    const a2 = ang + g.sum / tot * P2, on = gi === i, dim = gi >= 0 && !on ? ' dim' : '';
+    paths += `<path class="${on ? 'sel' : ''}${dim}" d="${ring(ang, a2, r0, on ? r1 + 8 : r1)}" fill="${g.col}" fill-rule="evenodd" data-act="pies" data-v="${i}" data-tip="${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}"></path>`;
     ang = a2;
   });
-  const sg = gi >= 0 ? pb.groups[gi] : null, si = ii >= 0 ? sg.items[ii] : null;
-  const cl = si ? si.nome : sg ? sg.label : node.label, cv = si ? si.val : sg ? sg.sum : pb.sum, cp = si ? si.pct : sg ? sg.pct : '';
-  const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 14))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
-  const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}${g.items.length ? `<small style="color:#5b7370;font-weight:400"> · ${g.items.length} ${g.items.length === 1 ? 'elemento' : 'elementi'}</small>` : ''}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`
-    + (i === gi ? g.items.map((it, j) => `<div class="pl ps2 ${j === ii ? 'on' : ''}" data-act="pies2" data-v="${i}-${j}"><span class="a">${esc(it.nome)}${it.sub ? `<small style="display:block;font-weight:400;color:#5b7370">${esc(it.sub)}</small>` : ''}</span><span>${eur0(it.val)} · ${it.pct}</span></div>`).join('') : '')).join('');
+  const sg = gi >= 0 ? pb.groups[gi] : null;
+  const cl = sg ? sg.label : node.label, cv = sg ? sg.sum : pb.sum, cp = sg ? sg.pct : '';
+  const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 16))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
+  const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
   return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2><p class="note" style="margin-top:0">${esc(path)}</p>
-    <svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${inner}${outer}</g>${hole}</svg>
-    <p class="note" style="text-align:center;margin:0 0 6px">${single ? 'Tocca una fetta.' : 'Anello interno: ' + esc(node.label) + '. Anello esterno: dettaglio. Tocca una fetta.'}</p>${legend}</div>`;
+    <svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${paths}</g>${hole}</svg>
+    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta.</p>${legend}</div>`;
 }

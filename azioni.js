@@ -70,19 +70,18 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
-    if (a === 'tview') { S.tview = v; S.tx = new Set(['r']); S.tf = 'r'; S.pieSel = null; S.pieSel2 = null; S.anim = true; return render(); }
+    if (a === 'tview') { S.tview = v; S.tx = new Set(['r']); S.tf = 'r'; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'topie') { const p = $('pie'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (a === 'tn') {
       const w0 = document.querySelector('.tt'), sl = w0 ? w0.scrollLeft : 0, lv = +el.dataset.l;
       S.tx = S.tx || new Set(['r']); if (S.tx.has(v)) S.tx.delete(v); else S.tx.add(v);
-      S.tf = S.tx.has(v) ? v : (el.dataset.p || 'r'); S.pieSel = null; S.pieSel2 = null; S.anim = true;
+      S.tf = S.tx.has(v) ? v : (el.dataset.p || 'r'); S.pieSel = null; S.anim = true;
       render();
       const w = document.querySelector('.tt');
       if (w) { const fine = 2 + (lv + 2) * (TN.w + TN.gx) - TN.gx; w.scrollLeft = S.tx.has(v) && fine > sl + w.clientWidth ? fine - w.clientWidth + 6 : sl; }
       return;
     }
-    if (a === 'pies') { S.anim = 'sel'; S.pieSel = S.pieSel === +v ? null : +v; S.pieSel2 = null; return render(); }
-    if (a === 'pies2') { S.anim = 'sel'; const [g, j] = v.split('-').map(Number); if (S.pieSel === g && S.pieSel2 === j) S.pieSel2 = null; else { S.pieSel = g; S.pieSel2 = j; } return render(); }
+    if (a === 'pies') { S.anim = 'sel'; S.pieSel = S.pieSel === +v ? null : +v; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
     if (a === 'adda') {
       const nm = $('an').value.trim();
