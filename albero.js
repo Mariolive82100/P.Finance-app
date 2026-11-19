@@ -2,23 +2,24 @@
 /* ---------- Albero del patrimonio (interattivo) ---------- */
 const TN = { w: 150, h: 46, gx: 44, gy: 12 };
 
-/* Costruisce l'albero: patrimonio netto > (account >) attivi/passivi > classi > voci.
-   La classe è l'asset class per gli investimenti, la categoria per tutto il resto.
+/* Costruisce l'albero: patrimonio netto > (account >) attivi/passivi > macro categorie > (classi, solo per gli investimenti) > voci.
    La stessa classe presente su più conti viene sommata. */
 function alberoDati(D, mode) {
   const att = D.voci.filter(v => v.tipo === 'attivo'), pas = D.voci.filter(v => v.tipo === 'passivo'), multi = D.accounts.length > 0;
   const sum = a => a.reduce((s, v) => s + v.valore, 0);
-  const classe = v => v.tipo === 'attivo' && v.categoria === 'Investimenti' ? (v.assetClass || 'Non indicata') : v.categoria;
   const lato = (pid, t, voci, showAcc) => {
     if (!voci.length) return null;
-    const tot = sum(voci), m = new Map();
-    voci.forEach(v => { const k = classe(v); if (!m.has(k)) m.set(k, []); m.get(k).push(v); });
-    const kids = [...m.entries()].map(([k, a]) => {
-      const cs = sum(a);
-      return { id: pid + '/' + k, label: k, val: cs, pct: tot > 0 ? cs / tot : null, tone: t, lv: 'c',
-        kids: a.slice().sort((x, y) => y.valore - x.valore).map(v => ({ id: pid + '/' + k + '/' + v.id, lv: 'v', tone: t, kids: [], val: v.valore, pct: cs > 0 ? v.valore / cs : null,
-          label: v.categoria === 'Investimenti' && v.dove ? 'su ' + v.dove : dn(v), sub: showAcc && multi ? accName(v) : '' })) };
-    }).sort((x, y) => y.val - x.val);
+    const tot = sum(voci), cats = [...new Set([...CATS[t === 'a' ? 'attivo' : 'passivo'], ...voci.map(v => v.categoria)])].filter(c => voci.some(v => v.categoria === c));
+    const leaves = (base, arr, ps) => arr.slice().sort((x, y) => y.valore - x.valore).map(v => ({ id: base + '/' + v.id, lv: 'v', tone: t, kids: [], val: v.valore, pct: ps > 0 ? v.valore / ps : null,
+      label: v.categoria === 'Investimenti' && v.dove ? 'su ' + v.dove : dn(v), sub: showAcc && multi ? accName(v) : '' }));
+    const kids = cats.map(c => {
+      const a = voci.filter(v => v.categoria === c), cs = sum(a), id = pid + '/' + c; let sub;
+      if (t === 'a' && c === 'Investimenti') {
+        const m = new Map(); a.forEach(v => { const k = v.assetClass || 'Non indicata'; if (!m.has(k)) m.set(k, []); m.get(k).push(v); });
+        sub = [...m.entries()].map(([k, b]) => { const ks = sum(b); return { id: id + '/' + k, label: k, val: ks, pct: cs > 0 ? ks / cs : null, tone: t, lv: 'c', kids: leaves(id + '/' + k, b, ks) }; }).sort((x, y) => y.val - x.val);
+      } else sub = leaves(id, a, cs);
+      return { id, label: c, val: cs, pct: tot > 0 ? cs / tot : null, tone: t, lv: 'm', kids: sub };
+    });
     return { id: pid, label: t === 'a' ? 'Attivi' : 'Passivi', val: tot, pct: null, tone: t, lv: 's', kids };
   };
   const net = sum(att) - sum(pas);
@@ -50,10 +51,11 @@ const TSTY = {
   r: { f: '#1f3b38', s: '#1f3b38', t1: '#d6f2ee', t2: '#ffffff', ln: '#8aa5a2' },
   u: { f: '#e8eefb', s: '#1d4ed8', t1: '#16302d', t2: '#1d4ed8', ln: '#7d97d6' },
   sa: { f: '#d6f2ee', s: '#0f766e', t1: '#16302d', t2: '#0f766e', ln: '#4f9f96' }, sp: { f: '#fde8e8', s: '#b91c1c', t1: '#16302d', t2: '#b91c1c', ln: '#d96464' },
+  ma: { f: '#e3f3f0', s: '#2f8a80', t1: '#16302d', t2: '#0f766e', ln: '#4f9f96' }, mp: { f: '#fdeeee', s: '#c95555', t1: '#16302d', t2: '#b91c1c', ln: '#d96464' },
   ca: { f: '#eef6f5', s: '#4f9f96', t1: '#16302d', t2: '#0f766e', ln: '#4f9f96' }, cp: { f: '#fff5f5', s: '#d96464', t1: '#16302d', t2: '#b91c1c', ln: '#d96464' },
   va: { f: '#ffffff', s: '#b5d9d4', t1: '#16302d', t2: '#0f766e', ln: '#4f9f96' }, vp: { f: '#ffffff', s: '#efb0b0', t1: '#16302d', t2: '#b91c1c', ln: '#d96464' }
 };
-const tsty = n => n.lv === 'r' || n.lv === 'u' ? TSTY[n.lv] : TSTY[n.lv === 's' ? 's' + n.tone : n.lv === 'c' ? 'c' + n.tone : 'v' + n.tone];
+const tsty = n => n.lv === 'r' || n.lv === 'u' ? TSTY[n.lv] : TSTY[n.lv === 's' ? 's' + n.tone : n.lv === 'm' ? 'm' + n.tone : n.lv === 'c' ? 'c' + n.tone : 'v' + n.tone];
 
 function alberoSvg(root, open) {
   const L = alberoLayout(root, open), W = L.depth * (TN.w + TN.gx) - TN.gx + 4, H = Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
@@ -79,5 +81,5 @@ function treeCard() {
   return `<div class="card" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
     <div class="tw tt" style="margin-top:12px">${alberoSvg(alberoDati(D, mode), S.tx)}</div>
-    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Le classi sono gli investimenti divisi per asset class e le altre categorie. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p></div>`;
+    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Dopo Attivi e Passivi trovi le macro categorie; gli investimenti si dividono poi per asset class. Le percentuali sono sul ramo che le contiene. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p></div>`;
 }
