@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.66';
+const VER = '0.67';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -133,3 +133,30 @@ function termsGate() {
 }
 function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="note">Hai accettato la versione ${S.profile && S.profile.termini ? S.profile.termini : TERMS_V}.</p></div>`; }
 
+
+/* ---------- Info app e novità ---------- */
+const CHANGELOG = [
+  ['0.67', '19 nov 2026', ['Grafico a torta: tocca una fetta per selezionarla, tocca di nuovo per aprirla', 'Nuovi tasti "Indietro" e "Torna all\'inizio" sulla torta', 'Tocca al centro o fuori dalle fette per deselezionare', 'La torta non dipende più dall\'albero', 'Nuova sezione Info nel menu, con le novità']],
+  ['0.66', '19 nov 2026', ['Importa i titoli da un file CSV (conto e tipo di investimento)']],
+  ['0.65', '19 nov 2026', ['Albero aggregato: la stessa piattaforma su più account è un solo ramo']],
+  ['0.62 – 0.64', '19 nov 2026', ['Albero ridisegnato più volte per il telefono, ora di nuovo orizzontale']],
+  ['0.60 – 0.61', '19 nov 2026', ['Pulsanti "Espandi tutto" e "Comprimi tutto" sull\'albero', 'Aggiorni il valore dalle voci finali dell\'albero']],
+  ['0.57 – 0.59', '19 nov 2026', ['Opzione per mostrare i conti a saldo zero', 'Grafico a torta a un solo anello']],
+  ['0.55 – 0.56', '19 nov 2026', ['Nuovo albero del patrimonio: aggregato o per account, con rami apribili']],
+  ['0.54', '19 nov 2026', ['Report PDF dettagliato con grafici e opzione per nascondere gli importi']],
+  ['0.53', '18 nov 2026', ['Campo "tipo di investimento" (asset class) nelle voci']],
+  ['0.50 – 0.52', '18 nov 2026', ['Accesso solo con Google', 'App utilizzabile anche senza connessione', 'Termini e condizioni aggiornati (versione 2)']],
+  ['0.44 – 0.49', '18 nov 2026', ['Barre della variazione mensile interattive', 'Selettori di periodo e di anno per i grafici', 'Evidenziazione delle fette nella torta']],
+  ['0.35 – 0.43', '18 nov 2026', ['Tasto indietro del telefono per schede, menu e finestre', 'Barra di navigazione in basso con icone', 'Grafico del patrimonio netto interattivo nella pagina Andamento']],
+  ['0.30 – 0.34', '17 nov 2026', ['Grafici con zoom, schermo intero e valori al tocco', 'Confronto tra periodi e indicatori nel report', 'Importazione dello storico da file']]
+];
+function pageInfo() {
+  return `<div class="card"><h2>P.Finance</h2><p class="lbl">Versione ${VER} beta</p>
+    <p>App per tenere traccia del proprio patrimonio, della situazione mese per mese e per imparare le basi della finanza personale.</p>
+    <div class="row"><div class="n">Titolare</div><div class="v">Mario T.</div></div>
+    <div class="row"><div class="n">Accesso</div><div class="v">Google</div></div>
+    <div class="row"><div class="n">Funziona anche offline</div><div class="v">Sì</div></div>
+    <p class="note">Strumento educativo, non consulenza finanziaria. I tuoi dati restano visibili solo a te.</p>
+    <button class="b s sm" data-act="terms">Termini e condizioni</button></div>
+    <div class="card"><h2>Novità</h2>${CHANGELOG.map(([v, d, l]) => `<h3 style="margin:12px 0 2px;font-size:15px">Versione ${v}</h3><div class="lbl">${d}</div><ul class="c">${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')}</div>`;
+}

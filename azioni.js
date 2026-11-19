@@ -19,6 +19,7 @@ async function act(el) {
   let a = el.dataset.act; const v = el.dataset.v, D = S.data;
   S.msg = '';
   try {
+    if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
     if (a === 'accept') {
       if (!$('tc') || !$('tc').checked) { S.msg = 'Per continuare devi spuntare la casella di accettazione.'; return render(); }
