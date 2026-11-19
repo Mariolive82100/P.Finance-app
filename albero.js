@@ -37,7 +37,7 @@ function alberoDati(D, mode) {
 function alberoLayout(root, open) {
   const nodes = [], links = [], step = TN.h + TN.gy; let row = 0;
   const walk = (n, lvl, parent) => {
-    const kids = open.has(n.id) ? n.kids : [], me = { n, lvl, y: 0, can: n.kids.length > 0, open: kids.length > 0 };
+    const kids = open.has(n.id) ? n.kids : [], me = { n, lvl, y: 0, can: n.kids.length > 0, open: kids.length > 0, par: parent ? parent.n.id : '' };
     nodes.push(me);
     if (kids.length) { const ys = kids.map(k => walk(k, lvl + 1, me)); me.y = (ys[0] + ys[ys.length - 1]) / 2; } else me.y = row++ * step;
     if (parent) links.push([parent, me]);
@@ -57,7 +57,7 @@ const TSTY = {
 };
 const tsty = n => n.lv === 'r' || n.lv === 'u' ? TSTY[n.lv] : TSTY[n.lv === 's' ? 's' + n.tone : n.lv === 'm' ? 'm' + n.tone : n.lv === 'c' ? 'c' + n.tone : 'v' + n.tone];
 
-function alberoSvg(root, open) {
+function alberoSvg(root, open, focus) {
   const L = alberoLayout(root, open), W = L.depth * (TN.w + TN.gx) - TN.gx + 4, H = Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
   const X = lvl => 2 + lvl * (TN.w + TN.gx), Y = m => 2 + m.y;
   const T = (x, y, s, sz, w, f, an = 'start') => `<text x="${x}" y="${y}" font-size="${sz}" font-weight="${w}" fill="${f}" text-anchor="${an}">${esc(s)}</text>`;
@@ -66,8 +66,8 @@ function alberoSvg(root, open) {
     o += `<path d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" stroke="${tsty(c.n).ln}" stroke-width="2.2"/>`; });
   L.nodes.forEach(m => {
     const n = m.n, c = tsty(n), x = X(m.lvl), y = Y(m), pc = n.pct != null ? ' · ' + (n.pct * 100).toFixed(1).replace('.', ',') + '%' : '';
-    o += `<g${m.can ? ` data-act="tn" data-v="${esc(n.id)}" data-l="${m.lvl}" style="cursor:pointer"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
-      + `<rect x="${x}" y="${y}" width="${TN.w}" height="${TN.h}" rx="10" fill="${c.f}" stroke="${c.s}" stroke-width="${n.lv === 'v' ? 1.5 : 2}"/>`
+    o += `<g${m.can ? ` data-act="tn" data-v="${esc(n.id)}" data-l="${m.lvl}" data-p="${esc(m.par)}" style="cursor:pointer"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
+      + `<rect x="${x}" y="${y}" width="${TN.w}" height="${TN.h}" rx="10" fill="${c.f}" stroke="${c.s}" stroke-width="${n.id === focus ? 4 : n.lv === 'v' ? 1.5 : 2}"/>`
       + T(x + 10, y + 19, trunc(n.label, 20), 11, 600, c.t1) + T(x + 10, y + 35, eur0(n.val) + pc, 10.5, 600, n.val < 0 ? '#b91c1c' : c.t2);
     if (m.can) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 5, m.open ? '−' : '+', 15, 700, c.s, 'middle');
     o += '</g>';
@@ -75,11 +75,69 @@ function alberoSvg(root, open) {
   return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="min-width:${W}px">${o}</svg>`;
 }
 
-function treeCard() {
-  const D = S.data, mode = S.tview || 'agg';
-  if (!S.tx) S.tx = new Set(['r']);
-  return `<div class="card" style="min-width:0"><h2>Albero del patrimonio</h2>
+function alberoTrova(root, id, path = []) {
+  const p = [...path, root];
+  if (root.id === id) return { node: root, path: p };
+  for (const k of root.kids) { const r = alberoTrova(k, id, p); if (r) return r; }
+  return null;
+}
+
+function treeCard(root, focus) {
+  const mode = S.tview || 'agg';
+  return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
-    <div class="tw tt" style="margin-top:12px">${alberoSvg(alberoDati({ ...D, voci: vz(D.voci) }, mode), S.tx)}</div>
-    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Dopo Attivi e Passivi trovi le macro categorie; gli investimenti si dividono poi per asset class. Le percentuali sono sul ramo che le contiene. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p></div>`;
+    ${zeroToggle()}
+    <div class="tw tt" style="margin-top:12px">${alberoSvg(root, S.tx, focus)}</div>
+    <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Il grafico a torta mostra il ramo evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p>
+    <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
+}
+
+/* ---------- Grafico a torta: segue il ramo evidenziato nell'albero ---------- */
+const PALS = {
+  a: ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'],
+  p: ['#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#9f1239', '#be123c', '#fb7185'],
+  x: ['#1d4ed8', '#3b82f6', '#60a5fa', '#93c5fd', '#1e40af', '#0369a1', '#38bdf8', '#6366f1']
+};
+function pieDati(node) {
+  const kids = node.kids.filter(k => k.val > 0), total = kids.reduce((s, k) => s + k.val, 0), cnt = {};
+  const P = x => total > 0 ? (x / total * 100).toFixed(1).replace('.', ',') + '%' : '';
+  const groups = kids.map(k => {
+    const pal = PALS[k.tone] || PALS.a, n = cnt[k.tone] = (cnt[k.tone] ?? -1) + 1;
+    const items = k.kids.filter(x => x.val > 0).map(x => ({ nome: x.label, val: x.val, sub: x.sub || '', pct: P(x.val) }));
+    return { label: k.label, sum: k.val, pct: P(k.val), col: pal[n % pal.length], items };
+  });
+  return { sum: node.val, groups, total };
+}
+function pieCard(found) {
+  const node = found.node, pb = pieDati(node), path = found.path.map(n => n.label).join(' › ');
+  if (!pb.groups.length) return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2><p class="note" style="margin-top:0">${esc(path)}</p><p>Nessuna voce da mostrare in questo ramo.</p></div>`;
+  const gi = S.pieSel != null && pb.groups[S.pieSel] ? S.pieSel : -1, ii = gi >= 0 && S.pieSel2 != null && pb.groups[gi].items[S.pieSel2] ? S.pieSel2 : -1;
+  const single = pb.groups.every(g => !g.items.length);
+  const CX = 200, CY = 200, r0 = 62, r1 = single ? 178 : 114, r2 = 120, r3 = 178, tot = pb.total || 1, P2 = Math.PI * 2;
+  const pt = (r, a) => [(CX + r * Math.cos(a)).toFixed(1), (CY + r * Math.sin(a)).toFixed(1)];
+  const ring = (a0, a1, ra, rb) => {
+    if (a1 - a0 >= P2 - 1e-3) return `M${CX + rb} ${CY}A${rb} ${rb} 0 1 1 ${CX - rb} ${CY}A${rb} ${rb} 0 1 1 ${CX + rb} ${CY}ZM${CX + ra} ${CY}A${ra} ${ra} 0 1 0 ${CX - ra} ${CY}A${ra} ${ra} 0 1 0 ${CX + ra} ${CY}Z`;
+    const big = a1 - a0 > Math.PI ? 1 : 0, p1 = pt(rb, a0), p2 = pt(rb, a1 - 1e-4), p3 = pt(ra, a1 - 1e-4), p4 = pt(ra, a0);
+    return `M${p1[0]} ${p1[1]}A${rb} ${rb} 0 ${big} 1 ${p2[0]} ${p2[1]}L${p3[0]} ${p3[1]}A${ra} ${ra} 0 ${big} 0 ${p4[0]} ${p4[1]}Z`;
+  };
+  let ang = -Math.PI / 2, inner = '', outer = '';
+  pb.groups.forEach((g, i) => {
+    const a2 = ang + g.sum / tot * P2, col = g.col, dim = gi >= 0 && gi !== i ? ' dim' : '', on = gi === i;
+    inner += `<path class="${on ? 'sel' : ''}${dim}" d="${ring(ang, a2, r0, on ? r1 + 5 : r1)}" fill="${col}" fill-rule="evenodd" data-act="pies" data-v="${i}" data-tip="${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}"></path>`;
+    let ib = ang;
+    g.items.forEach((it, j) => {
+      const ie = ib + it.val / tot * P2, io = on && ii === j, dimO = gi >= 0 && (gi !== i || (ii >= 0 && ii !== j)) ? ' dim' : '';
+      outer += `<path class="${io ? 'sel' : ''}${dimO}" d="${ring(ib, ie, r2, io ? r3 + 7 : on && ii < 0 ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}" data-tip="${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}"></path>`;
+      ib = ie;
+    });
+    ang = a2;
+  });
+  const sg = gi >= 0 ? pb.groups[gi] : null, si = ii >= 0 ? sg.items[ii] : null;
+  const cl = si ? si.nome : sg ? sg.label : node.label, cv = si ? si.val : sg ? sg.sum : pb.sum, cp = si ? si.pct : sg ? sg.pct : '';
+  const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 14))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
+  const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}${g.items.length ? `<small style="color:#5b7370;font-weight:400"> · ${g.items.length} ${g.items.length === 1 ? 'elemento' : 'elementi'}</small>` : ''}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`
+    + (i === gi ? g.items.map((it, j) => `<div class="pl ps2 ${j === ii ? 'on' : ''}" data-act="pies2" data-v="${i}-${j}"><span class="a">${esc(it.nome)}${it.sub ? `<small style="display:block;font-weight:400;color:#5b7370">${esc(it.sub)}</small>` : ''}</span><span>${eur0(it.val)} · ${it.pct}</span></div>`).join('') : '')).join('');
+  return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2><p class="note" style="margin-top:0">${esc(path)}</p>
+    <svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${inner}${outer}</g>${hole}</svg>
+    <p class="note" style="text-align:center;margin:0 0 6px">${single ? 'Tocca una fetta.' : 'Anello interno: ' + esc(node.label) + '. Anello esterno: dettaglio. Tocca una fetta.'}</p>${legend}</div>`;
 }

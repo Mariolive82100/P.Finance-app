@@ -173,66 +173,13 @@ const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 
 const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
 
 function pageDis() {
-  const D = S.data, view = S.dview || 'acc';
-  const ctl = `<div class="card stk"><div class="tabs"><button class="b ${view === 'acc' ? '' : 's'}" data-act="dview" data-v="acc">Per account</button><button class="b ${view === 'conti' ? '' : 's'}" data-act="dview" data-v="conti">Per conti</button></div>
-    <select data-act="dcat" style="margin-top:8px"><option value="">Tutte le categorie</option><optgroup label="Attivi">${CATS.attivo.map(c => `<option ${S.dcat === c ? 'selected' : ''}>${c}</option>`).join('')}</optgroup><optgroup label="Passivi">${CATS.passivo.map(c => `<option ${S.dcat === c ? 'selected' : ''}>${c}</option>`).join('')}</optgroup></select>
-    <div class="legend" style="margin:8px 0 0"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span></div>${zeroToggle()}</div>`;
-  if (!D.voci.length) return ctl + '<div class="card">Nessuna voce da mostrare. Inseriscile nella pagina Patrimonio.</div>';
-  const vv = vz(S.dcat ? D.voci.filter(v => v.categoria === S.dcat) : D.voci);
-  if (!vv.length) return ctl + '<div class="card">Nessuna voce in questa categoria.</div>';
-  const build = tp => {
-    const vs = vv.filter(v => v.tipo === tp);
-    if (!vs.length) return null;
-    const total = vs.reduce((s, v) => s + v.valore, 0), G = {};
-    vs.forEach(v => {
-      const k = view === 'acc' ? accKey(v) : v.categoria;
-      const g = G[k] = G[k] || { label: view === 'acc' ? accName(v) : v.categoria, items: [], sum: 0 };
-      g.items.push({ nome: dn(v), val: v.valore, sub: v.dove ? (view === 'acc' ? v.categoria + ' · su ' + v.dove : 'su ' + v.dove) : (view === 'acc' ? v.categoria : accName(v)) });
-      g.sum += v.valore;
-    });
-    const share = x => total > 0 ? (x / total * 100).toFixed(1).replace('.', ',') + '%' : '';
-    const groups = Object.values(G).sort((a, b) => b.sum - a.sum);
-    groups.forEach(g => { g.items.sort((a, b) => b.val - a.val); g.items.forEach(i => i.pct = share(i.val)); g.pct = share(g.sum); });
-    return { label: tp === 'attivo' ? 'Attivi' : 'Passivi', tone: tp === 'attivo' ? 'a' : 'p', sum: total, groups };
-  };
-  const br = ['attivo', 'passivo'].map(build).filter(Boolean);
-
-  const pt = S.pie || 'attivo', pb = br.find(b => b.tone === (pt === 'attivo' ? 'a' : 'p')) || br[0];
-  const PAL = pb && pb.tone === 'p' ? ['#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#9f1239', '#be123c', '#fb7185'] : ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'];
-  const gi = S.pieSel != null && pb && pb.groups[S.pieSel] ? S.pieSel : -1, ii = gi >= 0 && S.pieSel2 != null && pb.groups[gi].items[S.pieSel2] ? S.pieSel2 : -1;
-  let pieHtml = '';
-  if (pb) {
-    const CX = 200, CY = 200, r0 = 62, r1 = 114, r2 = 120, r3 = 178, tot = pb.sum || 1, P2 = Math.PI * 2;
-    const pt = (r, a) => [(CX + r * Math.cos(a)).toFixed(1), (CY + r * Math.sin(a)).toFixed(1)];
-    const ring = (a0, a1, ra, rb) => {
-      if (a1 - a0 >= P2 - 1e-3) return `M${CX + rb} ${CY}A${rb} ${rb} 0 1 1 ${CX - rb} ${CY}A${rb} ${rb} 0 1 1 ${CX + rb} ${CY}ZM${CX + ra} ${CY}A${ra} ${ra} 0 1 0 ${CX - ra} ${CY}A${ra} ${ra} 0 1 0 ${CX + ra} ${CY}Z`;
-      const big = a1 - a0 > Math.PI ? 1 : 0, p1 = pt(rb, a0), p2 = pt(rb, a1 - 1e-4), p3 = pt(ra, a1 - 1e-4), p4 = pt(ra, a0);
-      return `M${p1[0]} ${p1[1]}A${rb} ${rb} 0 ${big} 1 ${p2[0]} ${p2[1]}L${p3[0]} ${p3[1]}A${ra} ${ra} 0 ${big} 0 ${p4[0]} ${p4[1]}Z`;
-    };
-    let ang = -Math.PI / 2, inner = '', outer = '';
-    pb.groups.forEach((g, i) => {
-      const fr = g.sum / tot; if (fr <= 0) return;
-      const a2 = ang + fr * P2, col = PAL[i % PAL.length], dim = gi >= 0 && gi !== i ? ' dim' : '', on = gi === i;
-      inner += `<path class="${on ? 'sel' : ''}${dim}" d="${ring(ang, a2, r0, on ? r1 + 5 : r1)}" fill="${col}" fill-rule="evenodd" data-act="pies" data-v="${i}" data-tip="${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}"></path>`;
-      let ib = ang;
-      g.items.forEach((it, j) => {
-        const f2 = it.val / tot; if (f2 <= 0) return;
-        const ie = ib + f2 * P2, io = on && ii === j, dimO = gi >= 0 && (gi !== i || (ii >= 0 && ii !== j)) ? ' dim' : '';
-        outer += `<path class="${io ? 'sel' : ''}${dimO}" d="${ring(ib, ie, r2, io ? r3 + 7 : on && ii < 0 ? r3 + 3 : r3)}" fill="${col}" fill-opacity="${[0.95, 0.72, 0.52][j % 3]}" fill-rule="evenodd" data-act="pies2" data-v="${i}-${j}" data-tip="${esc(it.nome + ' · ' + eur(it.val) + ' · ' + it.pct)}"></path>`;
-        ib = ie;
-      });
-      ang = a2;
-    });
-    const sg = gi >= 0 ? pb.groups[gi] : null, si = ii >= 0 ? sg.items[ii] : null;
-    const cl = si ? si.nome : sg ? sg.label : pb.label, cv = si ? si.val : sg ? sg.sum : pb.sum, cp = si ? si.pct : sg ? sg.pct : '';
-    const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 14))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
-    const top = `<div class="tabs">${br.map(b => `<button class="b ${b.tone === pb.tone ? '' : 's'}" data-act="piet" data-v="${b.tone === 'a' ? 'attivo' : 'passivo'}">${b.label}</button>`).join('')}</div>`;
-    pieHtml = `<div class="card">${top}<svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${inner}${outer}</g>${hole}</svg>
-    <p class="note" style="text-align:center;margin:0 0 6px">Anello interno: categorie. Anello esterno: singole voci. Tocca una fetta.</p>
-    ${pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}<small style="color:#5b7370;font-weight:400"> · ${g.items.length} ${g.items.length === 1 ? 'voce' : 'voci'}</small></span><span>${eur0(g.sum)} · ${g.pct}</span></div>` + (i === gi ? g.items.map((it, j) => `<div class="pl ps2 ${j === ii ? 'on' : ''}" data-act="pies2" data-v="${i}-${j}"><span class="a">${esc(it.nome)}<small style="display:block;font-weight:400;color:#5b7370">${esc(it.sub)}</small></span><span>${eur0(it.val)} · ${it.pct}</span></div>`).join('') : '')).join('')}</div>`;
-  }
+  const D = S.data;
+  if (!D.voci.length) return '<div class="card">Nessuna voce da mostrare. Inseriscile nella pagina Patrimonio.</div>';
+  if (!S.tx) S.tx = new Set(['r']);
+  const root = alberoDati({ ...D, voci: vz(D.voci) }, S.tview || 'agg'), found = alberoTrova(root, S.tf || 'r') || alberoTrova(root, 'r');
+  const html = `<div class="dgrid">${treeCard(root, found.node.id)}${pieCard(found)}</div>`;
   S.anim = false;
-  return ctl + `<div class="dgrid">${pieHtml}${treeCard()}</div>`;
+  return html;
 }
 
 const compact = v => new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
