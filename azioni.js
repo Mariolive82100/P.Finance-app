@@ -177,6 +177,19 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', v));
       D.voci = D.voci.filter(x => x.id !== v); await syncStorico(); return render();
     }
+    if (a === 'pdfmake') {
+      S.pdfBusy = true; S.pdf = null; render(); await new Promise(r => setTimeout(r, 40));
+      try { await caricaPdfLib(); S.pdf = await creaPdf(S.data, !!S.pdfHide); } finally { S.pdfBusy = false; }
+      return render();
+    }
+    if (a === 'pdfsave') {
+      const u = URL.createObjectURL(S.pdf.blob), l = document.createElement('a'); l.href = u; l.download = S.pdf.name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 8000); return;
+    }
+    if (a === 'pdfshare') {
+      const f = new File([S.pdf.blob], S.pdf.name, { type: 'application/pdf' });
+      try { await navigator.share({ files: [f], title: 'Report del patrimonio' }); } catch (e) { if (e.name !== 'AbortError') throw e; }
+      return;
+    }
     if (a === 'appr' || a === 'rev') { await updateDoc(doc(db, 'users', v), { approved: a === 'appr' }); await loadUsers(); return render(); }
     if (a === 'rej') { if (!confirm('Rifiutare questa richiesta?')) return; await deleteDoc(doc(db, 'users', v)); await loadUsers(); return render(); }
     if (a === 'reload-users') { await loadUsers(); return render(); }
@@ -209,6 +222,7 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT' && el.tagName !== 'INPUT') act(el); });
 document.addEventListener('change', e => { if ((e.target.tagName === 'SELECT' || e.target.type === 'month') && e.target.dataset.act) act(e.target); });
+document.addEventListener('change', e => { if (e.target.id === 'pdfhide') { S.pdfHide = e.target.checked; S.pdf = null; render(); } });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   if ($('an') && document.activeElement === $('an')) act(document.querySelector('[data-act="adda"]'));

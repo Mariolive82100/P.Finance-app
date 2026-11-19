@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.53';
+const VER = '0.54';
 const ASSET = ['Azioni', 'Obbligazioni', 'Monetario', 'Oro e materie prime', 'Immobiliare', 'Criptovalute', 'Multi-asset', 'Altro'];
 const dn = v => v.assetClass || v.nome;
 const ADMIN_UID = '29kFEZwmKPZvHFjQ9M65ERhIbhG3';
