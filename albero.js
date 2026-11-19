@@ -10,8 +10,18 @@ function alberoDati(D, mode) {
   const lato = (pid, t, voci, showAcc) => {
     if (!voci.length) return null;
     const tot = sum(voci), cats = [...new Set([...CATS[t === 'a' ? 'attivo' : 'passivo'], ...voci.map(v => v.categoria)])].filter(c => voci.some(v => v.categoria === c));
-    const leaves = (base, arr, ps) => arr.slice().sort((x, y) => y.valore - x.valore).map(v => ({ id: base + '/' + v.id, lv: 'v', vid: v.piano ? '' : v.id, tone: t, kids: [], val: v.valore, pct: ps > 0 ? v.valore / ps : null,
-      label: v.categoria === 'Investimenti' && v.dove ? 'su ' + v.dove : dn(v), sub: showAcc && multi ? accName(v) : '' }));
+    const leaf = (base, v, ps, label, sub) => ({ id: base + '/' + v.id, lv: 'v', vid: v.piano ? '' : v.id, tone: t, kids: [], val: v.valore, pct: ps > 0 ? v.valore / ps : null, label, sub });
+    const leaves = (base, arr, ps) => {
+      const srt = arr.slice().sort((x, y) => y.valore - x.valore), inv = v => v.categoria === 'Investimenti' && v.dove;
+      if (!(showAcc && multi)) return srt.map(v => leaf(base, v, ps, inv(v) ? 'su ' + v.dove : dn(v), ''));
+      /* aggregato: stessa piattaforma su più account = un solo ramo, con il dettaglio per account */
+      const g = new Map(); srt.forEach(v => { const k = inv(v) ? 'b:' + v.dove.trim().toLowerCase() : 'v:' + v.id; if (!g.has(k)) g.set(k, []); g.get(k).push(v); });
+      return [...g.entries()].map(([k, b]) => {
+        if (b.length === 1) return leaf(base, b[0], ps, inv(b[0]) ? 'su ' + b[0].dove : dn(b[0]), accName(b[0]));
+        const bs = sum(b);
+        return { id: base + '/' + k, lv: 'v', vid: '', tone: t, val: bs, pct: ps > 0 ? bs / ps : null, label: 'su ' + b[0].dove.trim(), sub: b.length + ' account', kids: b.map(v => leaf(base + '/' + k, v, bs, accName(v), '')) };
+      }).sort((x, y) => y.val - x.val);
+    };
     const kids = cats.map(c => {
       const a = voci.filter(v => v.categoria === c), cs = sum(a), id = pid + '/' + c; let sub;
       if (t === 'a' && c === 'Investimenti') {
