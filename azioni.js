@@ -157,6 +157,8 @@ async function act(el) {
     if (a === 'edit') { S.edit = v; return render(); }
     if (a === 'cancel') { S.edit = null; S.fd = null; return render(); }
     if (a === 'export') return exportCsv();
+    if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
+    if (a === 'timpok') return titoliApplica();
     if (a === 'save') {
       S.fd = grabForm();
       const tipo = $('ft').value, categoria = $('fc').value; let nome = $('fn') ? $('fn').value.trim() : '', fm = $('fm'), fa2 = $('fa');
@@ -213,6 +215,71 @@ async function act(el) {
 
 const tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
 const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
+/* ---------- Importa titoli (CSV della scheda "Elenco titoli") ---------- */
+function csvRighe(t) {
+  t = t.replace(/^﻿/, ''); const d = (t.split('\n')[0].match(/;/g) || []).length > (t.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+  const rows = []; let r = [], c = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { c += '"'; i++; } else q = false; } else c += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === d) { r.push(c); c = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && t[i + 1] === '\n') i++; r.push(c); c = ''; rows.push(r); r = []; }
+    else c += ch;
+  }
+  if (c !== '' || r.length) { r.push(c); rows.push(r); }
+  return rows.filter(x => x.some(y => y.trim() !== ''));
+}
+function titoliProposta(txt) {
+  const D = S.data, R = csvRighe(txt); if (R.length < 2) throw new Error('File vuoto.');
+  const H = R[0].map(x => x.trim().toLowerCase()), ix = n => H.indexOf(n);
+  const iC = ix('classe'), iN = ix('nome'), iV = ix('valore'), iQ = H.findIndex(h => h === 'quantità' || h === 'quantita');
+  const iCo = H.map((h, i) => /^quantit[àa] .+/.test(h) ? i : -1).filter(i => i >= 0);
+  if (iC < 0 || iV < 0 || iQ < 0 || !iCo.length) throw new Error('Non trovo le colonne Classe, Valore, Quantità e le quantità per conto. Hai scaricato la scheda "Elenco titoli"?');
+  const mapC = c => { c = c.trim().toLowerCase(); return /^azion/.test(c) ? 'Azioni' : /^obblig/.test(c) ? 'Obbligazioni' : /^cript/.test(c) ? 'Criptovalute' : /^(commod|oro)/.test(c) ? 'Oro e materie prime' : 'Altro'; };
+  const g = new Map(), conti = new Map(); let letti = 0;
+  R.slice(1).forEach(r => {
+    const tot = pnum(r[iQ]), val = pnum(r[iV]); if (!(tot > 0) || !(val > 0)) return; letti++;
+    iCo.forEach(i => {
+      const qt = pnum(r[i]); if (!(qt > 0)) return;
+      const broker = H[i].replace(/^quantit[àa] /, '').trim().split(/\s+/)[0]; const dove = broker.charAt(0).toUpperCase() + broker.slice(1);
+      const k = dove.toLowerCase() + '|' + mapC(r[iC]);
+      if (!g.has(k)) g.set(k, { dove, assetClass: mapC(r[iC]), valore: 0 });
+      g.get(k).valore += val * qt / tot;
+    });
+  });
+  const acc = S.fAcc && S.fAcc !== 'all' && S.fAcc !== 'main' ? S.fAcc : '';
+  const righe = [...g.values()].map(x => {
+    x.valore = r2(x.valore);
+    const ex = D.voci.find(v => v.tipo === 'attivo' && v.categoria === 'Investimenti' && (v.dove || '').trim().toLowerCase() === x.dove.toLowerCase() && v.assetClass === x.assetClass && (v.account || '') === acc);
+    return { ...x, exId: ex ? ex.id : '', prima: ex ? ex.valore : null };
+  }).sort((a, b) => a.dove.localeCompare(b.dove) || b.valore - a.valore);
+  if (!righe.length) throw new Error('Nessun titolo con quantità trovato.');
+  return { righe, acc, letti };
+}
+async function titoliApplica() {
+  const D = S.data, P = S.timp; if (!P) return;
+  for (const x of P.righe) {
+    if (x.exId) {
+      const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
+      const { id, ...rest } = v; const dati = { ...rest, valore: x.valore };
+      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); Object.assign(v, dati);
+    } else {
+      if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
+        const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: x.dove, account: P.acc, valore: 0 };
+        const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
+      }
+      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, assetClass: x.assetClass, account: P.acc, valore: x.valore };
+      const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
+    }
+  }
+  S.timp = null; await syncStorico(); S.msg = 'Titoli importati e aggiornati.'; render();
+}
+document.addEventListener('change', async e => {
+  if (e.target.id !== 'titf' || !e.target.files[0] || !S.data) return;
+  try { S.timp = titoliProposta(await e.target.files[0].text()); S.timpErr = ''; } catch (x) { S.timp = null; S.timpErr = x.message || 'File non valido.'; }
+  render();
+});
 document.addEventListener('mousemove', e => { const t = e.target.closest ? e.target.closest('[data-tip]') : null; tipAt(e, PTYPE === 'touch' && t && t.closest('.pie') ? null : t); });
 document.addEventListener('mouseleave', () => tipAt(null, null));
 document.addEventListener('change', async e => {
