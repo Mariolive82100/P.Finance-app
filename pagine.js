@@ -171,37 +171,6 @@ function popup() {
 const eur0 = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(v || 0);
 const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
 
-function treeSvg(root, branches) {
-  const colW = 176, nw = 160, nh = 46, lh = 40, rootY = 4, rootH = 62, b1Y = 112, b1H = 50, gY = 218, leafY0 = gY + nh + 14;
-  const cols = branches.reduce((s, b) => s + b.groups.length, 0), W = Math.max(cols * colW, 360), off = (W - cols * colW) / 2, mid = W / 2;
-  const maxL = Math.max(1, ...branches.flatMap(b => b.groups.map(g => g.items.length))), H = leafY0 + maxL * lh + 6;
-  const TONE = { a: { st: '#0f766e', fill: '#d6f2ee', ln: '#4f9f96', leaf: '#b5d9d4', tx: '#16302d' }, p: { st: '#b91c1c', fill: '#fde8e8', ln: '#d96464', leaf: '#efb0b0', tx: '#b91c1c' } };
-  const T = (x, y, s, sz, w, f, an = 'middle') => `<text x="${x}" y="${y}" font-size="${sz}" font-weight="${w}" fill="${f}" text-anchor="${an}">${esc(s)}</text>`;
-  let o = '', col = 0;
-  branches.forEach(b => {
-    const c = TONE[b.tone], first = off + col * colW + colW / 2, last = off + (col + b.groups.length - 1) * colW + colW / 2, bx = (first + last) / 2;
-    const m1 = (rootY + rootH + b1Y) / 2, m2 = (b1Y + b1H + gY) / 2;
-    o += `<path d="M${mid} ${rootY + rootH} C${mid} ${m1} ${bx} ${m1} ${bx} ${b1Y}" fill="none" stroke="${c.ln}" stroke-width="3"/>`;
-    b.groups.forEach((g, i) => {
-      const x = off + (col + i) * colW + colW / 2, gx = x - nw / 2, rail = gx + 12, lx = rail + 12, lw = gx + nw - lx;
-      o += `<path d="M${bx} ${b1Y + b1H} C${bx} ${m2} ${x} ${m2} ${x} ${gY}" fill="none" stroke="${c.ln}" stroke-width="2.5"/>`;
-      o += `<rect x="${gx}" y="${gY}" width="${nw}" height="${nh}" rx="10" fill="${c.fill}" stroke="${c.st}" stroke-width="1.8"/>` + T(x, gY + 19, trunc(g.label, 22), 11, 600, '#16302d') + T(x, gY + 35, eur0(g.sum) + (g.pct ? ' · ' + g.pct : ''), 10.5, 600, c.tx);
-      if (g.items.length) o += `<line x1="${rail}" x2="${rail}" y1="${gY + nh}" y2="${leafY0 + (g.items.length - 1) * lh + 23}" stroke="${c.ln}" stroke-width="2"/>`;
-      g.items.forEach((it, j) => {
-        const y = leafY0 + j * lh;
-        o += `<line x1="${rail}" x2="${lx}" y1="${y + 23}" y2="${y + 23}" stroke="${c.ln}" stroke-width="2"/><g><title>${esc(it.nome + ' · ' + it.sub + ' · ' + eur(it.val))}</title>`
-          + `<rect x="${lx}" y="${y}" width="${lw}" height="${lh - 6}" rx="8" fill="#fff" stroke="${c.leaf}" stroke-width="1.5"/>`
-          + T(lx + 8, y + 14, trunc(it.nome, 20), 10.5, 600, '#16302d', 'start')
-          + T(lx + 8, y + 27, eur0(it.val) + (it.pct ? ' · ' + it.pct : ''), 10, 600, c.tx, 'start') + '</g>';
-      });
-    });
-    o += `<rect x="${bx - 90}" y="${b1Y}" width="180" height="${b1H}" rx="12" fill="${c.fill}" stroke="${c.st}" stroke-width="2.5"/>` + T(bx, b1Y + 21, b.label, 12, 700, c.st) + T(bx, b1Y + 40, eur0(b.sum), 12.5, 700, c.tx);
-    col += b.groups.length;
-  });
-  o += `<rect x="${mid - 110}" y="${rootY}" width="220" height="${rootH}" rx="12" fill="#1f3b38"/>` + T(mid, rootY + 21, 'Patrimonio netto', 11, 600, '#d6f2ee') + T(mid, rootY + 42, eur0(root.netto), 14, 700, '#fff') + T(mid, rootY + 56, 'Attivi ' + eur0(root.attivi) + ' − Passivi ' + eur0(root.passivi), 9, 500, '#b5d9d4');
-  return `<div class="tw"><svg viewBox="0 0 ${W} ${H}" style="min-width:${W}px">${o}</svg></div>`;
-}
-
 function pageDis() {
   const D = S.data, view = S.dview || 'acc';
   const ctl = `<div class="card stk"><div class="tabs"><button class="b ${view === 'acc' ? '' : 's'}" data-act="dview" data-v="acc">Per account</button><button class="b ${view === 'conti' ? '' : 's'}" data-act="dview" data-v="conti">Per conti</button></div>
@@ -262,8 +231,7 @@ function pageDis() {
     ${pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${PAL[i % PAL.length]}"></i><span class="a">${esc(g.label)}<small style="color:#5b7370;font-weight:400"> · ${g.items.length} ${g.items.length === 1 ? 'voce' : 'voci'}</small></span><span>${eur0(g.sum)} · ${g.pct}</span></div>` + (i === gi ? g.items.map((it, j) => `<div class="pl ps2 ${j === ii ? 'on' : ''}" data-act="pies2" data-v="${i}-${j}"><span class="a">${esc(it.nome)}<small style="display:block;font-weight:400;color:#5b7370">${esc(it.sub)}</small></span><span>${eur0(it.val)} · ${it.pct}</span></div>`).join('') : '')).join('')}</div>`;
   }
   S.anim = false;
-  return ctl + `<div class="dgrid">${pieHtml}<div class="card" style="min-width:0"><h2>Distribuzione ${view === 'acc' ? 'per account' : 'per conti'}</h2>${treeSvg(totals(vv), br)}
-    <p class="note">Ramo verde: attivi. Ramo rosso: passivi. Le percentuali sono sul totale del proprio ramo. Scorri di lato se i rami sono molti.</p></div></div>`;
+  return ctl + `<div class="dgrid">${pieHtml}${treeCard()}</div>`;
 }
 
 const compact = v => new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);

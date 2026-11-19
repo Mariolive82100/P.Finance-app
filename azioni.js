@@ -71,6 +71,15 @@ async function act(el) {
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
     if (a === 'dcat') { S.dcat = el.value; S.pieSel = null; S.pieSel2 = null; S.anim = true; return render(); }
+    if (a === 'tview') { S.tview = v; S.tx = new Set(['r']); return render(); }
+    if (a === 'tn') {
+      const w0 = document.querySelector('.tt'), sl = w0 ? w0.scrollLeft : 0, lv = +el.dataset.l;
+      S.tx = S.tx || new Set(['r']); if (S.tx.has(v)) S.tx.delete(v); else S.tx.add(v);
+      render();
+      const w = document.querySelector('.tt');
+      if (w) { const fine = 2 + (lv + 2) * (TN.w + TN.gx) - TN.gx; w.scrollLeft = S.tx.has(v) && fine > sl + w.clientWidth ? fine - w.clientWidth + 6 : sl; }
+      return;
+    }
     if (a === 'dview') { S.dview = v; S.pieSel = null; S.pieSel2 = null; return render(); }
     if (a === 'piet') { S.anim = true; S.pie = v; S.pieSel = null; S.pieSel2 = null; return render(); }
     if (a === 'pies') { S.anim = 'sel'; S.pieSel = S.pieSel === +v ? null : +v; S.pieSel2 = null; return render(); }
