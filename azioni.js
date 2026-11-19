@@ -71,6 +71,12 @@ async function act(el) {
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
     if (a === 'tview') { S.tview = v; S.tx = new Set(['r']); S.tf = 'r'; S.pieSel = null; S.anim = true; return render(); }
+    if (a === 'texp' || a === 'tcol') {
+      const all = new Set(['r']);
+      if (a === 'texp') { const w = n => { if (n.kids.length) { all.add(n.id); n.kids.forEach(w); } }; w(alberoDati({ ...S.data, voci: vz(S.data.voci) }, S.tview || 'agg')); }
+      else S.tf = 'r';
+      S.tx = all; S.pieSel = null; S.anim = true; return render();
+    }
     if (a === 'topie') { const p = $('pie'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (a === 'tn') {
       const w0 = document.querySelector('.tt'), sl = w0 ? w0.scrollLeft : 0, lv = +el.dataset.l;

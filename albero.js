@@ -87,6 +87,7 @@ function treeCard(root, focus) {
   return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
     ${zeroToggle()}
+    <div class="tabs" style="margin-top:8px"><button class="b s sm" data-act="texp">Espandi tutto</button><button class="b s sm" data-act="tcol">Comprimi tutto</button></div>
     <div class="tw tt" style="margin-top:12px">${alberoSvg(root, S.tx, focus)}</div>
     <p class="note">Tocca un riquadro con il + per aprire il ramo e toccalo di nuovo per chiuderlo. Il grafico a torta mostra i rami del riquadro evidenziato. Nella vista Aggregato la stessa classe presente su più conti è sommata, e aprendola vedi il dettaglio per conto. Scorri di lato se i rami sono larghi.</p>
     <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
