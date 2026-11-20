@@ -168,7 +168,7 @@ async function act(el) {
     if (a === 'cancel') { S.edit = null; S.fd = null; return render(); }
     if (a === 'export') return exportCsv();
     if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
-    if (a === 'timpok') return titoliApplica();
+    if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;
     if (a === 'save') {
       S.fd = grabForm();
       const tipo = $('ft').value, categoria = $('fc').value; let nome = $('fn') ? $('fn').value.trim() : '', fm = $('fm'), fa2 = $('fa');
@@ -286,7 +286,7 @@ async function titoliApplica() {
   S.timp = null; await syncStorico(); S.msg = 'Titoli importati e aggiornati.'; render();
 }
 document.addEventListener('change', async e => {
-  if (e.target.id !== 'titf' || !e.target.files[0] || !S.data) return;
+  if (e.target.id !== 'titf' || !e.target.files[0] || !S.data || !isAdmin()) return;
   try { S.timp = titoliProposta(await e.target.files[0].text()); S.timpErr = ''; } catch (x) { S.timp = null; S.timpErr = x.message || 'File non valido.'; }
   render();
 });

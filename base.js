@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.67';
+const VER = '0.68';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -136,6 +136,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.68', '20 nov 2026', ['Importazione dei titoli da CSV riservata all\'amministratore durante la fase beta']],
   ['0.67', '19 nov 2026', ['Grafico a torta: tocca una fetta per selezionarla, tocca di nuovo per aprirla', 'Nuovi tasti "Indietro" e "Torna all\'inizio" sulla torta', 'Tocca al centro o fuori dalle fette per deselezionare', 'La torta non dipende più dall\'albero', 'Nuova sezione Info nel menu, con le novità']],
   ['0.66', '19 nov 2026', ['Importa i titoli da un file CSV (conto e tipo di investimento)']],
   ['0.65', '19 nov 2026', ['Albero aggregato: la stessa piattaforma su più account è un solo ramo']],
