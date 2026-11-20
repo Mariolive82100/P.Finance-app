@@ -94,7 +94,10 @@ function alberoSvg(root, open, focus) {
   });
   Object.keys(TPOS).forEach(k => delete TPOS[k]); Object.assign(TPOS, NP);
   const k = treeK();
-  return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * k)}" height="${Math.round(H * k)}" style="min-width:${Math.round(W * k)}px">${o}</svg>`;
+  const wk = Math.round(W * k), hk = Math.round(H * k);
+  /* su computer dimensioni fisse: il carattere è lo stesso con l'albero chiuso o aperto (la regola generale svg{width:100%} lo stirerebbe) */
+  const fix = innerWidth >= 1000 ? `width:${wk}px;height:${hk}px;max-width:none;` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" width="${wk}" height="${hk}" style="${fix}min-width:${wk}px">${o}</svg>`;
 }
 
 function alberoTrova(root, id, path = []) {
