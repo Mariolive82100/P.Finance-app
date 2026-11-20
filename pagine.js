@@ -187,13 +187,13 @@ function pageDis() {
 }
 function disParts() {
   const D = S.data; if (!S.tx) S.tx = new Set(['r']);
-  const Dz = { ...D, voci: vz(D.voci) }, wide = innerWidth >= 1000, root = alberoDati(Dz, S.tview || 'agg'), pr = wide && S.qd ? qRoot(S.qd, Dz) : root;
+  const Dz = { ...D, voci: vz(D.voci) }, wide = innerWidth >= 1000, root = alberoDati(Dz, S.tview || 'agg'), pr = root;
   const found = (S.pp || ['r']).slice().reverse().map(id => alberoTrova(pr, id)).find(Boolean) || alberoTrova(pr, 'r');
   S.pp = found.path.map(n => n.id);
   /* l'albero è sempre tutto aperto */
   const op = new Set(['r']); const wk = n => { if (n.kids.length) { op.add(n.id); n.kids.forEach(wk); } }; wk(root); S.tx = op;
   /* computer: quattro torte piccole (tocco = ingrandisce); telefono: torta unica come prima */
-  return { tree: treeCard(root, ''), pie: !wide ? pieCard(found) : S.qd ? pieCard(found, QT[S.qd]) : quadCard(Dz) };
+  return { tree: treeCard(root, ''), pie: wide ? quadCard(Dz) : pieCard(found) };
 }
 /* Panoramica: solo su schermi larghi (computer) */
 function pagePan() {

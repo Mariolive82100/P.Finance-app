@@ -74,9 +74,9 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
-    if (a === 'tview') { S.tanim = true; S.tview = v; S.tx = new Set(['r']); if (!S.qd) { S.pp = ['r']; S.pieSel = null; S.anim = true; } return render(); }
-    if (a === 'qopen') { S.qd = v; S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
-    if (a === 'qclose') { S.qd = null; S.pp = ['r']; S.pieSel = null; S.anim = false; return render(); }
+    if (a === 'tview') { S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
+    if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = +i; return render(); }
+    if (a === 'qdes') { if (S.qsel && S.qsel[v] != null) { S.qsel[v] = null; render(); } return; }
     if (a === 'texp' || a === 'tcol') {
       const all = new Set(['r']);
       if (a === 'texp') { const w = n => { if (n.kids.length) { all.add(n.id); n.kids.forEach(w); } }; w(alberoDati({ ...S.data, voci: vz(S.data.voci) }, S.tview || 'agg')); }
@@ -95,7 +95,7 @@ async function act(el) {
     if (a === 'pies') {
       const i = +v;
       if (S.pieSel === i) {
-        const root = pieRoot(), f = alberoTrova(root, (S.pp || ['r']).slice(-1)[0]) || alberoTrova(root, 'r'), g = pieDati(f.node).groups[i];
+        const root = alberoDati({ ...S.data, voci: vz(S.data.voci) }, S.tview || 'agg'), f = alberoTrova(root, (S.pp || ['r']).slice(-1)[0]) || alberoTrova(root, 'r'), g = pieDati(f.node).groups[i];
         if (g && g.can) { S.pp = [...(S.pp || ['r']), g.id]; S.pieSel = null; S.anim = true; return render(); }
         return;
       }

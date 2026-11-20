@@ -155,5 +155,5 @@ main{margin:0 0 0 200px;max-width:none;padding:18px 28px 40px}
 .qc:hover{border-color:#0f766e;background:#f1f8f7}
 .qc b{flex:none;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qs{flex:1;min-height:0;position:relative}.qs svg{position:absolute;inset:0;width:100%;height:100%}
-.qp path{stroke:#fff;stroke-width:3}.qp text{pointer-events:none}
+.qp path{stroke:#fff;stroke-width:3}.qp text{pointer-events:none}.qp path{cursor:pointer;transition:opacity .2s}.qp .dim{opacity:.35}
 }
