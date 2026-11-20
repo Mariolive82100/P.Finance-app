@@ -146,3 +146,14 @@ main{margin:0 0 0 200px;max-width:none;padding:18px 28px 40px}
 .tcard h2{margin:0;flex:1 1 auto}.tcard .tabs{margin:0!important}.tcard>label{margin:0!important}
 .tcard .tt{flex:1 1 100%;margin-top:4px!important}.tcard .note{display:none}
 }
+
+@media(min-width:1000px){
+.qcard{display:flex;flex-direction:column}.qcard h2{flex:none}
+.qg{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px}
+.dgrid .qcard{height:340px}.dgrid .qg{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:1fr}
+.qc{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px solid #e2eceb;border-radius:12px;padding:6px 8px;cursor:pointer;background:#fafdfc;transition:border-color .15s,background .15s}
+.qc:hover{border-color:#0f766e;background:#f1f8f7}
+.qc b{flex:none;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qs{flex:1;min-height:0;position:relative}.qs svg{position:absolute;inset:0;width:100%;height:100%}
+.qp path{stroke:#fff;stroke-width:3}.qp text{pointer-events:none}
+}

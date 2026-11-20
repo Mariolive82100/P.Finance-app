@@ -140,10 +140,10 @@ function pieDati(node) {
   });
   return { sum: node.val, groups, total };
 }
-function pieCard(found) {
-  const node = found.node, pb = pieDati(node), path = found.path.map(n => n.label).join(' › ');
-  const nav = `<div class="tabs" style="margin:0 0 8px"><button class="b s sm" data-act="pback" ${S.pp && S.pp.length > 1 ? '' : 'disabled'}>← Indietro</button><button class="b s sm" data-act="phome" ${S.pp && S.pp.length > 1 ? '' : 'disabled'}>⟲ Torna all'inizio</button></div>`;
-  if (!pb.groups.length) return `<div class="card pcard" id="pie"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p><p>Nessuna voce da mostrare in questo ramo.</p></div>`;
+function pieCard(found, qt) {
+  const node = found.node, pb = pieDati(node), path = found.path.map(n => n.label).join(' › '), ttl = qt || 'Grafico a torta';
+  const nav = `<div class="tabs" style="margin:0 0 8px">${qt ? '<button class="b sm" data-act="qclose">▦ Tutti i grafici</button>' : ''}<button class="b s sm" data-act="pback" ${S.pp && S.pp.length > 1 ? '' : 'disabled'}>← Indietro</button><button class="b s sm" data-act="phome" ${S.pp && S.pp.length > 1 ? '' : 'disabled'}>⟲ Torna all'inizio</button></div>`;
+  if (!pb.groups.length) return `<div class="card pcard" id="pie"><h2>${esc(ttl)}</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p><p>Nessuna voce da mostrare in questo ramo.</p></div>`;
   const gi = S.pieSel != null && pb.groups[S.pieSel] ? S.pieSel : -1;
   const CX = 200, CY = 200, r0 = 84, r1 = 178, tot = pb.total || 1, P2 = Math.PI * 2;
   const pt = (r, a) => [(CX + r * Math.cos(a)).toFixed(1), (CY + r * Math.sin(a)).toFixed(1)];
@@ -162,7 +162,44 @@ function pieCard(found) {
   const cl = sg ? sg.label : node.label, cv = sg ? sg.sum : pb.sum, cp = sg ? sg.pct : '';
   const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 16))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
   const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
-  return `<div class="card pcard" id="pie" data-act="pdes"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p>
+  return `<div class="card pcard" id="pie" data-act="pdes"><h2>${esc(ttl)}</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p>
     <div class="pbody"><div class="psvg"><svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${paths}</g>${hole}</svg>
 </div><div class="pleg">${legend}</div></div></div>`;
+}
+
+/* ---------- Computer: quattro torte piccole, tocco = si ingrandisce ---------- */
+const QT = { a: 'Attivi per categoria', p: 'Passivi per tipo', c: 'Per account', l: 'Liquido / non liquido' };
+const QLIQ = ['Liquidità', 'Investimenti'];
+/* radice (stesso formato dell'albero) di ciascuna delle quattro torte: la navigazione a fette è quella di sempre */
+function qRoot(key, Dz) {
+  const agg = alberoDati(Dz, 'agg'), lato = t => agg.kids.find(k => k.id === 'r/' + t);
+  let kids = [], tone = 'a';
+  if (key === 'a' || key === 'p') { const n = lato(key); if (n) { kids = n.kids; tone = key; } }
+  else if (key === 'c') { kids = alberoDati(Dz, 'acc').kids; tone = 'x'; }
+  else {
+    const a = lato('a'), cats = a ? a.kids : [], sm = arr => arr.reduce((s, k) => s + k.val, 0);
+    const mk = (id, label, tn, arr) => ({ id: 'r/' + id, label, tone: tn, lv: 'm', val: sm(arr), pct: null, kids: arr });
+    kids = [mk('liq', 'Liquido', 'a', cats.filter(k => QLIQ.includes(k.label))), mk('nliq', 'Non liquido', 'x', cats.filter(k => !QLIQ.includes(k.label)))].filter(n => n.kids.length);
+  }
+  return { id: 'r', label: QT[key], val: key === 'c' ? alberoDati(Dz, 'acc').val : kids.reduce((s, k) => s + k.val, 0), pct: null, tone, lv: 'r', kids };
+}
+const pieRoot = () => { const Dz = { ...S.data, voci: vz(S.data.voci) }; return innerWidth >= 1000 && S.qd ? qRoot(S.qd, Dz) : alberoDati(Dz, S.tview || 'agg'); };
+function ringPath(CX, CY, a0, a1, ra, rb) {
+  const P2 = Math.PI * 2, pt = (r, a) => [(CX + r * Math.cos(a)).toFixed(1), (CY + r * Math.sin(a)).toFixed(1)];
+  if (a1 - a0 >= P2 - 1e-3) return `M${CX + rb} ${CY}A${rb} ${rb} 0 1 1 ${CX - rb} ${CY}A${rb} ${rb} 0 1 1 ${CX + rb} ${CY}ZM${CX + ra} ${CY}A${ra} ${ra} 0 1 0 ${CX - ra} ${CY}A${ra} ${ra} 0 1 0 ${CX + ra} ${CY}Z`;
+  const big = a1 - a0 > Math.PI ? 1 : 0, p1 = pt(rb, a0), p2 = pt(rb, a1 - 1e-4), p3 = pt(ra, a1 - 1e-4), p4 = pt(ra, a0);
+  return `M${p1[0]} ${p1[1]}A${rb} ${rb} 0 ${big} 1 ${p2[0]} ${p2[1]}L${p3[0]} ${p3[1]}A${ra} ${ra} 0 ${big} 0 ${p4[0]} ${p4[1]}Z`;
+}
+function miniPie(key, Dz) {
+  const root = qRoot(key, Dz), pb = pieDati(root), tot = pb.total || 1, CX = 200, CY = 200, r0 = 100, r1 = 190;
+  let ang = -Math.PI / 2, o = '';
+  if (!pb.groups.length) o = `<circle cx="${CX}" cy="${CY}" r="${(r0 + r1) / 2}" fill="none" stroke="#e2eceb" stroke-width="${r1 - r0}"/><text x="${CX}" y="${CY + 8}" text-anchor="middle" font-size="30" fill="#5b7370">nessuna voce</text>`;
+  else {
+    pb.groups.forEach(g => { const a2 = ang + g.sum / tot * Math.PI * 2; o += `<path d="${ringPath(CX, CY, ang, a2, r0, r1)}" fill="${g.col}" fill-rule="evenodd" data-tip="${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}"></path>`; ang = a2; });
+    o += `<text x="${CX}" y="${CY + 16}" text-anchor="middle" font-size="46" font-weight="700" fill="#16302d">${esc(compact(pb.sum))}</text>`;
+  }
+  return `<div class="qc" data-act="qopen" data-v="${key}"><b>${QT[key]}</b><div class="qs"><svg class="qp" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${o}</svg></div></div>`;
+}
+function quadCard(Dz) {
+  return `<div class="card pcard qcard" id="pie"><h2>Grafici a torta</h2><div class="qg">${['a', 'p', 'c', 'l'].map(k => miniPie(k, Dz)).join('')}</div></div>`;
 }
