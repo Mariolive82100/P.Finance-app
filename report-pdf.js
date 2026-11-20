@@ -167,6 +167,8 @@ async function creaPdf(D, hide) {
   } else {
     h2('Attivi e passivi nel tempo', 80);
     img(lineChart(labels, [{ name: 'Attivi', color: PC.teal, fill: 0, vals: st.map(s => s.attivi) }, { name: 'Passivi', color: PC.neg, fill: 0, vals: st.map(s => s.passivi) }], axE), CH_W, CH_H);
+    h2('Indebitamento nel tempo', 80);
+    img(lineChart(labels, [{ name: 'Passivi su attivi', color: '#b45309', fill: 1, vals: st.map(s => s.attivi > 0 ? s.passivi / s.attivi : 0) }], axQ), CH_W, CH_H);
   }
   if (st.length > 1) {
     h2(hide ? 'Variazione mensile del patrimonio netto (%)' : 'Variazione mensile del patrimonio netto', 80);
@@ -209,15 +211,15 @@ async function creaPdf(D, hide) {
   if (D.accounts.length) {
     h2('Per account');
     const keys = ['main', ...D.accounts.map(a => a.id)], ar = keys.map(k => { const a = att.filter(v => accKey(v) === k), p = pas.filter(v => accKey(v) === k); return { n: k === 'main' ? D.nome : D.accounts.find(x => x.id === k).nome, a: sum(a), p: sum(p) }; }).filter(r => r.a || r.p);
-    table(hide ? [{ h: 'Account', w: 90 }, { h: '% degli attivi', w: 45, a: 'r' }, { h: 'Indebitamento', w: 45, a: 'r' }] : [{ h: 'Account', w: 60 }, { h: 'Attivi', w: 40, a: 'r' }, { h: 'Passivi', w: 40, a: 'r' }, { h: 'Netto', w: 40, a: 'r' }],
-      ar.map(r => ({ cells: hide ? [r.n, totA > 0 ? pP(r.a / totA) : '-', r.a > 0 ? pP(r.p / r.a) : '-'] : [r.n, pE(r.a), pE(r.p), { t: pE(r.a - r.p), c: colSgn(r.a - r.p) }] })));
+    table(hide ? [{ h: 'Account', w: 90 }, { h: '% degli attivi', w: 45, a: 'r' }, { h: 'Indebitamento', w: 45, a: 'r' }] : [{ h: 'Account', w: 46 }, { h: 'Attivi', w: 34, a: 'r' }, { h: 'Passivi', w: 34, a: 'r' }, { h: 'Netto', w: 34, a: 'r' }, { h: 'Indebitamento', w: 32, a: 'r' }],
+      ar.map(r => ({ cells: hide ? [r.n, totA > 0 ? pP(r.a / totA) : '-', r.a > 0 ? pP(r.p / r.a) : '-'] : [r.n, pE(r.a), pE(r.p), { t: pE(r.a - r.p), c: colSgn(r.a - r.p) }, r.a > 0 ? pP(r.p / r.a) : '-'] })));
   }
 
   /* storico */
   h2('Storico mensile');
   const hs = st.map((s, i) => ({ s, d: i ? s.netto - st[i - 1].netto : null, dp: i && st[i - 1].netto ? (s.netto - st[i - 1].netto) / Math.abs(st[i - 1].netto) : null })).reverse().slice(0, 24);
-  table(hide ? [{ h: 'Mese', w: 80 }, { h: 'Variazione netto', w: 50, a: 'r' }, { h: 'Indebitamento', w: 50, a: 'r' }] : [{ h: 'Mese', w: 42 }, { h: 'Attivi', w: 34, a: 'r' }, { h: 'Passivi', w: 34, a: 'r' }, { h: 'Netto', w: 34, a: 'r' }, { h: 'Variazione', w: 36, a: 'r' }],
-    hs.map(r => ({ cells: hide ? [monthName(r.s.mese), r.dp !== null ? { t: pSP(r.dp), c: colSgn(r.dp) } : '-', r.s.attivi > 0 ? pP(r.s.passivi / r.s.attivi) : '-'] : [monthName(r.s.mese), pE(r.s.attivi), pE(r.s.passivi), pE(r.s.netto), r.d !== null ? { t: pS(r.d), c: colSgn(r.d) } : '-'] })));
+  table(hide ? [{ h: 'Mese', w: 80 }, { h: 'Variazione netto', w: 50, a: 'r' }, { h: 'Indebitamento', w: 50, a: 'r' }] : [{ h: 'Mese', w: 34 }, { h: 'Attivi', w: 30, a: 'r' }, { h: 'Passivi', w: 30, a: 'r' }, { h: 'Netto', w: 30, a: 'r' }, { h: 'Variazione', w: 30, a: 'r' }, { h: 'Indebit.', w: 26, a: 'r' }],
+    hs.map(r => ({ cells: hide ? [monthName(r.s.mese), r.dp !== null ? { t: pSP(r.dp), c: colSgn(r.dp) } : '-', r.s.attivi > 0 ? pP(r.s.passivi / r.s.attivi) : '-'] : [monthName(r.s.mese), pE(r.s.attivi), pE(r.s.passivi), pE(r.s.netto), r.d !== null ? { t: pS(r.d), c: colSgn(r.d) } : '-', r.s.attivi > 0 ? pP(r.s.passivi / r.s.attivi) : '-'] })));
 
   /* indicatori */
   h2('Indicatori patrimoniali');
