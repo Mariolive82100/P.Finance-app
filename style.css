@@ -176,3 +176,14 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 .qcard .pbody{flex:1;min-height:0}
 .qcard .chh{margin-bottom:8px}
 }
+
+@media(min-width:1000px){
+.chsel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+.chsel .chcmp{margin-left:auto}.chsel .chcmp select{width:auto;margin:0}
+}
+
+@media(min-width:1000px){
+.eye{background:transparent;border:0;cursor:pointer;color:#5b7370;padding:2px 6px;margin-left:6px;vertical-align:middle;line-height:1;border-radius:8px}
+.eye:hover{color:#0f766e;background:#eef6f5}
+.eye svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block}
+}

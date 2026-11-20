@@ -161,15 +161,16 @@ function cmpBars(d) {
   return `<svg viewBox="0 0 ${W} ${H}">${o}</svg>`;
 }
 const CMP_OPT = [['y', 'Anno in corso vs anno precedente'], ['12', 'Ultimi 12 mesi vs 12 precedenti'], ['6', 'Ultimi 6 mesi vs 6 precedenti'], ['3', 'Ultimi 3 mesi vs 3 precedenti']];
-function cmpCards(all) {
-  const mode = S.cmp || 'y', sel = `<select data-act="cmpm">${CMP_OPT.map(([v, l]) => `<option value="${v}" ${mode === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-  const d = cmpData(all, mode);
-  if (!d.dB.some(v => v != null) && !d.cB.some(v => v != null)) return `<div class="card"><h2>Confronto tra periodi</h2>${sel}<p class="note">Per questo confronto servono più mesi di storico (anche quelli del periodo precedente).</p></div>`;
+const cmpSel = () => { const mode = S.cmp || 'y'; return `<select data-act="cmpm">${CMP_OPT.map(([v, l]) => `<option value="${v}" ${mode === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`; };
+function cmpParts(all, noSel) {
+  const mode = S.cmp || 'y', sel = noSel ? '' : cmpSel(), d = cmpData(all, mode);
+  if (!d.dB.some(v => v != null) && !d.cB.some(v => v != null)) return { a: `<div class="card"><h2>Confronto tra periodi</h2>${sel}<p class="note">Per questo confronto servono più mesi di storico (anche quelli del periodo precedente).</p></div>`, b: '' };
   const lg = [{ k: 'a', c: '#1d4ed8', l: 'Periodo attuale' }, { k: 'b', c: '#9aa9c7', l: 'Periodo precedente', dash: true }];
   const pts = d.kA.map((k, i) => ({ lab: shortM(k), long: shortM(k) + ' / ' + shortM(d.kB[i]), a: d.cA[i], b: d.cB[i] }));
-  return `<div class="card"><h2>Confronto tra periodi</h2>${sel}<div class="legend"><span><i style="background:#1d4ed8"></i>Periodo attuale</span><span><i style="background:#9aa9c7"></i>Periodo precedente</span></div>
-    <h3 style="font-size:14px;margin:8px 0 2px">Variazione mensile del patrimonio netto</h3>${cmpBars(d)}</div>` + lcCard('cmp', 'Crescita accumulata: periodo attuale e precedente', pts, lg);
+  return { a: `<div class="card"><h2>Confronto tra periodi</h2>${sel}<div class="legend"><span><i style="background:#1d4ed8"></i>Periodo attuale</span><span><i style="background:#9aa9c7"></i>Periodo precedente</span></div>
+    <h3 style="font-size:14px;margin:8px 0 2px">Variazione mensile del patrimonio netto</h3>${cmpBars(d)}</div>`, b: lcCard('cmp', 'Crescita accumulata: periodo attuale e precedente', pts, lg) };
 }
+function cmpCards(all) { const c = cmpParts(all); return c.a + c.b; }
 
 function popupM() {
   const p = S.popm, s = S.data.storico.find(x => x.mese === p.mese); if (!s) return '';
@@ -230,7 +231,7 @@ function aggSeries(all, A) {
 }
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
-  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40));
+  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, innerWidth - 200 - 56 - 40);
   return lcCard('main', 'Andamento del patrimonio', aggSeries(all, A).pts, serMain(), W, Math.max(130, r1 - 150));
 }
 function pageAnd() {
@@ -309,6 +310,7 @@ function indicatori(D, st) {
 function pageRep() {
   const D = S.data, st = D.storico;
   if (!st.length) return '<div class="card">Nessun dato disponibile. Inserisci almeno una voce nella pagina Patrimonio.</div>';
+  if (innerWidth >= 1000) return pdfCard();
   const cur = st[st.length - 1], prev = st.length > 1 ? st[st.length - 2] : null;
   const dN = prev ? cur.netto - prev.netto : null, dA = prev ? cur.attivi - prev.attivi : null, dP = prev ? cur.passivi - prev.passivi : null;
   const dpct = prev && prev.netto ? dN / Math.abs(prev.netto) : null;

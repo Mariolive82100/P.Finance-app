@@ -79,6 +79,7 @@ async function act(el) {
     }
     if (a === 'tview') { S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
+    if (a === 'chv') { S.chv = v; S.qd = null; return render(); }
     if (a === 'qopen') { S.qd = v; return render(); }
     if (a === 'qclose') { S.qd = null; return render(); }
     if (a === 'qdes') { if (S.qsel && S.qsel[v] != null) { S.qsel[v] = null; render(); } return; }
@@ -181,7 +182,7 @@ async function act(el) {
     }
     if (a === 'ftipo' || a === 'fmod' || a === 'fcat') { S.fd = grabForm(); return render(); }
     if (a === 'edit') { S.edit = v; return render(); }
-    if (a === 'cancel') { S.edit = null; S.fd = null; if (innerWidth >= 1000 && S.tab === 'nv') S.tab = 'pan'; return render(); }
+    if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') S.tab = 'pan'; return render(); }
     if (a === 'export') return exportCsv();
     if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
     if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;

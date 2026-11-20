@@ -30,7 +30,7 @@ function render() {
   let body = '';
   if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
-    <button class="b s sm" data-act="hide">${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}</button><button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
+    ${wide ? '' : `<button class="b s sm" data-act="hide">${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}</button>`}<button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     </header>
     <main>
     <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}${wide ? navWide(IC, pend, D) : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`}`;
@@ -148,7 +148,7 @@ function pagePat() {
     ${selMod}
     ${isInv ? '' : `<label class="lbl">Nome (es. Conto Fineco, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">`}
     ${campi}
-    <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div>` : ''}</div>`;
+    <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed || S.tab === 'nv' ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div>` : ''}</div>`;
   if (S.tab === 'nv') return form;
   return `${filtro}<div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="two"><div class="card at"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
@@ -210,23 +210,42 @@ function disParts(Dz0, single) {
   return { tree: treeCard(root, '', single), pie: wide ? quadCard(Dz, single) : pieCard(found) };
 }
 /* Panoramica: solo su schermi larghi (computer) */
+/* Riquadro grafici della Panoramica: un selettore sceglie quale grafico vedere */
+const HUB = { main: 'Andamento', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita', c: 'Per account', a: 'Attivi', i: 'Classi di investimento', p: 'Passivi', l: 'Liquido / non liquido', q: 'Tutte le torte' };
+function hubBody(key, Dz, all, single, r1) {
+  const hist = all.length >= 2, W = Math.max(380, innerWidth - 200 - 56 - 40), H = Math.max(130, r1 - 150);
+  const no = t => `<div class="card"><h2>${t}</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>`;
+  if (key === 'main') return panMain(all, r1);
+  if (key === 'bar') {
+    if (!hist) return no('Variazione mensile del patrimonio netto');
+    const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
+    return lcCard('bar', A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', aggSeries(all, A).dBar, [{ k: 'v', c: '#15803d', l: A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile', bar: 1 }], W, H);
+  }
+  if (key === 'cmp1' || key === 'cmp2') { if (!hist) return no('Confronto tra periodi'); const c = cmpParts(all, true); return key === 'cmp1' ? c.a : c.b || c.a; }
+  if (key === 'q') return quadCard(Dz, single);
+  return bigPie(key, Dz, false);
+}
 function pagePan() {
   const D = S.data, all = D.storico;
-  if (!D.voci.length) return '<div class="card">Nessuna voce da mostrare. Aggiungile con il tasto Nuova voce.</div>' + panTop('Aggregato');
+  if (!D.voci.length) return panTop('Aggregato') + '<div class="card">Nessuna voce da mostrare. Aggiungile con il tasto Nuova voce.</div>';
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', vis = vz(D.voci).filter(v => !single || accKey(v) === fa), Dz = { ...D, voci: vis };
   const aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
   const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = !single && cur && prev ? cur.netto - prev.netto : null;
-  const kp = (l, v, sub, c) => `<div class="card"><div class="lbl">${l}</div><div class="big ${c || ''}">${v}</div><div class="lbl">${sub}</div></div>`;
+  const kp = (l, v, sub, c, extra) => `<div class="card"><div class="lbl">${l}</div><div class="big ${c || ''}">${v}${extra || ''}</div><div class="lbl">${sub}</div></div>`;
+  const eye = `<button class="eye" data-act="hide" aria-label="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}" title="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${hideAmt() ? '' : '<path d="M3 3l18 18"/>'}</svg></button>`;
+  const dsub = dN !== null ? `<span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}` : '&nbsp;';
   const ind = t.attivi > 0 ? t.passivi / t.attivi : null;
-  const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28 - 40, r1 = single ? Math.max(300, Math.round(avail * 0.45)) : Math.max(290, Math.round(avail * 0.5)), r2 = Math.max(250, avail - r1);
-  const pr = disParts(Dz, single), ch = single ? '' : panMain(all, r1);
+  const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28 - 40, r1 = Math.max(400, Math.round(avail * 0.62));
+  const keys = single ? ['l', 'a', 'i', 'p', 'q'] : ['main', 'bar', 'cmp1', 'cmp2', 'c', 'a', 'i', 'p', 'q'], hv = keys.includes(S.chv) ? S.chv : keys[0];
+  const pr = disParts(Dz, single), body = hubBody(hv, Dz, all, single, r1);
   S.anim = false; S.tanim = false;
-  const rows = single ? `<div class="g12 r1"><div class="s12">${pr.pie}</div></div><div class="g12 r2"><div class="s12">${pr.tree}</div></div>`
-    : `<div class="g12 r1"><div class="s7">${ch}</div><div class="s5">${pr.pie}</div></div><div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div>`;
-  return `<div class="pan" style="--r1:${r1}px;--r2:${r2}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dN !== null ? `${dN >= 0 ? '+' : ''}${eur(dN)} su ${esc(monthName(prev.mese))}` : '&nbsp;', cls(t.netto))}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>${rows}</div>`;
+  const selc = `<div class="chsel">${keys.map(k => `<button class="b ${k === hv ? '' : 's'} sm" data-act="chv" data-v="${k}">${HUB[k]}</button>`).join('')}${hv.startsWith('cmp') ? `<span class="chcmp">${cmpSel()}</span>` : ''}</div>`;
+  const row2 = single ? `<div class="g12 r2"><div class="s12">${pr.tree}</div></div>` : `<div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div>`;
+  return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye)}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
+    <div class="g12 r1"><div class="s12">${selc}${body}</div></div>${row2}</div>`;
 }
-const panTop = name => `<div class="ptop"><h2>Panoramica · ${esc(name)}</h2><div class="pbtn"><button class="b s sm" data-act="tab" data-v="rep">Genera report</button><button class="b sm" data-act="nv">Nuova voce</button></div></div>`;
+const panTop = name => `<div class="ptop"><h2>Panoramica · ${esc(name)}</h2><div class="pbtn"><button class="b sm" data-act="nv">Nuova voce</button></div></div>`;
 
 const compact = v => hideAmt() ? '•••' : new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 const shortM = k => { const [y, m] = k.split('-'); return MESI[+m - 1].slice(0, 3) + ' ' + y.slice(2); };
