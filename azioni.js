@@ -62,6 +62,19 @@ async function act(el) {
     if (a === 'tleaf') { const t = document.querySelector('.tt'); S.ttl = t ? t.scrollLeft : null; S.pop = { id: v, mode: 'upd', only: true }; render(); return keepTT(); }
     if (a === 'popback') { if (S.pop.only) { S.pop = null; render(); return keepTT(); } S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
+    if (a === 'popbf') { S.pop.mode = 'bf'; return render(); }
+    if (a === 'popbfok') {
+      const x = D.voci.find(z => z.id === S.pop.id), h = pnum($('pbh') ? $('pbh').value : ''), hv = isFinite(h) && h > 0 ? r2(h) : 0;
+      if (!x || x.ricostruito) return;
+      const ms = bfMesi(x);
+      await Promise.all(ms.map(s => {
+        const res = piano(x, endM(s.mese)).residuo;
+        s.passivi = r2(s.passivi + res); s.attivi = r2(s.attivi + hv); s.netto = r2(s.attivi - s.passivi);
+        return setDoc(doc(db, 'users', D.uid, 'storico', s.mese), { attivi: s.attivi, passivi: s.passivi, netto: s.netto, aggiornato: serverTimestamp() });
+      }));
+      await updateDoc(doc(db, 'users', D.uid, 'voci', x.id), { ricostruito: true }); x.ricostruito = true;
+      S.pop = null; S.msg = 'Storico ricostruito.'; return render();
+    }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
     if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; if (innerWidth >= 1000) S.tab = 'nv'; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
     if (a === 'updsave') {

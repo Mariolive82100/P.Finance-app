@@ -138,7 +138,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
-  ['0.99','20 nov 2026',['Nuovo mutuo: campo facoltativo Valore dell\'immobile, che crea anche l\'attivo in Immobili']],
+  ['0.99','20 nov 2026',['Nuovo mutuo: campo facoltativo Valore dell\'immobile, che crea anche l\'attivo in Immobili','Mutuo: tasto Ricostruisci storico, per riempire i mesi passati dei grafici']],
   ['0.98','20 nov 2026',['Computer: nuova pagina Conti con aggiornamento di fine mese (tutti i valori in una volta), archivia ed elimina con avviso Annulla; conti divisi per categoria comprimibili, investimenti per conto']],
   ['0.97', '20 nov 2026', ['Computer: l\'albero del patrimonio ha una pagina tutta sua (voce Albero nel menu a sinistra, dopo Panoramica); in Panoramica restano grafici, torte e indicatori']],
   ['0.96', '20 nov 2026', ['Computer: nei grafici a sinistra il confronto variazioni è sostituito dall\'andamento dei passivi.', 'Nel grafico a colonne la colonna degli attivi è divisa per categoria.']],
