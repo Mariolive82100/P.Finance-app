@@ -56,7 +56,13 @@ function lcSvg(id) {
 }
 function lcBlock(id) { return `<div class="lcw" data-ch="${id}" data-k="${CH[id].key}">${lcSvg(id)}</div>`; }
 const lcLegend = ser => `<div class="legend">${ser.filter(x => !x.bar).map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : ''}</div>`;
-const lcZoomBar = key => `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
+const AGGK = ['main', 'net', 'bar'];
+const lcAgg = key => {
+  if (!AGGK.includes(key)) return '';
+  const ok = S.data && new Set(S.data.storico.map(x => x.mese.slice(0, 4))).size >= 2, cur = ok ? (S.agg || 'm') : 'm';
+  return `<div class="zc">${[['m', 'Mese'], ['yf', 'Anno (fine)'], ['ya', 'Anno (media)']].map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
+};
+const lcZoomBar = key => lcAgg(key) + `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
 function lcCard(key, title, pts, series) {
   CHS[key] = { title, pts, series };
   lcInit(key, key, pts, series, CW(), CHt(CW()));
@@ -208,17 +214,31 @@ function pageAnd() {
   const sel = `<select data-act="range">${rg === 'year' ? '<option value="" selected disabled>Periodo…</option>' : ''}${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico'], ['custom', 'Periodo personalizzato']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   const sel2 = `<select data-act="yrsel">${rg === 'year' ? '' : '<option value="" selected disabled>Anno…</option>'}${yrs.map(y => `<option value="${y}" ${rg === 'year' && y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
   const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }];
-  const pts = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
+  const pts0 = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
   const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
-  const dNet = all.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 }));
-  const dBar = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
-  const wsig = [rg, lo_, hi_, yr, all.length].join('|');
+  const dNet0 = all.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 }));
+  const dBar0 = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
+  const yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))], A = yrsAll.length >= 2 ? (S.agg || 'm') : 'm', curY = monthKey().slice(0, 4);
+  let pts = pts0, dNet = dNet0, dBar = dBar0;
+  if (A !== 'm') {
+    const avg = (a, k) => a.reduce((t, x) => t + x[k], 0) / a.length, by = yrsAll.map(y => all.filter(s => s.mese.slice(0, 4) === y));
+    const lg = (g, y) => A === 'yf' ? `${y} · ${monthName(g[g.length - 1].mese)}${y === curY ? ' (in corso)' : ''}` : `Media ${y}${y === curY ? ' (in corso)' : ''}`;
+    const val = (g, k) => A === 'yf' ? g[g.length - 1][k] : avg(g, k);
+    pts = by.map((g, i) => ({ lab: yrsAll[i], long: lg(g, yrsAll[i]), attivi: val(g, 'attivi'), passivi: val(g, 'passivi'), netto: val(g, 'netto') }));
+    dNet = by.map((g, i) => ({ lab: yrsAll[i], long: lg(g, yrsAll[i]), abs: val(g, 'netto'), var: 0 }));
+    dBar = [];
+    by.forEach((g, i) => {
+      if (A === 'yf') { if (i) dBar.push({ lab: yrsAll[i], long: lg(g, yrsAll[i]), v: g[g.length - 1].netto - by[i - 1][by[i - 1].length - 1].netto }); }
+      else { const d = g.map(s => { const j = all.indexOf(s); return j > 0 ? s.netto - all[j - 1].netto : null; }).filter(x => x !== null); if (d.length) dBar.push({ lab: yrsAll[i], long: lg(g, yrsAll[i]), v: d.reduce((t, x) => t + x, 0) / d.length }); }
+    });
+  }
+  const wsig = [rg, lo_, hi_, yr, all.length, A].join('|');
   if (all.length > 1 && S.wsig !== wsig) {
     S.wsig = wsig;
-    [['main', pts], ['net', dNet], ['bar', dBar]].forEach(([k, d]) => {
+    [['main', pts0], ['net', dNet0], ['bar', dBar0]].forEach(([k, d]) => {
       const n = d.length, m = d.map(q => q.mese);
-      if (!st.length || rg === '0') { delete ZM[k]; return; }
+      if (A !== 'm' || !st.length || rg === '0') { delete ZM[k]; return; }
       let ia = m.findIndex(x => x >= st[0].mese), ib = m.length - 1 - [...m].reverse().findIndex(x => x <= st[st.length - 1].mese);
       if (ia < 0) ia = 0; if (ib >= n || ib < 0) ib = n - 1;
       const mins = Math.min(n - 1, 3);
@@ -229,12 +249,13 @@ function pageAnd() {
       ZM[k] = { a: ia, b: ib, n, sig: d[0].lab + '|' + d[n - 1].lab };
     });
   }
+  const bT = A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', bL = A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile';
   const ch = all.length > 1 ? {
     main: lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L),
-    net: lcCard('net', 'Variazione totale del patrimonio netto nel periodo', dNet, [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo mese visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]),
-    bar: lcCard('bar', 'Variazione mensile del patrimonio netto', dBar, [{ k: 'v', c: '#15803d', l: 'Variazione mensile', bar: 1 }])
+    net: lcCard('net', 'Variazione totale del patrimonio netto nel periodo', dNet, [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo punto visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]),
+    bar: lcCard('bar', bT, dBar, [{ k: 'v', c: '#15803d', l: bL, bar: 1 }])
   } : null;
-  return `<div class="card"><div class="grid">${sel}${sel2}</div>${cust}${all.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
+  return `<div class="card"><div class="grid">${sel}${sel2}</div>${cust}${A !== 'm' ? '<p class="note">Vista annuale attiva: i grafici mostrano tutti gli anni e il periodo scelto qui sopra non si applica. Per tornare al dettaglio, usa il tasto "Mese" sotto i grafici.</p>' : ''}${all.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
     ${ch ? ch.main : ''}
     ${ch ? ch.net : ''}
     ${ch ? ch.bar : ''}

@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.69';
+const VER = '0.70';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -136,6 +136,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.70', '20 nov 2026', ['Grafici di Andamento: nuovi tasti Mese / Anno (fine) / Anno (media) per vedere i dati per anno']],
   ['0.69', '20 nov 2026', ['Report PDF con importi: aggiunti grafico e colonna dell\'indebitamento (come nella versione senza importi)']],
   ['0.68', '20 nov 2026', ['Importazione dei titoli da CSV riservata all\'amministratore durante la fase beta']],
   ['0.67', '19 nov 2026', ['Grafico a torta: tocca una fetta per selezionarla, tocca di nuovo per aprirla', 'Nuovi tasti "Indietro" e "Torna all\'inizio" sulla torta', 'Tocca al centro o fuori dalle fette per deselezionare', 'La torta non dipende più dall\'albero', 'Nuova sezione Info nel menu, con le novità']],

@@ -98,6 +98,7 @@ async function act(el) {
       S.anim = 'sel'; S.pieSel = i; return render();
     }
     if (a === 'pdes') { if (S.pieSel == null) return; S.pieSel = null; S.anim = 'sel'; return render(); }
+    if (a === 'agg') { S.agg = v; S.wsig = null; return render(); }
     if (a === 'pback') { if (S.pp && S.pp.length > 1) S.pp = S.pp.slice(0, -1); S.pieSel = null; S.anim = true; return render(); }
     if (a === 'phome') { S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }
