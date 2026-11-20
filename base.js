@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.91';
+const VER = '0.92';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -138,6 +138,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.92', '20 nov 2026', ['Computer: il tasto Indietro dei grafici ingranditi è dentro il riquadro, vicino al tasto schermo intero', 'Grafico del patrimonio netto: un puntino con etichetta (data e valore) all\'inizio di ogni anno']],
   ['0.91', '20 nov 2026', ['Computer: il grafico dell\'andamento mostra solo il patrimonio netto (tolte le linee di attivi, passivi e variazione, e le etichette da selezionare)', 'Il grafico del patrimonio netto usa una scala adattata ai dati, così le variazioni si vedono meglio']],
   ['0.90', '20 nov 2026', ['Computer: transizioni quando si apre e si chiude un sottoquadrante (grafici e torte)', 'Il tasto per tornare alla vista con i quattro sottoquadranti ora si chiama Indietro (vale anche il tasto Esc)', 'Grafici ingranditi più alti, per riempire meglio il riquadro']],
   ['0.89', '20 nov 2026', ['Computer: il riquadro a sinistra è fatto come quello delle torte: quattro sottoquadranti (Andamento, Variazione mensile, Confronto variazioni, Confronto crescita) con un mini grafico ciascuno; tocca un sottoquadrante per ingrandirlo, il tasto Tutti i grafici torna indietro']],

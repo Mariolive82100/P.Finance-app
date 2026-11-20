@@ -51,6 +51,15 @@ function lcSvg(id) {
       if (iMin >= 0 && pts[iMin][se.k] !== pts[iMax][se.k]) o += [[iMin, '#b91c1c'], [iMax, '#15803d']].map(([i, col]) => `<circle cx="${x(i).toFixed(1)}" cy="${y(pts[i][se.k]).toFixed(1)}" r="5.5" fill="${col}" stroke="#fff" stroke-width="1.5"/>`).join('');
     }
     o += '</g>';
+    if (se.ck && pts[0].mese) {
+      const cks = [];
+      for (let i = lo; i <= hi; i++) { const v = pts[i][se.k], yy = pts[i].mese.slice(0, 4); if (v != null && !(i > 0 && pts[i - 1].mese.slice(0, 4) === yy)) cks.push({ i, v, cx: x(i), jan: pts[i].mese.slice(5) === '01' }); }
+      cks.forEach((k, j) => {
+        if (cks[j + 1] && cks[j + 1].cx - k.cx < 95 && !k.jan) return;
+        const cy = y(k.v), up = cy - 14 >= T + 6, an = k.cx < L + 50 ? 'start' : k.cx > W - R - 50 ? 'end' : 'middle', tx = an === 'start' ? k.cx - 4 : an === 'end' ? k.cx + 4 : k.cx;
+        o += `<circle cx="${k.cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6" fill="#fff" stroke="${se.c}" stroke-width="2.5"/><text x="${tx.toFixed(1)}" y="${(up ? cy - 12 : cy + 22).toFixed(1)}" font-size="12" font-weight="700" fill="${se.c}" text-anchor="${an}" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(pts[k.i].lab + ' · ' + compact(k.v))}</text>`;
+      });
+    }
   });
   c.geom.y = y;
   return `<svg class="lc" viewBox="0 0 ${W} ${H}">${o}<g class="xh"></g></svg>`;
@@ -64,11 +73,13 @@ const lcAgg = key => {
   return `<div class="zc">${[['m', 'Mese'], ['yf', 'Anno (fine)'], ['ya', 'Anno (media)']].map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
 };
 const lcZoomBar = key => lcAgg(key) + `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
+const hubOpen = () => innerWidth >= 1000 && S.tab === 'pan' && !!S.hq;
 function lcCard(key, title, pts, series, w, h) {
   CHS[key] = { title, pts, series };
   const ww = w || CW();
   lcInit(key, key, pts, series, ww, h || CHt(ww));
-  return `<div class="card"><div class="chh"><h2>${esc(title)}</h2><button class="b s sm" data-act="fs" data-v="${key}" aria-label="Schermo intero">⛶</button></div>${lcLegend(series)}${lcBlock(key)}${lcZoomBar(key)}
+  const hb = hubOpen(), bk = hb ? '<button class="b s sm" data-act="hclose">← Indietro</button>' : '', cs = hb && key === 'cmp' ? cmpSel() : '';
+  return `<div class="card"><div class="chh"><h2>${esc(title)}</h2><span class="chb">${cs}${bk}<button class="b s sm" data-act="fs" data-v="${key}" aria-label="Schermo intero">⛶</button></span></div>${lcLegend(series)}${lcBlock(key)}${lcZoomBar(key)}
     <p class="note" style="margin:4px 0 0">${AGGK[0] === key ? 'Tocca i nomi in alto per mostrare o nascondere le linee. ' : ''}Tocca un punto per vedere il valore, tocca di nuovo per nasconderlo. Pizzica con due dita (o Ctrl + rotellina) per ingrandire, trascina per scorrere.</p></div>`;
 }
 function fsOverlay() {
@@ -163,11 +174,11 @@ function cmpBars(d, w, h) {
 const CMP_OPT = [['y', 'Anno in corso vs anno precedente'], ['12', 'Ultimi 12 mesi vs 12 precedenti'], ['6', 'Ultimi 6 mesi vs 6 precedenti'], ['3', 'Ultimi 3 mesi vs 3 precedenti']];
 const cmpSel = () => { const mode = S.cmp || 'y'; return `<select data-act="cmpm">${CMP_OPT.map(([v, l]) => `<option value="${v}" ${mode === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`; };
 function cmpParts(all, noSel, w, h1, h2) {
-  const mode = S.cmp || 'y', sel = noSel ? '' : cmpSel(), d = cmpData(all, mode);
-  if (!d.dB.some(v => v != null) && !d.cB.some(v => v != null)) return { a: `<div class="card"><h2>Confronto tra periodi</h2>${sel}<p class="note">Per questo confronto servono più mesi di storico (anche quelli del periodo precedente).</p></div>`, b: '' };
+  const mode = S.cmp || 'y', hb = hubOpen(), d = cmpData(all, mode), head = hb ? `<div class="chh"><h2>Confronto tra periodi</h2><span class="chb">${cmpSel()}<button class="b s sm" data-act="hclose">← Indietro</button></span></div>` : `<h2>Confronto tra periodi</h2>${noSel ? '' : cmpSel()}`;
+  if (!d.dB.some(v => v != null) && !d.cB.some(v => v != null)) return { a: `<div class="card">${head}<p class="note">Per questo confronto servono più mesi di storico (anche quelli del periodo precedente).</p></div>`, b: '' };
   const lg = [{ k: 'a', c: '#1d4ed8', l: 'Periodo attuale' }, { k: 'b', c: '#9aa9c7', l: 'Periodo precedente', dash: true }];
   const pts = d.kA.map((k, i) => ({ lab: shortM(k), long: shortM(k) + ' / ' + shortM(d.kB[i]), a: d.cA[i], b: d.cB[i] }));
-  return { a: `<div class="card"><h2>Confronto tra periodi</h2>${sel}<div class="legend"><span><i style="background:#1d4ed8"></i>Periodo attuale</span><span><i style="background:#9aa9c7"></i>Periodo precedente</span></div>
+  return { a: `<div class="card">${head}<div class="legend"><span><i style="background:#1d4ed8"></i>Periodo attuale</span><span><i style="background:#9aa9c7"></i>Periodo precedente</span></div>
     <h3 style="font-size:14px;margin:8px 0 2px">Variazione mensile del patrimonio netto</h3>${cmpBars(d, w, h1)}</div>`, b: lcCard('cmp', 'Crescita accumulata: periodo attuale e precedente', pts, lg, w, h2) };
 }
 function cmpCards(all) { const c = cmpParts(all); return c.a + c.b; }
@@ -259,7 +270,7 @@ function hubGrid(all) {
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
   const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40));
-  return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1 }], W, Math.max(130, r1 - 150));
+  return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150));
 }
 function pageAnd() {
   const all = S.data.storico, rg = String(S.range || '12');

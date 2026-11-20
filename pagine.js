@@ -212,16 +212,16 @@ function disParts(Dz0, single) {
 /* Panoramica: solo su schermi larghi (computer) */
 /* Riquadro grafici della Panoramica: un selettore sceglie quale grafico vedere */
 function hubBody(key, all, r1) {
-  const hist = all.length >= 2, W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40)), H = Math.max(80, r1 - 144);
-  const no = t => `<div class="card"><h2>${t}</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>`;
-  if (key === 'main') return panMain(all, r1 + 24);
+  const hist = all.length >= 2, W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40)), H = Math.max(80, r1 - 110);
+  const no = t => `<div class="card"><div class="chh"><h2>${t}</h2><span class="chb"><button class="b s sm" data-act="hclose">← Indietro</button></span></div><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>`;
+  if (key === 'main') return panMain(all, r1 + 70);
   if (key === 'bar') {
     if (!hist) return no('Variazione mensile del patrimonio netto');
     const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
     return lcCard('bar', A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', aggSeries(all, A).dBar, [{ k: 'v', c: '#15803d', l: A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile', bar: 1 }], W, H);
   }
   if (!hist) return no('Confronto tra periodi');
-  const c = cmpParts(all, true, W, Math.max(80, r1 - 162), Math.max(80, r1 - 172)); return key === 'cmp1' ? c.a : c.b || c.a;
+  const c = cmpParts(all, true, W, Math.max(80, r1 - 124), Math.max(80, r1 - 134)); return key === 'cmp1' ? c.a : c.b || c.a;
 }
 function pagePan() {
   const D = S.data, all = D.storico;
@@ -238,7 +238,7 @@ function pagePan() {
   const keys = ['main', 'bar', 'cmp1', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
   const pr = disParts(Dz, single);
   S.anim = false; S.tanim = false;
-  const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}"><div class="chsel"><button class="b s sm" data-act="hclose">← Indietro</button>${hv.startsWith('cmp') ? `<span class="chcmp">${cmpSel()}</span>` : ''}</div>${hubBody(hv, all, r1)}</div>` : hubGrid(all);
+  const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, all, r1)}</div>` : hubGrid(all);
   S.hanim = false; S.panim = false;
   const row2 = single ? `<div class="g12 r2"><div class="s12">${pr.tree}</div></div>` : `<div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye)}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
