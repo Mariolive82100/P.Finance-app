@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.84';
+const VER = '0.85';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -138,6 +138,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.85', '20 nov 2026', ['Computer: le quattro torte tornano espandibili (tocca il riquadro; tocca una fetta per selezionarla)', 'Barra laterale: Panoramica, Account (Aggregato e singoli account, con aggiunta, rinomina ed elimina), Report, Info e novità, Termini e condizioni, Amministrazione; il menu a panino non c\'è più su computer', 'Tocchi su un account: la Panoramica mostra solo quell\'account', 'In alto a destra della Panoramica: Genera report e Nuova voce', 'Su computer restano solo Panoramica e Report; Patrimonio, Distribuzione e Andamento sono nascoste per ora']],
   ['0.84', '20 nov 2026', ['Computer: le quattro torte non si espandono più, le fette si selezionano soltanto', 'Nuovo ordine: Per account, Attivi per categoria, Classi di investimento (valori aggregati di tutti gli account), Passivi per tipo']],
   ['0.83', '20 nov 2026', ['Computer: il grafico a torta diventa quattro torte piccole (Attivi per categoria, Passivi per tipo, Per account, Liquido / non liquido)', 'Tocca una torta per ingrandirla; il tasto Tutti i grafici riporta alla vista con le quattro torte', 'Telefono invariato']],
   ['0.82', '20 nov 2026', ['Nuovo tasto per nascondere gli importi in tutta l\'app (restano le percentuali)', 'Grafico a torta più compatto, senza il testo di istruzioni']],

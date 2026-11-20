@@ -37,6 +37,9 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
+    if (a === 'accsel') { S.tab = 'pan'; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
+    if (a === 'nv') { S.tab = 'nv'; S.edit = null; S.fd = null; S.exp = { ...(S.exp || {}), form: true }; window.scrollTo(0, 0); return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'exp') { S.exp = S.exp || {}; S.exp[v] = !S.exp[v]; return render(); }
@@ -49,7 +52,7 @@ async function act(el) {
     if (a === 'popback') { if (S.pop.only) { S.pop = null; render(); return keepTT(); } S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
-    if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
+    if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; if (innerWidth >= 1000) S.tab = 'nv'; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
     if (a === 'updsave') {
       const x = D.voci.find(z => z.id === S.pop.id), nv = pnum($('pv').value);
       if (!isFinite(nv) || nv < 0) { S.msg = 'Inserisci un valore valido (zero o più).'; return render(); }
@@ -75,7 +78,9 @@ async function act(el) {
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
     if (a === 'tview') { S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
-    if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = +i; return render(); }
+    if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
+    if (a === 'qopen') { S.qd = v; return render(); }
+    if (a === 'qclose') { S.qd = null; return render(); }
     if (a === 'qdes') { if (S.qsel && S.qsel[v] != null) { S.qsel[v] = null; render(); } return; }
     if (a === 'texp' || a === 'tcol') {
       const all = new Set(['r']);
@@ -176,7 +181,7 @@ async function act(el) {
     }
     if (a === 'ftipo' || a === 'fmod' || a === 'fcat') { S.fd = grabForm(); return render(); }
     if (a === 'edit') { S.edit = v; return render(); }
-    if (a === 'cancel') { S.edit = null; S.fd = null; return render(); }
+    if (a === 'cancel') { S.edit = null; S.fd = null; if (innerWidth >= 1000 && S.tab === 'nv') S.tab = 'pan'; return render(); }
     if (a === 'export') return exportCsv();
     if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
     if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;
@@ -208,7 +213,7 @@ async function act(el) {
       }
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
       else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
-      S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; await syncStorico(); return render();
+      S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') S.tab = 'pan'; await syncStorico(); return render();
     }
     if (a === 'del') {
       if (!confirm('Eliminare questa voce?')) return;

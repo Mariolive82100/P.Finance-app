@@ -157,3 +157,22 @@ main{margin:0 0 0 200px;max-width:none;padding:18px 28px 40px}
 .qs{flex:1;min-height:0;position:relative}.qs svg{position:absolute;inset:0;width:100%;height:100%}
 .qp path{stroke:#fff;stroke-width:3}.qp text{pointer-events:none}.qp path{cursor:pointer;transition:opacity .2s}.qp .dim{opacity:.35}
 }
+
+@media(min-width:1000px){
+.ham{display:none}
+nav{overflow-y:auto}
+nav hr{border:0;border-top:1px solid #e2eceb;margin:8px 4px}
+nav .nv .chev{margin-left:auto}
+.nsub{margin:0 0 4px 20px;padding-left:6px;border-left:2px solid #d5e3e1}
+.nr{display:flex;align-items:center}
+nav .nr button{flex:1;min-width:0;padding:7px 10px;font-size:13px;text-align:left;display:block;overflow:hidden;text-overflow:ellipsis;border-radius:8px}
+nav .nr button.on{background:#d6f2ee;color:#0f766e;font-weight:700}
+.nic{cursor:pointer;padding:2px 5px;color:#7a908d;font-size:12px}.nic:hover{color:#0f766e}
+nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
+.nadd{padding:6px 2px}.nadd input{margin:0 0 6px}
+.ptop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.ptop h2{margin:0;font-size:17px}.pbtn{display:flex;gap:8px}
+.g12 .s12{grid-column:span 12;min-width:0}
+.s12 .qg{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:1fr}
+.qcard .pbody{flex:1;min-height:0}
+.qcard .chh{margin-bottom:8px}
+}

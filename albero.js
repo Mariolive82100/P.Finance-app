@@ -111,14 +111,14 @@ function alberoFull(root) {
   const all = new Set(['r']); const w = n => { if (n.kids.length) { all.add(n.id); n.kids.forEach(w); } }; w(root);
   const L = alberoLayout(root, all); return { h: Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4, w: L.depth * (TN.w + TN.gx) - TN.gx + 4 };
 }
-function treeCard(root, focus) {
-  const mode = S.tview || 'agg', fu = alberoFull(root);
+function treeCard(root, focus, single) {
+  const mode = single ? 'agg' : S.tview || 'agg', fu = alberoFull(root);
   /* scala l'albero aperto del tutto in modo che stia nella larghezza disponibile */
-  const avail = S.tab === 'pan' ? (innerWidth - 270) * 0.75 - 40 : innerWidth - 200 - 56 - 40;
+  const avail = S.tab === 'pan' && !single ? (innerWidth - 270) * 0.75 - 40 : innerWidth - 200 - 56 - 40;
   TK.k = Math.max(0.5, Math.min(avail / fu.w, 1.5));
   const fh = Math.round(fu.h * treeK()) + 20;
   return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
-    <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
+    ${single ? '' : `<div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>`}
     ${zeroToggle()}
     <div class="tw tt" style="margin-top:12px;--th:${fh}px">${alberoSvg(root, S.tx, focus)}</div>
     <p class="note">Tocca ✎ per aggiornare il valore di una voce.</p>
@@ -167,15 +167,20 @@ function pieCard(found) {
 </div><div class="pleg">${legend}</div></div></div>`;
 }
 
-/* ---------- Computer: quattro torte piccole, le fette si selezionano (niente ingrandimento) ---------- */
-const QT = { c: 'Per account', a: 'Attivi per categoria', i: 'Classi di investimento', p: 'Passivi per tipo' };
-/* radice (stesso formato dell'albero) di ciascuna torta; sempre i valori aggregati di tutti gli account */
+/* ---------- Computer: quattro torte piccole; tocco sulla fetta = selezione, tocco sul riquadro = si ingrandisce ---------- */
+const QT = { c: 'Per account', a: 'Attivi per categoria', i: 'Classi di investimento', p: 'Passivi per tipo', l: 'Liquido / non liquido' };
+const QLIQ = ['Liquidità', 'Investimenti'];
+/* radice (stesso formato dell'albero) di ciascuna torta; sempre i valori aggregati degli account considerati */
 function qRoot(key, Dz) {
-  const agg = alberoDati(Dz, 'agg'), lato = t => agg.kids.find(k => k.id === 'r/' + t);
+  const agg = alberoDati(Dz, 'agg'), lato = t => agg.kids.find(k => k.id === 'r/' + t), sm = arr => arr.reduce((s, k) => s + k.val, 0);
   let kids = [], val = 0;
   if (key === 'c') { const r = alberoDati(Dz, 'acc'); kids = r.kids; val = r.val; }
   else if (key === 'a' || key === 'p') { const n = lato(key); if (n) { kids = n.kids; val = n.val; } }
-  else { const a = lato('a'), inv = a && a.kids.find(k => k.label === 'Investimenti'); if (inv) { kids = inv.kids.map(k => ({ ...k, tone: 'x' })); val = inv.val; } }
+  else if (key === 'i') { const a = lato('a'), inv = a && a.kids.find(k => k.label === 'Investimenti'); if (inv) { kids = inv.kids.map(k => ({ ...k, tone: 'x' })); val = inv.val; } }
+  else {
+    const a = lato('a'), cats = a ? a.kids : [], mk = (id, label, tn, arr) => ({ id: 'r/' + id, label, tone: tn, lv: 'm', val: sm(arr), pct: null, kids: arr });
+    kids = [mk('liq', 'Liquido', 'a', cats.filter(k => QLIQ.includes(k.label))), mk('nliq', 'Non liquido', 'x', cats.filter(k => !QLIQ.includes(k.label)))].filter(n => n.kids.length); val = sm(kids);
+  }
   return { id: 'r', label: QT[key], val, pct: null, tone: 'a', lv: 'r', kids };
 }
 function ringPath(CX, CY, a0, a1, ra, rb) {
@@ -184,18 +189,34 @@ function ringPath(CX, CY, a0, a1, ra, rb) {
   const big = a1 - a0 > Math.PI ? 1 : 0, p1 = pt(rb, a0), p2 = pt(rb, a1 - 1e-4), p3 = pt(ra, a1 - 1e-4), p4 = pt(ra, a0);
   return `M${p1[0]} ${p1[1]}A${rb} ${rb} 0 ${big} 1 ${p2[0]} ${p2[1]}L${p3[0]} ${p3[1]}A${ra} ${ra} 0 ${big} 0 ${p4[0]} ${p4[1]}Z`;
 }
-function miniPie(key, Dz) {
-  const pb = pieDati(qRoot(key, Dz)), tot = pb.total || 1, CX = 200, CY = 200, r0 = 100, r1 = 188, T = (y, sz, w, f, t) => `<text x="${CX}" y="${y}" text-anchor="middle" font-size="${sz}" font-weight="${w}" fill="${f}">${esc(t)}</text>`;
+/* piccola (big = false) o grande (big = true): stessa selezione delle fette in entrambe */
+function qSvg(key, Dz, big) {
+  const pb = pieDati(qRoot(key, Dz)), tot = pb.total || 1, CX = 200, CY = 200, r0 = big ? 84 : 100, r1 = big ? 176 : 188, f = big ? 0.5 : 1;
+  const T = (y, sz, w, c, t) => `<text x="${CX}" y="${y}" text-anchor="middle" font-size="${sz}" font-weight="${w}" fill="${c}">${esc(t)}</text>`;
   const sel = S.qsel && S.qsel[key] != null && pb.groups[S.qsel[key]] ? S.qsel[key] : -1;
   let ang = -Math.PI / 2, o = '';
   if (!pb.groups.length) o = `<circle cx="${CX}" cy="${CY}" r="${(r0 + r1) / 2}" fill="none" stroke="#e2eceb" stroke-width="${r1 - r0}"/>` + T(CY + 8, 30, 400, '#5b7370', 'nessuna voce');
   else {
     pb.groups.forEach((g, i) => { const a2 = ang + g.sum / tot * Math.PI * 2, on = i === sel; o += `<path class="${on ? 'sel' : sel >= 0 ? 'dim' : ''}" d="${ringPath(CX, CY, ang, a2, r0, on ? r1 + 10 : r1)}" fill="${g.col}" fill-rule="evenodd" data-act="qs" data-v="${key}:${i}" data-tip="${esc(g.label + ' · ' + eur(g.sum) + ' · ' + g.pct)}"></path>`; ang = a2; });
     const g = sel >= 0 ? pb.groups[sel] : null;
-    o += g ? T(CY - 18, 28, 400, '#5b7370', trunc(g.label, 14)) + T(CY + 22, 44, 700, '#16302d', compact(g.sum)) + T(CY + 56, 28, 400, '#5b7370', g.pct) : T(CY + 16, 46, 700, '#16302d', compact(pb.sum));
+    o += big ? (g ? T(CY - 14, 20, 400, '#5b7370', trunc(g.label, 13)) + T(CY + 16, 25, 700, '#16302d', eur0(g.sum)) + T(CY + 40, 17, 400, '#5b7370', g.pct) : T(CY - 10, 20, 400, '#5b7370', 'Totale') + T(CY + 20, 25, 700, '#16302d', eur0(pb.sum)))
+      : (g ? T(CY - 18, 28, 400, '#5b7370', trunc(g.label, 14)) + T(CY + 22, 44, 700, '#16302d', compact(g.sum)) + T(CY + 56, 28, 400, '#5b7370', g.pct) : T(CY + 16, 46, 700, '#16302d', compact(pb.sum)));
   }
-  return `<div class="qc" data-act="qdes" data-v="${key}"><b>${QT[key]}</b><div class="qs"><svg class="qp" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${o}</svg></div></div>`;
+  return { pb, sel, svg: o };
 }
-function quadCard(Dz) {
-  return `<div class="card pcard qcard" id="pie"><h2>Grafici a torta</h2><div class="qg">${['c', 'a', 'i', 'p'].map(k => miniPie(k, Dz)).join('')}</div></div>`;
+function miniPie(key, Dz) {
+  const r = qSvg(key, Dz, false);
+  return `<div class="qc" data-act="qopen" data-v="${key}"><b>${QT[key]}</b><div class="qs"><svg class="qp" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${r.svg}</svg></div></div>`;
+}
+function bigPie(key, Dz) {
+  const r = qSvg(key, Dz, true), head = `<div class="chh"><h2>${QT[key]}</h2><button class="b s sm" data-act="qclose">▦ Tutti i grafici</button></div>`;
+  if (!r.pb.groups.length) return `<div class="card pcard qcard" id="pie">${head}<p>Nessuna voce da mostrare.</p></div>`;
+  const leg = r.pb.groups.map((g, i) => `<div class="pl ${i === r.sel ? 'on' : ''}" data-act="qs" data-v="${key}:${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
+  return `<div class="card pcard qcard" id="pie" data-act="qdes" data-v="${key}">${head}<div class="pbody"><div class="psvg"><svg class="pie" viewBox="0 0 400 400"><g>${r.svg}</g></svg></div><div class="pleg">${leg}</div></div></div>`;
+}
+function quadCard(Dz, single) {
+  const keys = single ? ['l', 'a', 'i', 'p'] : ['c', 'a', 'i', 'p'];
+  if (S.qd && !keys.includes(S.qd)) S.qd = null;
+  if (S.qd) return bigPie(S.qd, Dz);
+  return `<div class="card pcard qcard" id="pie"><h2>Grafici a torta</h2><div class="qg">${keys.map(k => miniPie(k, Dz)).join('')}</div></div>`;
 }
