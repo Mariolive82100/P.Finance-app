@@ -84,12 +84,11 @@ function alberoSvg(root, open, focus) {
       if (pv) { const dy = pv.y - NP[n.id].y, dx = pv.x - NP[n.id].x; if (Math.abs(dy) > 0.5 || Math.abs(dx) > 0.5) { cl = ' class="tmv"'; st = `--dx:${dx.toFixed(1)}px;--dy:${dy.toFixed(1)}px;`; } }
       else { const pp = TPOS[m.par] || NP[m.par]; if (pp) { cl = ' class="tin"'; st = `--dx:${(pp.x - NP[n.id].x).toFixed(1)}px;--dy:${(pp.y - NP[n.id].y).toFixed(1)}px;`; } else cl = ' class="tin"'; }
     }
-    const ptr = m.can || n.vid ? 'cursor:pointer;' : '', sty = ` style="${st}${ptr}"`;
-    o += `<g${cl}${st || ptr ? sty : ''}${m.can ? ` data-act="tn" data-v="${esc(n.id)}" data-l="${m.lvl}" data-p="${esc(m.par)}"` : n.vid ? ` data-act="tleaf" data-v="${esc(n.vid)}"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
+    const ptr = n.vid ? 'cursor:pointer;' : '', sty = ` style="${st}${ptr}"`;
+    o += `<g${cl}${st || ptr ? sty : ''}${n.vid ? ` data-act="tleaf" data-v="${esc(n.vid)}"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
       + `<rect x="${x}" y="${y}" width="${TN.w}" height="${TN.h}" rx="10" fill="${c.f}" stroke="${c.s}" stroke-width="${n.id === focus ? 4 : n.lv === 'v' ? 1.5 : 2}"/>`
       + T(x + 10, y + 19, trunc(n.label, 20), 11, 600, c.t1) + T(x + 10, y + 35, eur0(n.val) + pc, 10.5, 600, n.val < 0 ? '#b91c1c' : c.t2);
     if (n.vid) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 4, '✎', 12, 700, c.s, 'middle');
-    if (m.can) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 5, m.open ? '−' : '+', 15, 700, c.s, 'middle');
     o += '</g>';
   });
   Object.keys(TPOS).forEach(k => delete TPOS[k]); Object.assign(TPOS, NP);
@@ -121,9 +120,8 @@ function treeCard(root, focus) {
   return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
     ${zeroToggle()}
-    <div class="tabs" style="margin-top:8px"><button class="b s sm" data-act="texp">Espandi tutto</button><button class="b s sm" data-act="tcol">Comprimi tutto</button></div>
     <div class="tw tt" style="margin-top:12px;--th:${fh}px">${alberoSvg(root, S.tx, focus)}</div>
-    <p class="note">Tocca + per aprire, ✎ per aggiornare il valore.</p>
+    <p class="note">Tocca ✎ per aggiornare il valore di una voce.</p>
     <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
 }
 

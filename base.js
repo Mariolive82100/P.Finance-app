@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.78';
+const VER = '0.79';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -136,6 +136,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.79', '20 nov 2026', ['Albero sempre completamente aperto, con tutti i rami visibili', 'Tolti i tasti Espandi tutto e Comprimi tutto: resta la scelta Aggregato / Per account']],
   ['0.78', '20 nov 2026', ['Albero su computer: stessa dimensione dei caratteri con l\'albero chiuso o aperto, e altezza sempre completa']],
   ['0.77', '20 nov 2026', ['Albero aperto del tutto: ora sta interamente nella finestra, anche in larghezza']],
   ['0.76', '20 nov 2026', ['Albero: la finestra ha già lo spazio per tutto l\'albero aperto, quindi non cambia e non scorre quando apri i rami']],

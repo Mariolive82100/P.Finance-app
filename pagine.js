@@ -189,6 +189,8 @@ function disParts() {
   const D = S.data; if (!S.tx) S.tx = new Set(['r']);
   const root = alberoDati({ ...D, voci: vz(D.voci) }, S.tview || 'agg'), found = (S.pp || ['r']).slice().reverse().map(id => alberoTrova(root, id)).find(Boolean) || alberoTrova(root, 'r');
   S.pp = found.path.map(n => n.id);
+  /* l'albero è sempre tutto aperto */
+  const op = new Set(['r']); const wk = n => { if (n.kids.length) { op.add(n.id); n.kids.forEach(wk); } }; wk(root); S.tx = op;
   return { tree: treeCard(root, ''), pie: pieCard(found) };
 }
 /* Panoramica: solo su schermi larghi (computer) */
