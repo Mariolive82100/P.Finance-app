@@ -139,8 +139,8 @@ main{margin:0 0 0 200px;max-width:none;padding:18px 28px 40px}
 .g12.r1 .card{height:var(--r1)}.g12.r2 .card{height:auto}
 .g12 .card{box-sizing:border-box;overflow:auto}.g12.r2 .card{overflow:visible}
 .g12 .s9{grid-column:span 9;min-width:0}.g12 .s3{grid-column:span 3;min-width:0}.g12 .s7{grid-column:span 7;min-width:0}.g12 .s5{grid-column:span 5;min-width:0}
-.pan .pie{max-height:calc(var(--r1) - 150px);width:auto;max-width:100%;margin:0 auto}
-.pan .pleg{max-height:calc(var(--r1) - 140px)}
+.pan .pie{max-height:calc(var(--r1) - 110px);width:auto;max-width:100%;margin:0 auto}
+.pan .pleg{max-height:calc(var(--r1) - 120px)}
 .pan .lcw ~ .note{display:none}.pan .lcw ~ .zc,.pan .legend ~ .zc{display:inline-flex;margin-right:10px}
 .tcard{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;align-content:flex-start}
 .tcard h2{margin:0;flex:1 1 auto}.tcard .tabs{margin:0!important}.tcard>label{margin:0!important}

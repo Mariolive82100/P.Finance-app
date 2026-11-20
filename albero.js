@@ -164,5 +164,5 @@ function pieCard(found) {
   const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
   return `<div class="card pcard" id="pie" data-act="pdes"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p>
     <div class="pbody"><div class="psvg"><svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${paths}</g>${hole}</svg>
-    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta per selezionarla, tocca di nuovo la stessa fetta per aprirla. Tocca al centro o fuori dalle fette per deselezionare.</p></div><div class="pleg">${legend}</div></div></div>`;
+</div><div class="pleg">${legend}</div></div></div>`;
 }

@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.81';
+const VER = '0.82';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -15,7 +15,9 @@ const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const eur = v => new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', maximumFractionDigits: 0, useGrouping:'always'}).format(v || 0);
+/* Nascondi importi: solo le percentuali restano visibili (scelta ricordata su questo dispositivo) */
+const hideAmt = () => { if (S.hide === undefined) { try { S.hide = localStorage.getItem('pf_hide') === '1'; } catch (e) { S.hide = false; } } return S.hide; };
+const eur = v => hideAmt() ? '••••' : new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', maximumFractionDigits: 0, useGrouping:'always'}).format(v || 0);
 const pct = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(1).replace('.', ',') + '%';
 const monthKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 const monthName = k => { const [y, m] = k.split('-'); return MESI[+m - 1] + ' ' + y; };
@@ -136,6 +138,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.82', '20 nov 2026', ['Nuovo tasto per nascondere gli importi in tutta l\'app (restano le percentuali)', 'Grafico a torta più compatto, senza il testo di istruzioni']],
   ['0.81', '20 nov 2026', ['Albero su computer ancora più grande: caratteri ingranditi fino a riempire la larghezza, il riquadro si allunga di conseguenza']],
   ['0.80', '20 nov 2026', ['Albero su computer più grande: occupa tutta la larghezza disponibile, con caratteri più leggibili']],
   ['0.79', '20 nov 2026', ['Albero sempre completamente aperto, con tutti i rami visibili', 'Tolti i tasti Espandi tutto e Comprimi tutto: resta la scelta Aggregato / Per account']],

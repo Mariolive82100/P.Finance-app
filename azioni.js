@@ -35,6 +35,7 @@ async function act(el) {
     if (a === 'google') { await signInWithPopup(auth, new GoogleAuthProvider()); return; }
     if (a === 'logout') { S.tab = 'pat'; S.menu = false; S.pop = null; S.fAcc = 'all'; await signOut(auth); try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {} return location.reload(); }
     if (a === 'refresh') return location.reload();
+    if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
