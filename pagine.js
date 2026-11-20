@@ -203,7 +203,7 @@ function pagePan() {
   S.anim = false; S.tanim = false;
   return `<div class="pan" style="--r1:${r1}px;--r2:${r2}px"><div class="kpis">${kp('Patrimonio netto', eur(t.netto), dN !== null ? `${dN >= 0 ? '+' : ''}${eur(dN)} su ${esc(monthName(prev.mese))}` : '&nbsp;', cls(t.netto))}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
     <div class="g12 r1"><div class="s7">${ch}</div><div class="s5">${pr.pie}</div></div>
-    <div class="g12 r2"><div class="s8">${pr.tree}</div><div class="s4">${all.length ? indicatori(D, all) : ''}</div></div></div>`;
+    <div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div></div>`;
 }
 
 const compact = v => new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);

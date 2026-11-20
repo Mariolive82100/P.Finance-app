@@ -67,7 +67,7 @@ const TSTY = {
 };
 const tsty = n => n.lv === 'r' || n.lv === 'u' ? TSTY[n.lv] : TSTY[n.lv === 's' ? 's' + n.tone : n.lv === 'm' ? 'm' + n.tone : n.lv === 'c' ? 'c' + n.tone : 'v' + n.tone];
 
-const TPOS = {}, treeK = () => innerWidth >= 1000 ? 0.72 : 1;
+const TPOS = {}, TK = { k: 0.72 }, treeK = () => innerWidth >= 1000 ? TK.k : 1;
 function alberoSvg(root, open, focus) {
   const L = alberoLayout(root, open), anim = !!S.tanim && Object.keys(TPOS).length > 0, W = L.depth * (TN.w + TN.gx) - TN.gx + 4, H = Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
   const X = lvl => 2 + lvl * (TN.w + TN.gx), Y = m => 2 + m.y;
@@ -105,12 +105,16 @@ function alberoTrova(root, id, path = []) {
 }
 
 /* altezza dell'albero con tutti i rami aperti: la finestra dell'albero si dimensiona su questa, così non cambia mai */
-function alberoFullH(root) {
+function alberoFull(root) {
   const all = new Set(['r']); const w = n => { if (n.kids.length) { all.add(n.id); n.kids.forEach(w); } }; w(root);
-  const L = alberoLayout(root, all); return Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
+  const L = alberoLayout(root, all); return { h: Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4, w: L.depth * (TN.w + TN.gx) - TN.gx + 4 };
 }
 function treeCard(root, focus) {
-  const mode = S.tview || 'agg', fh = Math.round(alberoFullH(root) * treeK()) + 20;
+  const mode = S.tview || 'agg', fu = alberoFull(root);
+  /* scala l'albero aperto del tutto in modo che stia nella larghezza disponibile */
+  const avail = S.tab === 'pan' ? (innerWidth - 270) * 0.75 - 40 : innerWidth - 200 - 56 - 40;
+  TK.k = Math.max(0.5, Math.min(0.72, avail / fu.w));
+  const fh = Math.round(fu.h * treeK()) + 20;
   return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
     ${zeroToggle()}
