@@ -115,7 +115,7 @@ function treeCard(root, focus) {
   const mode = S.tview || 'agg', fu = alberoFull(root);
   /* scala l'albero aperto del tutto in modo che stia nella larghezza disponibile */
   const avail = S.tab === 'pan' ? (innerWidth - 270) * 0.75 - 40 : innerWidth - 200 - 56 - 40;
-  TK.k = Math.max(0.5, Math.min(avail / fu.w, 1, Math.max(0.72, innerHeight * 0.55 / fu.h)));
+  TK.k = Math.max(0.5, Math.min(avail / fu.w, 1.5));
   const fh = Math.round(fu.h * treeK()) + 20;
   return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
