@@ -66,7 +66,7 @@ function lcSvg(id) {
 }
 function lcBlock(id) { return `<div class="lcw" data-ch="${id}" data-k="${CH[id].key}">${lcSvg(id)}</div>`; }
 const lcLegend = ser => ser.every(x => x.nolg) ? '' : `<div class="legend">${ser.filter(x => !x.bar && !x.ghost).map(x => x.tog ? `<span class="lt${x.off ? ' off' : ''}" data-act="ser" data-v="${x.k}"><i style="background:${x.c}"></i>${x.l}</span>` : `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : ''}</div>`;
-const AGGK = ['main', 'net', 'bar'];
+const AGGK = ['main', 'net', 'bar', 'pas'];
 const lcAgg = key => {
   if (!AGGK.includes(key)) return '';
   const ok = S.data && new Set(S.data.storico.map(x => x.mese.slice(0, 4))).size >= 2, cur = ok ? (S.agg || 'm') : 'm';
@@ -241,7 +241,7 @@ function aggSeries(all, A) {
   return { pts, dBar };
 }
 /* ---------- Computer: riquadro andamento a quattro sottoquadranti (mini grafici, tocco = si ingrandisce) ---------- */
-const HUB = { main: 'Patrimonio netto', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita' };
+const HUB = { main: 'Patrimonio netto', bar: 'Variazione mensile', pas: 'Passivi', cmp2: 'Confronto crescita' };
 const mnSvg = o => `<svg viewBox="0 0 320 110" preserveAspectRatio="none" style="width:100%;height:100%">${o}</svg>`;
 function mnLines(sers) {
   const all = sers.flatMap(x => x.v).filter(v => v != null); if (!all.length) return '';
@@ -264,11 +264,11 @@ function hubGrid(all) {
   return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><h2>Andamento del patrimonio</h2><div class="qg">
     ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
     ${cell('bar', ok && mnBars([{ v: ag.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
-    ${cell('cmp1', cmpOk && mnBars([{ v: d.dB, c: '#9aa9c7' }, { v: d.dA, c: '#1d4ed8' }]))}
+    ${cell('pas', ok && mnLines([{ v: ag.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
 /* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
-function colCard(t) {
+function colCard(t, vis) {
   const A = t.attivi, P = t.passivi, N = t.netto, pp = Math.max(P, 0), np = Math.max(N, 0), nn = Math.max(-N, 0);
   const head = '<h2>Attivi, passivi e netto</h2>';
   if (A <= 0 && P <= 0) return `<div class="card colc">${head}<p class="note">Nessuna voce da mostrare.</p></div>`;
@@ -276,13 +276,17 @@ function colCard(t) {
   const T = (x, y, sz, w, c, tx) => `<text x="${x}" y="${y.toFixed(1)}" text-anchor="middle" font-size="${sz}" font-weight="${w}" fill="${c}">${esc(tx)}</text>`;
   const bar = (x, yt, h, col, name, v) => { if (h <= 0) return ''; let o = `<rect x="${x}" y="${yt.toFixed(1)}" width="100" height="${h.toFixed(1)}" fill="${col}" data-tip="${esc(name + ' · ' + eur(v) + (A > 0 ? ' · ' + pc(v) + ' degli attivi' : ''))}"/>`; if (h >= 22) o += T(x + 50, yt + h / 2 + (h >= 40 ? -2 : 4), 13, 700, '#fff', eur0(v)); if (h >= 40 && A > 0) o += T(x + 50, yt + h / 2 + 14, 11, 400, '#fff', pc(v)); return o; };
   let o = `<line x1="10" x2="290" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#9db3af" stroke-width="1.2"/>`;
-  o += bar(30, y0 - A * sc, A * sc, '#0f766e', 'Attivi', A);
+  const PA = ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'], cm = {};
+  (vis || []).filter(v => v.tipo === 'attivo').forEach(v => { const k = v.categoria || 'Altro'; cm[k] = (cm[k] || 0) + v.valore; });
+  const cats = Object.entries(cm).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  if (cats.length) { let acc = 0; cats.forEach(([n, v], i) => { acc += v; o += bar(30, y0 - acc * sc, v * sc, PA[i % PA.length], n, v); }); }
+  else o += bar(30, y0 - A * sc, A * sc, '#0f766e', 'Attivi', A);
   o += bar(170, y0 - pp * sc, pp * sc, '#b91c1c', 'Passivi', P);
   o += bar(170, y0 - (pp + np) * sc, np * sc, '#1d4ed8', 'Patrimonio netto', N);
   o += bar(170, y0, nn * sc, '#1d4ed8', 'Patrimonio netto', N);
   const ty = T0 + (top + nn) * sc + 18;
   o += T(80, ty, 13, 600, '#16302d', 'Attivi') + T(220, ty, 13, 600, '#16302d', 'Passivi + netto');
-  const lg = '<div class="legend"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span><span><i style="background:#1d4ed8"></i>Patrimonio netto</span></div>';
+  const lg = '<div class="legend">' + (cats.length ? cats.map(([n], i) => `<span><i style="background:${PA[i % PA.length]}"></i>${esc(n)}</span>`).join('') : '<span><i style="background:#0f766e"></i>Attivi</span>') + '<span><i style="background:#b91c1c"></i>Passivi</span><span><i style="background:#1d4ed8"></i>Patrimonio netto</span></div>';
   return `<div class="card colc">${head}<div class="qs"><svg viewBox="0 0 300 ${Math.ceil(ty + 8)}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${o}</svg></div>${lg}</div>`;
 }
 function panMain(all, r1) {
