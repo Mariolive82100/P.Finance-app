@@ -267,9 +267,27 @@ function hubGrid(all) {
     ${cell('cmp1', cmpOk && mnBars([{ v: d.dB, c: '#9aa9c7' }, { v: d.dA, c: '#1d4ed8' }]))}
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
+/* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
+function colCard(t) {
+  const A = t.attivi, P = t.passivi, N = t.netto, pp = Math.max(P, 0), np = Math.max(N, 0), nn = Math.max(-N, 0);
+  const head = '<h2>Attivi, passivi e netto</h2>';
+  if (A <= 0 && P <= 0) return `<div class="card colc">${head}<p class="note">Nessuna voce da mostrare.</p></div>`;
+  const top = Math.max(A, pp + np, 1), H = 230, T0 = 14, sc = H / (top + nn), y0 = T0 + top * sc, pc = v => A > 0 ? (v / A * 100).toFixed(1).replace('.', ',') + '%' : '';
+  const T = (x, y, sz, w, c, tx) => `<text x="${x}" y="${y.toFixed(1)}" text-anchor="middle" font-size="${sz}" font-weight="${w}" fill="${c}">${esc(tx)}</text>`;
+  const bar = (x, yt, h, col, name, v) => { if (h <= 0) return ''; let o = `<rect x="${x}" y="${yt.toFixed(1)}" width="100" height="${h.toFixed(1)}" fill="${col}" data-tip="${esc(name + ' · ' + eur(v) + (A > 0 ? ' · ' + pc(v) + ' degli attivi' : ''))}"/>`; if (h >= 22) o += T(x + 50, yt + h / 2 + (h >= 40 ? -2 : 4), 13, 700, '#fff', eur0(v)); if (h >= 40 && A > 0) o += T(x + 50, yt + h / 2 + 14, 11, 400, '#fff', pc(v)); return o; };
+  let o = `<line x1="10" x2="290" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#9db3af" stroke-width="1.2"/>`;
+  o += bar(30, y0 - A * sc, A * sc, '#0f766e', 'Attivi', A);
+  o += bar(170, y0 - pp * sc, pp * sc, '#b91c1c', 'Passivi', P);
+  o += bar(170, y0 - (pp + np) * sc, np * sc, '#1d4ed8', 'Patrimonio netto', N);
+  o += bar(170, y0, nn * sc, '#1d4ed8', 'Patrimonio netto', N);
+  const ty = T0 + (top + nn) * sc + 18;
+  o += T(80, ty, 13, 600, '#16302d', 'Attivi') + T(220, ty, 13, 600, '#16302d', 'Passivi + netto');
+  const lg = '<div class="legend"><span><i style="background:#0f766e"></i>Attivi</span><span><i style="background:#b91c1c"></i>Passivi</span><span><i style="background:#1d4ed8"></i>Patrimonio netto</span></div>';
+  return `<div class="card colc">${head}<div class="qs"><svg viewBox="0 0 300 ${Math.ceil(ty + 8)}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${o}</svg></div>${lg}</div>`;
+}
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
-  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40));
+  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 28) * 5 / 12 - 40));
   return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150));
 }
 function pageAnd() {

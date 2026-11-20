@@ -210,3 +210,8 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 .tcol .tmini{display:flex;justify-content:center;align-items:center;overflow:hidden;flex:1 1 100%;margin-top:4px}
 .tcol .tmini svg{pointer-events:none}
 }
+@media(min-width:1000px){
+.pan .kpis{grid-template-columns:minmax(0,380px)}
+.colc{display:flex;flex-direction:column}.colc h2{flex:none}.colc .qs{flex:1;min-height:0;position:relative}.colc .legend{flex:none;margin:6px 0 0;justify-content:center}
+.s4 .psvg{flex:0 1 44%}
+}

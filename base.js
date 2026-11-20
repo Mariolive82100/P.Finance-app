@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.94';
+const VER = '0.95';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -138,6 +138,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.95', '20 nov 2026', ['Computer: in alto resta solo il patrimonio netto (tolti attivi, passivi e indebitamento)', 'Nuovo grafico a colonne tra l\'andamento e le torte: una colonna con gli attivi e una colonna impilata con passivi e patrimonio netto']],
   ['0.94', '20 nov 2026', ['Computer: il riquadro Albero del patrimonio è ridotto, con l\'albero in miniatura; toccandolo si espande per intero, con il tasto Indietro (o Esc) per richiuderlo']],
   ['0.93', '20 nov 2026', ['Grafico del patrimonio netto: all\'inizio di ogni anno una linea verticale collega il punto della curva all\'etichetta con anno e valore (niente più puntino e niente mese)']],
   ['0.92', '20 nov 2026', ['Computer: il tasto Indietro dei grafici ingranditi è dentro il riquadro, vicino al tasto schermo intero', 'Grafico del patrimonio netto: un puntino con etichetta (data e valore) all\'inizio di ogni anno']],
