@@ -56,8 +56,8 @@ function lcSvg(id) {
       for (let i = lo; i <= hi; i++) { const v = pts[i][se.k], yy = pts[i].mese.slice(0, 4); if (v != null && !(i > 0 && pts[i - 1].mese.slice(0, 4) === yy)) cks.push({ i, v, cx: x(i), jan: pts[i].mese.slice(5) === '01' }); }
       cks.forEach((k, j) => {
         if (cks[j + 1] && cks[j + 1].cx - k.cx < 95 && !k.jan) return;
-        const cy = y(k.v), up = cy - 14 >= T + 6, an = k.cx < L + 50 ? 'start' : k.cx > W - R - 50 ? 'end' : 'middle', tx = an === 'start' ? k.cx - 4 : an === 'end' ? k.cx + 4 : k.cx;
-        o += `<circle cx="${k.cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6" fill="#fff" stroke="${se.c}" stroke-width="2.5"/><text x="${tx.toFixed(1)}" y="${(up ? cy - 12 : cy + 22).toFixed(1)}" font-size="12" font-weight="700" fill="${se.c}" text-anchor="${an}" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(pts[k.i].lab + ' · ' + compact(k.v))}</text>`;
+        const cy = y(k.v), top = cy - (T + 18) >= 10, ly = top ? T + 14 : H - B - 8, an = k.cx < L + 50 ? 'start' : k.cx > W - R - 50 ? 'end' : 'middle', tx = an === 'start' ? k.cx + 3 : an === 'end' ? k.cx - 3 : k.cx;
+        o += `<line x1="${k.cx.toFixed(1)}" x2="${k.cx.toFixed(1)}" y1="${cy.toFixed(1)}" y2="${(top ? ly + 4 : ly - 12).toFixed(1)}" stroke="${se.c}" stroke-width="1.6" stroke-dasharray="4 3" opacity=".75"/><text x="${tx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="12" font-weight="700" fill="${se.c}" text-anchor="${an}" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(pts[k.i].mese.slice(0, 4) + ' · ' + compact(k.v))}</text>`;
       });
     }
   });
