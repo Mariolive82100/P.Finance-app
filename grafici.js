@@ -10,9 +10,10 @@ function lcSvg(id) {
   const isBar = c.series.some(q => q.bar), pad = isBar ? 0.5 : 0;
   const a = z.a, b = z.b, zoomed = a > 0.001 || b < n - 1.001;
   const lo = Math.max(0, Math.ceil(a - 1e-6)), hi = Math.min(n - 1, Math.floor(b + 1e-6));
-  if (c.series.some(q => q.rebase)) { const base = c.raw[lo].abs; pts = c.pts = c.raw.map(p => ({ ...p, var: p.abs - base })); } else c.pts = pts;
+  const SV = c.series.filter(q => !q.off);
+  if (SV.some(q => q.rebase)) { const base = c.raw[lo].abs; pts = c.pts = c.raw.map(p => ({ ...p, var: p.abs - base })); } else c.pts = pts;
   let mn = Infinity, mx = -Infinity;
-  for (let i = lo; i <= hi; i++) c.series.forEach(s => { const v = pts[i][s.k]; if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; } });
+  for (let i = lo; i <= hi; i++) SV.forEach(s => { const v = pts[i][s.k]; if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; } });
   if (!isFinite(mn)) { mn = 0; mx = 1; }
   if (!zoomed || isBar) { mn = Math.min(0, mn); mx = Math.max(0, mx); } else { const p = (mx - mn) * 0.08 || 1; mn -= p; mx += p; }
   if (mx === mn) mx = mn + 1;
@@ -26,11 +27,11 @@ function lcSvg(id) {
   const i0 = Math.max(0, lo - 1), i1 = Math.min(n - 1, hi + 1);
   if (mn <= 0 && mx >= 0) {
     const z0 = y(0); o += `<line x1="${L}" x2="${W - R}" y1="${z0.toFixed(1)}" y2="${z0.toFixed(1)}" stroke="#475569" stroke-width="1.6"/>`;
-    if (c.series.some(q => q.zero) && Math.abs(z0 - y(mn)) > 12 && Math.abs(z0 - y(mx)) > 12) o += `<text x="${L - 6}" y="${(z0 + 4).toFixed(1)}" font-size="11" font-weight="700" fill="#475569" text-anchor="end">0</text>`;
+    if (SV.some(q => q.zero) && Math.abs(z0 - y(mn)) > 12 && Math.abs(z0 - y(mx)) > 12) o += `<text x="${L - 6}" y="${(z0 + 4).toFixed(1)}" font-size="11" font-weight="700" fill="#475569" text-anchor="end">0</text>`;
   }
   const y0c = Math.max(T - 4, Math.min(H - B + 4, y(0)));
   c.series.forEach(se => {
-    if (se.ghost) return;
+    if (se.ghost || se.off) return;
     if (se.bar) {
       const bw = Math.min(44, (W - L - R) / (b - a + 2 * pad) * 0.6), yz = y(0);
       o += `<g clip-path="url(#cp${id})">` + pts.map((q, i) => { const v = q[se.k]; if (v == null || i < lo - 1 || i > hi + 1) return ''; const yv = y(v); return `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${Math.min(yv, yz).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(Math.abs(yv - yz), 1.5).toFixed(1)}" rx="3" fill="${v >= 0 ? '#15803d' : '#b91c1c'}"/>`; }).join('') + '</g>';
@@ -55,7 +56,7 @@ function lcSvg(id) {
   return `<svg class="lc" viewBox="0 0 ${W} ${H}">${o}<g class="xh"></g></svg>`;
 }
 function lcBlock(id) { return `<div class="lcw" data-ch="${id}" data-k="${CH[id].key}">${lcSvg(id)}</div>`; }
-const lcLegend = ser => `<div class="legend">${ser.filter(x => !x.bar).map(x => `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : ''}</div>`;
+const lcLegend = ser => `<div class="legend">${ser.filter(x => !x.bar && !x.ghost).map(x => x.tog ? `<span class="lt${x.off ? ' off' : ''}" data-act="ser" data-v="${x.k}"><i style="background:${x.c}"></i>${x.l}</span>` : `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : ''}</div>`;
 const AGGK = ['main', 'net', 'bar'];
 const lcAgg = key => {
   if (!AGGK.includes(key)) return '';
@@ -67,7 +68,7 @@ function lcCard(key, title, pts, series) {
   CHS[key] = { title, pts, series };
   lcInit(key, key, pts, series, CW(), CHt(CW()));
   return `<div class="card"><div class="chh"><h2>${esc(title)}</h2><button class="b s sm" data-act="fs" data-v="${key}" aria-label="Schermo intero">⛶</button></div>${lcLegend(series)}${lcBlock(key)}${lcZoomBar(key)}
-    <p class="note" style="margin:4px 0 0">Tocca un punto per vedere il valore, tocca di nuovo per nasconderlo. Pizzica con due dita (o Ctrl + rotellina) per ingrandire, trascina per scorrere.</p></div>`;
+    <p class="note" style="margin:4px 0 0">${AGGK[0] === key ? 'Tocca i nomi in alto per mostrare o nascondere le linee. ' : ''}Tocca un punto per vedere il valore, tocca di nuovo per nasconderlo. Pizzica con due dita (o Ctrl + rotellina) per ingrandire, trascina per scorrere.</p></div>`;
 }
 function fsOverlay() {
   const s = CHS[S.fs]; if (!s) return '';
@@ -96,7 +97,7 @@ function lcCross(w, clientX, tap) {
   if (tap && w._sel === idx && xh.innerHTML) { xh.innerHTML = ''; w._sel = null; w._hid = idx; return; }
   if (!tap && w._hid === idx) return;
   w._hid = null; w._sel = idx;
-  const rows = c.series.filter(s => pt[s.k] != null), bw = 178, bh = 22 + rows.length * 15, bx = Math.max(4, Math.min(c.W - bw - 4, xs + 10 + bw > c.W - 4 ? xs - 10 - bw : xs + 10));
+  const rows = c.series.filter(s => !s.off && !s.ghost && pt[s.k] != null), bw = 178, bh = 22 + rows.length * 15, bx = Math.max(4, Math.min(c.W - bw - 4, xs + 10 + bw > c.W - 4 ? xs - 10 - bw : xs + 10));
   xh.innerHTML = `<line x1="${xs.toFixed(1)}" x2="${xs.toFixed(1)}" y1="${g.T}" y2="${c.H - g.B}" stroke="#5b7370" stroke-dasharray="3 3"/>`
     + rows.map(s => `<circle cx="${xs.toFixed(1)}" cy="${g.y(pt[s.k]).toFixed(1)}" r="4.5" fill="#fff" stroke="${s.c}" stroke-width="2.5"/>`).join('')
     + `<rect x="${bx.toFixed(1)}" y="${g.T + 2}" width="${bw}" height="${bh}" rx="6" fill="#16302d" opacity=".93"/><text x="${(bx + 8).toFixed(1)}" y="${g.T + 16}" font-size="11.5" font-weight="700" fill="#fff">${esc(pt.long || pt.lab)}</text>`
@@ -213,20 +214,19 @@ function pageAnd() {
   const st = rg === 'year' ? all.filter(s => s.mese.slice(0, 4) === yr) : rg === 'custom' ? all.filter(s => s.mese >= lo_ && s.mese <= hi_) : rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
   const sel = `<select data-act="range">${rg === 'year' ? '<option value="" selected disabled>Periodo…</option>' : ''}${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico'], ['custom', 'Periodo personalizzato']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   const sel2 = `<select data-act="yrsel">${rg === 'year' ? '' : '<option value="" selected disabled>Anno…</option>'}${yrs.map(y => `<option value="${y}" ${rg === 'year' && y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
-  const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }];
-  const pts0 = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto }));
+  const vis = S.sel instanceof Set && S.sel.size ? S.sel : new Set(['attivi', 'passivi', 'netto']);
+  const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }, { k: 'var', c: '#6d28d9', l: 'Variazione dal primo punto visibile', zero: 1, rebase: 1 }].map(x => ({ ...x, tog: 1, off: !vis.has(x.k) }));
+  const pts0 = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto, abs: s.netto, var: 0 }));
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
   const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
-  const dNet0 = all.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), abs: x.netto, var: 0 }));
   const dBar0 = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
   const yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))], A = yrsAll.length >= 2 ? (S.agg || 'm') : 'm', curY = monthKey().slice(0, 4);
-  let pts = pts0, dNet = dNet0, dBar = dBar0;
+  let pts = pts0, dBar = dBar0;
   if (A !== 'm') {
     const avg = (a, k) => a.reduce((t, x) => t + x[k], 0) / a.length, by = yrsAll.map(y => all.filter(s => s.mese.slice(0, 4) === y));
     const lg = (g, y) => A === 'yf' ? `${y} · ${monthName(g[g.length - 1].mese)}${y === curY ? ' (in corso)' : ''}` : `Media ${y}${y === curY ? ' (in corso)' : ''}`;
     const val = (g, k) => A === 'yf' ? g[g.length - 1][k] : avg(g, k);
-    pts = by.map((g, i) => ({ lab: yrsAll[i], long: lg(g, yrsAll[i]), attivi: val(g, 'attivi'), passivi: val(g, 'passivi'), netto: val(g, 'netto') }));
-    dNet = by.map((g, i) => ({ lab: yrsAll[i], long: lg(g, yrsAll[i]), abs: val(g, 'netto'), var: 0 }));
+    pts = by.map((g, i) => ({ lab: yrsAll[i], long: lg(g, yrsAll[i]), attivi: val(g, 'attivi'), passivi: val(g, 'passivi'), netto: val(g, 'netto'), abs: val(g, 'netto'), var: 0 }));
     dBar = [];
     by.forEach((g, i) => {
       if (A === 'yf') { if (i) dBar.push({ lab: yrsAll[i], long: lg(g, yrsAll[i]), v: g[g.length - 1].netto - by[i - 1][by[i - 1].length - 1].netto }); }
@@ -236,7 +236,7 @@ function pageAnd() {
   const wsig = [rg, lo_, hi_, yr, all.length, A].join('|');
   if (all.length > 1 && S.wsig !== wsig) {
     S.wsig = wsig;
-    [['main', pts0], ['net', dNet0], ['bar', dBar0]].forEach(([k, d]) => {
+    [['main', pts0], ['bar', dBar0]].forEach(([k, d]) => {
       const n = d.length, m = d.map(q => q.mese);
       if (A !== 'm' || !st.length || rg === '0') { delete ZM[k]; return; }
       let ia = m.findIndex(x => x >= st[0].mese), ib = m.length - 1 - [...m].reverse().findIndex(x => x <= st[st.length - 1].mese);
@@ -251,13 +251,11 @@ function pageAnd() {
   }
   const bT = A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', bL = A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile';
   const ch = all.length > 1 ? {
-    main: lcCard('main', 'Attivi, passivi e patrimonio netto', pts, L),
-    net: lcCard('net', 'Variazione totale del patrimonio netto nel periodo', dNet, [{ k: 'var', c: '#1d4ed8', l: 'Variazione dal primo punto visibile', zero: 1, rebase: 1 }, { k: 'g', c: '#b91c1c', l: 'Sotto lo zero', ghost: 1 }]),
+    main: lcCard('main', 'Andamento del patrimonio', pts, L),
     bar: lcCard('bar', bT, dBar, [{ k: 'v', c: '#15803d', l: bL, bar: 1 }])
   } : null;
   return `<div class="card"><div class="grid">${sel}${sel2}</div>${cust}${A !== 'm' ? '<p class="note">Vista annuale attiva: i grafici mostrano tutti gli anni e il periodo scelto qui sopra non si applica. Per tornare al dettaglio, usa il tasto "Mese" sotto i grafici.</p>' : ''}${all.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
     ${ch ? ch.main : ''}
-    ${ch ? ch.net : ''}
     ${ch ? ch.bar : ''}
     ${all.length > 1 ? cmpCards(all) : ''}
     <div class="card"><div class="row cl cat" data-act="exp" data-v="stab" style="border:0;padding:0"><div class="n">Storico mese per mese<small>${all.length} mesi · tocca una riga per modificarla o eliminarla</small></div><span class="chev ${topen ? 'open' : ''}">▸︎</span></div>

@@ -107,3 +107,5 @@ th,td{padding:8px 6px;text-align:right;border-bottom:1px solid #eef3f2;white-spa
 th:first-child,td:first-child{text-align:left}
 th{color:#5b7370;font-weight:500}
 .b:disabled{opacity:.4;cursor:default}
+
+.legend .lt{cursor:pointer;padding:3px 8px;border:1px solid #cfdcda;border-radius:14px}.legend .lt.off{opacity:.4;text-decoration:line-through}

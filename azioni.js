@@ -98,6 +98,12 @@ async function act(el) {
       S.anim = 'sel'; S.pieSel = i; return render();
     }
     if (a === 'pdes') { if (S.pieSel == null) return; S.pieSel = null; S.anim = 'sel'; return render(); }
+    if (a === 'ser') {
+      const def = ['attivi', 'passivi', 'netto'], cur = S.sel instanceof Set && S.sel.size ? S.sel : new Set(def);
+      if (v === 'var') S.sel = cur.size === 1 && cur.has('var') ? new Set(def) : new Set(['var']);
+      else { const n = new Set(cur); n.delete('var'); if (n.has(v)) n.delete(v); else n.add(v); S.sel = n.size ? n : new Set(def); }
+      return render();
+    }
     if (a === 'agg') { S.agg = v; S.wsig = null; return render(); }
     if (a === 'pback') { if (S.pp && S.pp.length > 1) S.pp = S.pp.slice(0, -1); S.pieSel = null; S.anim = true; return render(); }
     if (a === 'phome') { S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
