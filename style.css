@@ -60,7 +60,7 @@ tr.cl{cursor:pointer}tr.cl:hover{background:#f1f8f7}
 .pie path{transition:opacity .2s}
 .ps2{padding-left:24px;font-size:13px}
 .dgrid{display:block}
-@media(min-width:1000px){.dgrid .pcard{order:-1}.hw,nav .nv,main{max-width:1320px}.dgrid{display:grid;grid-template-columns:minmax(440px,520px) 1fr;gap:14px;align-items:start}.dgrid .card{margin-bottom:0}.pie{max-width:480px}}
+@media(min-width:1000px){.dgrid .pcard{order:-1}.hw,nav .nv,main{max-width:1320px}.dgrid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}.dgrid .card{margin-bottom:0}.pie{max-width:480px}}
 .pie path,.pie circle{cursor:pointer;stroke:#fff;stroke-width:2}
 .pie.full .pg{animation:pieIn .4s ease-out;transform-origin:200px 200px}
 .pie.anim .sel{animation:selIn .35s ease-out;transform-origin:200px 200px}

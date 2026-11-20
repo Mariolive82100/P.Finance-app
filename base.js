@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.71';
+const VER = '0.72';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -136,6 +136,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.72', '20 nov 2026', ['Distribuzione su computer: l\'albero ora sta sotto il grafico a torta, a tutta larghezza']],
   ['0.71', '20 nov 2026', ['Primi due grafici di Andamento uniti in uno: tocca i nomi (Attivi, Passivi, Patrimonio netto, Variazione) per mostrare solo le linee che vuoi']],
   ['0.70', '20 nov 2026', ['Grafici di Andamento: nuovi tasti Mese / Anno (fine) / Anno (media) per vedere i dati per anno']],
   ['0.69', '20 nov 2026', ['Report PDF con importi: aggiunti grafico e colonna dell\'indebitamento (come nella versione senza importi)']],
