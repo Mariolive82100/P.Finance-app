@@ -198,11 +198,12 @@ function pagePan() {
   const t = totals(vz(D.voci)), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = cur && prev ? cur.netto - prev.netto : null;
   const kp = (l, v, sub, c) => `<div class="card"><div class="lbl">${l}</div><div class="big ${c || ''}">${v}</div><div class="lbl">${sub}</div></div>`;
   const ind = t.attivi > 0 ? t.passivi / t.attivi : null;
-  const pr = disParts(), ch = panMain(all);
+  const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(290, Math.round(avail * 0.5)), r2 = Math.max(250, avail - r1);
+  const pr = disParts(), ch = panMain(all, r1);
   S.anim = false; S.tanim = false;
-  return `<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dN !== null ? `${dN >= 0 ? '+' : ''}${eur(dN)} su ${esc(monthName(prev.mese))}` : '&nbsp;', cls(t.netto))}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
-    <div class="g12"><div class="s8">${ch}</div><div class="s4">${pr.pie}</div></div>
-    <div class="g12"><div class="s8">${pr.tree}</div><div class="s4">${all.length ? indicatori(D, all) : ''}</div></div>`;
+  return `<div class="pan" style="--r1:${r1}px;--r2:${r2}px"><div class="kpis">${kp('Patrimonio netto', eur(t.netto), dN !== null ? `${dN >= 0 ? '+' : ''}${eur(dN)} su ${esc(monthName(prev.mese))}` : '&nbsp;', cls(t.netto))}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
+    <div class="g12 r1"><div class="s7">${ch}</div><div class="s5">${pr.pie}</div></div>
+    <div class="g12 r2"><div class="s8">${pr.tree}</div><div class="s4">${all.length ? indicatori(D, all) : ''}</div></div></div>`;
 }
 
 const compact = v => new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);

@@ -81,10 +81,11 @@ async function act(el) {
     }
     if (a === 'topie') { const p = $('pie'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (a === 'tn') {
-      const w0 = document.querySelector('.tt'), sl = w0 ? w0.scrollLeft : 0, lv = +el.dataset.l;
+      const w0 = document.querySelector('.tt'), sl = w0 ? w0.scrollLeft : 0, stp = w0 ? w0.scrollTop : 0, lv = +el.dataset.l;
       S.tx = S.tx || new Set(['r']); S.tanim = true; if (S.tx.has(v)) S.tx.delete(v); else S.tx.add(v);
             render();
       const w = document.querySelector('.tt');
+      if (w) w.scrollTop = stp;
       if (w) { const fine = (2 + (lv + 2) * (TN.w + TN.gx) - TN.gx) * treeK(); w.scrollLeft = S.tx.has(v) && fine > sl + w.clientWidth ? fine - w.clientWidth + 6 : sl; }
       return;
     }

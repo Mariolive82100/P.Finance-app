@@ -64,10 +64,10 @@ const lcAgg = key => {
   return `<div class="zc">${[['m', 'Mese'], ['yf', 'Anno (fine)'], ['ya', 'Anno (media)']].map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
 };
 const lcZoomBar = key => lcAgg(key) + `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
-function lcCard(key, title, pts, series, w) {
+function lcCard(key, title, pts, series, w, h) {
   CHS[key] = { title, pts, series };
   const ww = w || CW();
-  lcInit(key, key, pts, series, ww, CHt(ww));
+  lcInit(key, key, pts, series, ww, h || CHt(ww));
   return `<div class="card"><div class="chh"><h2>${esc(title)}</h2><button class="b s sm" data-act="fs" data-v="${key}" aria-label="Schermo intero">⛶</button></div>${lcLegend(series)}${lcBlock(key)}${lcZoomBar(key)}
     <p class="note" style="margin:4px 0 0">${AGGK[0] === key ? 'Tocca i nomi in alto per mostrare o nascondere le linee. ' : ''}Tocca un punto per vedere il valore, tocca di nuovo per nasconderlo. Pizzica con due dita (o Ctrl + rotellina) per ingrandire, trascina per scorrere.</p></div>`;
 }
@@ -228,10 +228,10 @@ function aggSeries(all, A) {
   }
   return { pts, dBar };
 }
-function panMain(all) {
+function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
-  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 8 / 12 - 40));
-  return lcCard('main', 'Andamento del patrimonio', aggSeries(all, A).pts, serMain(), W);
+  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40));
+  return lcCard('main', 'Andamento del patrimonio', aggSeries(all, A).pts, serMain(), W, Math.max(130, r1 - 150));
 }
 function pageAnd() {
   const all = S.data.storico, rg = String(S.range || '12');

@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.74';
+const VER = '0.75';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -136,6 +136,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.75', '20 nov 2026', ['Panoramica che sta tutta nello schermo, senza scorrere la pagina', 'Albero più piccolo, in una finestra di dimensione fissa che non cambia quando apri i rami']],
   ['0.74', '20 nov 2026', ['Versione computer: menu laterale a sinistra e nuova pagina Panoramica con andamento, torta, albero e indicatori insieme', 'Su telefono non cambia nulla']],
   ['0.73', '20 nov 2026', ['Versione computer: caratteri più piccoli in tutta l\'app e nell\'albero', 'Albero con transizioni fluide quando apri o chiudi i rami']],
   ['0.72', '20 nov 2026', ['Distribuzione su computer: l\'albero ora sta sotto il grafico a torta, a tutta larghezza']],

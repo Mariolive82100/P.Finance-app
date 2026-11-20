@@ -67,7 +67,7 @@ const TSTY = {
 };
 const tsty = n => n.lv === 'r' || n.lv === 'u' ? TSTY[n.lv] : TSTY[n.lv === 's' ? 's' + n.tone : n.lv === 'm' ? 'm' + n.tone : n.lv === 'c' ? 'c' + n.tone : 'v' + n.tone];
 
-const TPOS = {}, treeK = () => innerWidth >= 1000 ? 0.85 : 1;
+const TPOS = {}, treeK = () => innerWidth >= 1000 ? 0.72 : 1;
 function alberoSvg(root, open, focus) {
   const L = alberoLayout(root, open), anim = !!S.tanim && Object.keys(TPOS).length > 0, W = L.depth * (TN.w + TN.gx) - TN.gx + 4, H = Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
   const X = lvl => 2 + lvl * (TN.w + TN.gx), Y = m => 2 + m.y;
@@ -153,6 +153,6 @@ function pieCard(found) {
   const hole = `<text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="14" fill="#5b7370">${esc(trunc(cl, 16))}</text><text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="19" font-weight="700" fill="#16302d">${eur0(cv)}</text>${cp ? `<text x="${CX}" y="${CY + 32}" text-anchor="middle" font-size="12" fill="#5b7370">${cp}</text>` : ''}`;
   const legend = pb.groups.map((g, i) => `<div class="pl ${i === gi ? 'on' : ''}" data-act="pies" data-v="${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
   return `<div class="card pcard" id="pie" data-act="pdes"><h2>Grafico a torta</h2>${nav}<p class="note" style="margin-top:0">${esc(path)}</p>
-    <svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${paths}</g>${hole}</svg>
-    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta per selezionarla, tocca di nuovo la stessa fetta per aprirla. Tocca al centro o fuori dalle fette per deselezionare.</p>${legend}</div>`;
+    <div class="pbody"><div class="psvg"><svg class="pie${S.anim ? ' anim' : ''}${S.anim === true ? ' full' : ''}" viewBox="0 0 400 400"><g class="pg">${paths}</g>${hole}</svg>
+    <p class="note" style="text-align:center;margin:0 0 6px">Mostra i rami di ${esc(node.label)}. Tocca una fetta per selezionarla, tocca di nuovo la stessa fetta per aprirla. Tocca al centro o fuori dalle fette per deselezionare.</p></div><div class="pleg">${legend}</div></div></div>`;
 }
