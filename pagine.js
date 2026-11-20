@@ -239,7 +239,7 @@ function pagePan() {
   const pr = disParts(Dz, single);
   S.anim = false; S.tanim = false;
   const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, all, r1)}</div>` : hubGrid(all);
-  S.hanim = false; S.panim = false;
+  S.hanim = false; S.panim = false; S.tcan = false;
   const row2 = single ? `<div class="g12 r2"><div class="s12">${pr.tree}</div></div>` : `<div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye)}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
     ${single ? `<div class="g12 r1"><div class="s12">${pr.pie}</div></div>` : `<div class="g12 r1"><div class="s7">${left}</div><div class="s5">${pr.pie}</div></div>`}${row2}</div>`;

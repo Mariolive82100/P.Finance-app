@@ -205,3 +205,8 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 @media(prefers-reduced-motion:reduce){.anim-in,.anim-out .qc{animation:none}}
 @media(min-width:1000px){.chb{display:flex;gap:8px;align-items:center}.chb select{width:auto;margin:0;max-width:190px;font-size:12px;padding:5px 8px;text-overflow:ellipsis}}
 @media(min-width:1000px){.chb .b{white-space:nowrap}.chb select{max-width:170px}}
+@media(min-width:1000px){
+.tcol{cursor:pointer;transition:box-shadow .15s}.tcol:hover{box-shadow:0 0 0 2px #0f766e inset}
+.tcol .tmini{display:flex;justify-content:center;align-items:center;overflow:hidden;flex:1 1 100%;margin-top:4px}
+.tcol .tmini svg{pointer-events:none}
+}

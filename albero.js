@@ -113,11 +113,17 @@ function alberoFull(root) {
 }
 function treeCard(root, focus, single) {
   const mode = single ? 'agg' : S.tview || 'agg', fu = alberoFull(root);
+  /* computer: riquadro ridotto con l'albero in miniatura; il tocco lo espande */
+  if (innerWidth >= 1000 && !S.tex) {
+    const boxH = 200, aw = S.tab === 'pan' && !single ? (innerWidth - 270) * 0.75 - 40 : innerWidth - 200 - 56 - 40;
+    TK.k = Math.max(0.08, Math.min(aw / fu.w, boxH / fu.h));
+    return `<div class="card tcard tcol${S.tcan ? ' anim-in' : ''}" data-act="topen" style="min-width:0"><h2>Albero del patrimonio</h2><div class="tt tmini" style="height:${boxH}px">${alberoSvg(root, S.tx, focus)}</div></div>`;
+  }
   /* scala l'albero aperto del tutto in modo che stia nella larghezza disponibile */
   const avail = S.tab === 'pan' && !single ? (innerWidth - 270) * 0.75 - 40 : innerWidth - 200 - 56 - 40;
   TK.k = Math.max(0.5, Math.min(avail / fu.w, 1.5));
   const fh = Math.round(fu.h * treeK()) + 20;
-  return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
+  return `<div class="card tcard${S.tcan ? ' anim-in' : ''}" style="min-width:0"><h2>Albero del patrimonio</h2>${innerWidth >= 1000 ? '<button class="b s sm" data-act="tclose">← Indietro</button>' : ''}
     ${single ? '' : `<div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>`}
     ${zeroToggle()}
     <div class="tw tt" style="margin-top:12px;--th:${fh}px">${alberoSvg(root, S.tx, focus)}</div>
