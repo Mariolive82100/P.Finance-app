@@ -11,7 +11,7 @@ function exportCsv() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac', 'fimm'];
+const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
 /* Avviso con Annulla (10 secondi): l'eliminazione vera parte solo allo scadere */
@@ -62,19 +62,6 @@ async function act(el) {
     if (a === 'tleaf') { const t = document.querySelector('.tt'); S.ttl = t ? t.scrollLeft : null; S.pop = { id: v, mode: 'upd', only: true }; render(); return keepTT(); }
     if (a === 'popback') { if (S.pop.only) { S.pop = null; render(); return keepTT(); } S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
-    if (a === 'popbf') { S.pop.mode = 'bf'; return render(); }
-    if (a === 'popbfok') {
-      const x = D.voci.find(z => z.id === S.pop.id), h = pnum($('pbh') ? $('pbh').value : ''), hv = isFinite(h) && h > 0 ? r2(h) : 0;
-      if (!x || x.ricostruito) return;
-      const ms = bfMesi(x);
-      await Promise.all(ms.map(s => {
-        const res = piano(x, endM(s.mese)).residuo;
-        s.passivi = r2(s.passivi + res); s.attivi = r2(s.attivi + hv); s.netto = r2(s.attivi - s.passivi);
-        return setDoc(doc(db, 'users', D.uid, 'storico', s.mese), { attivi: s.attivi, passivi: s.passivi, netto: s.netto, aggiornato: serverTimestamp() });
-      }));
-      await updateDoc(doc(db, 'users', D.uid, 'voci', x.id), { ricostruito: true }); x.ricostruito = true;
-      S.pop = null; S.msg = 'Storico ricostruito.'; return render();
-    }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
     if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; if (innerWidth >= 1000) S.tab = 'nv'; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
     if (a === 'updsave') {
@@ -282,10 +269,6 @@ async function act(el) {
       }
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
       else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
-      if (!S.edit && dati.piano && categoria === 'Mutuo' && $('fimm')) {
-        const vi = pnum($('fimm').value);
-        if (isFinite(vi) && vi > 0) { const im = { tipo: 'attivo', categoria: 'Immobili', nome: 'Immobile · ' + nome, account: base.account, valore: r2(vi) }; const r1 = await addDoc(collection(db, 'users', D.uid, 'voci'), im); D.voci.push({ id: r1.id, ...im }); }
-      }
       S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } await syncStorico(); return render();
     }
     if (a === 'del') {

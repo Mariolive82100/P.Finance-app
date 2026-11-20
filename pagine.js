@@ -86,7 +86,7 @@ function pagePat() {
   const g = (id, d) => (S.fd && S.fd[id] !== undefined) ? S.fd[id] : d;
   const tipo = g('ft', ed ? ed.tipo : 'attivo');
   const mod = tipo === 'passivo' ? g('fm', ed ? (ed.piano ? 'piano' : 'manuale') : 'piano') : 'manuale';
-  const cat0 = g('fc', ed ? ed.categoria : CATS[tipo][0]), cat = CATS[tipo].includes(cat0) ? cat0 : CATS[tipo][0];
+  const cat = g('fc', ed ? ed.categoria : CATS[tipo][0]);
   const isInv = tipo === 'attivo' && cat === 'Investimenti';
   const accOpts = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
   const clk = id => ` data-act="pop" data-v="${id}"`;
@@ -137,7 +137,6 @@ function pagePat() {
     ? `<label class="lbl">Importo preso a prestito (€)</label><input id="fk" inputmode="decimal" value="${num('fk', ed && ed.piano ? String(ed.capitale).replace('.', ',') : '')}">
     <label class="lbl">Data di inizio</label><input id="fi" type="date" value="${num('fi', ed && ed.piano ? ed.inizio : '')}">
     <label class="lbl">Data di fine</label><input id="ff" type="date" value="${num('ff', ed && ed.piano ? ed.fine : '')}">
-    ${cat === 'Mutuo' && !ed ? `<label class="lbl">Valore dell'immobile (facoltativo)</label><input id="fimm" inputmode="decimal" placeholder="Se lo scrivi, crea anche l'immobile tra gli attivi" value="${num('fimm', '')}">` : ''}
     <p class="note" style="margin-top:0">Il debito residuo scende da solo ogni mese della sola quota capitale (importo diviso per i mesi). Gli interessi sono un costo e non vengono considerati.</p>`
     : `<label class="lbl">${tipo === 'attivo' ? 'Saldo o valore in euro' : 'Valore in euro'}</label><input id="fv" inputmode="decimal" value="${num('fv', ed && !ed.piano ? String(ed.valore).replace('.', ',') : '')}">${invCampi}`;
   const selMod = tipo === 'passivo' ? `<label class="lbl">Come vuoi inserire il debito?</label><select id="fm" data-act="fmod"><option value="piano" ${mod === 'piano' ? 'selected' : ''}>Piano di rimborso (calcolo automatico)</option><option value="manuale" ${mod === 'manuale' ? 'selected' : ''}>Residuo inserito a mano</option></select>` : '';
@@ -176,8 +175,6 @@ function drawer() {
   return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
 }
 
-const endM = k => { const [y, m] = k.split('-').map(Number); return new Date(y, m, 0); };
-const bfMesi = v => S.data.storico.filter(s => s.mese < monthKey() && endM(s.mese) >= parseD(v.inizio));
 function popup() {
   const D = S.data, p = S.pop, v = D.voci.find(x => x.id === p.id) || (D.arch || []).find(x => x.id === p.id), isA = !!v && !D.voci.includes(v);
   if (!v) return '';
@@ -186,10 +183,9 @@ function popup() {
   let body;
   if (p.mode === 'upd') body = `<label class="lbl">${v.tipo === 'attivo' ? 'Nuovo saldo o valore in euro' : 'Nuovo valore in euro'}</label><input id="pv" inputmode="decimal" value="${String(v.valore).replace('.', ',')}"><div class="acts"><button class="b" data-act="updsave">Salva</button><button class="b s" data-act="popback">Indietro</button></div>`;
   else if (p.mode === 'del') body = `<p style="margin-top:0">Vuoi davvero eliminare <b>${esc(dn(v))}</b>?</p><div class="acts"><button class="b r" data-act="delok">Sì, elimina</button><button class="b s" data-act="popback">Annulla</button></div>`;
-  else if (p.mode === 'bf') { const ms = bfMesi(v), im = D.voci.find(z => z.categoria === 'Immobili' && z.nome === 'Immobile · ' + v.nome); body = ms.length ? `<p style="margin-top:0">Aggiunge ai <b>${ms.length} mesi passati</b> (da ${esc(monthName(ms[0].mese))} a ${esc(monthName(ms[ms.length - 1].mese))}) il debito residuo di ogni mese, così sparisce il salto nei grafici. Si fa una sola volta e non si annulla.</p><label class="lbl">Valore dell'immobile da aggiungere agli attivi di quei mesi (facoltativo)</label><input id="pbh" inputmode="decimal" value="${im ? String(im.valore).replace('.', ',') : ''}"><div class="acts"><button class="b" data-act="popbfok">Ricostruisci</button><button class="b s" data-act="popback">Indietro</button></div>` : `<p style="margin-top:0">Non ci sono mesi passati da ricostruire per questo mutuo.</p><div class="acts"><button class="b s" data-act="popback">Indietro</button></div>`; }
   else if (p.mode === 'arch') body = `<p style="margin-top:0"><b>${esc(dn(v))}</b> vale ancora <b>${eur(v.valore)}</b>: archiviandolo, questa cifra esce dai totali. Procedere?</p><div class="acts"><button class="b" data-act="poparchok">Sì, archivia</button><button class="b s" data-act="popback">Annulla</button></div>`;
   else if (isA) body = `<div class="acts" style="flex-direction:column"><button class="b" data-act="popres">Ripristina</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
-  else body = `<div class="acts" style="flex-direction:column">${v.piano ? (v.ricostruito ? '' : '<button class="b" data-act="popbf">Ricostruisci storico</button>') : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b s" data-act="poparch">Archivia</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
+  else body = `<div class="acts" style="flex-direction:column">${v.piano ? '' : '<button class="b" data-act="popupd">Aggiorna</button>'}<button class="b s" data-act="popedit">Modifica</button><button class="b s" data-act="poparch">Archivia</button><button class="b r" data-act="popdel">Elimina</button><button class="b s" data-act="popclose">Chiudi</button></div>`;
   return `<div class="ov" data-act="popclose"></div><div class="pop"><h2 style="margin-bottom:2px">${esc(dn(v))}</h2><div class="lbl" style="margin-bottom:12px">${esc(v.categoria)}${v.dove && v.dove !== dn(v) ? ' · su ' + esc(v.dove) : ''} · ${esc(accName(v))} · ${eur(v.valore)}${isA ? ' · archiviato' : ''}</div>${pi ? `<div class="lbl" style="margin:-6px 0 12px">Prestito di ${eur(v.capitale)} · rata capitale ${eur(pi.rata)}/mese · pagate ${pi.k} su ${pi.N} · fine ${fmtD(v.fine)}${pi.partito ? '' : ' · non ancora iniziato'}</div>` : ''}${ob}<div class="msg">${esc(S.msg)}</div>${body}</div>`;
 }
 
