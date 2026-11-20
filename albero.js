@@ -104,13 +104,18 @@ function alberoTrova(root, id, path = []) {
   return null;
 }
 
+/* altezza dell'albero con tutti i rami aperti: la finestra dell'albero si dimensiona su questa, così non cambia mai */
+function alberoFullH(root) {
+  const all = new Set(['r']); const w = n => { if (n.kids.length) { all.add(n.id); n.kids.forEach(w); } }; w(root);
+  const L = alberoLayout(root, all); return Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
+}
 function treeCard(root, focus) {
-  const mode = S.tview || 'agg';
+  const mode = S.tview || 'agg', fh = Math.round(alberoFullH(root) * treeK()) + 20;
   return `<div class="card tcard" style="min-width:0"><h2>Albero del patrimonio</h2>
     <div class="tabs"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>
     ${zeroToggle()}
     <div class="tabs" style="margin-top:8px"><button class="b s sm" data-act="texp">Espandi tutto</button><button class="b s sm" data-act="tcol">Comprimi tutto</button></div>
-    <div class="tw tt" style="margin-top:12px">${alberoSvg(root, S.tx, focus)}</div>
+    <div class="tw tt" style="margin-top:12px;--th:${fh}px">${alberoSvg(root, S.tx, focus)}</div>
     <p class="note">Tocca + per aprire, ✎ per aggiornare il valore.</p>
     <button class="b s sm" data-act="topie">Vai al grafico ↓</button></div>`;
 }

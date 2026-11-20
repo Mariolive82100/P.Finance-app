@@ -132,12 +132,12 @@ main{margin:0 0 0 200px;max-width:none;padding:18px 28px 40px}
 }
 
 @media(min-width:1000px){
-.tt{max-height:60vh;overflow:auto}
+.tt{height:var(--th);max-height:none;overflow-x:auto;overflow-y:hidden}
 .pbody{display:flex;gap:14px;align-items:center}.psvg{flex:0 1 52%;min-width:0}.pleg{flex:1;min-width:0;max-height:300px;overflow:auto}
 .pan .kpis .card{padding:10px 16px}.pan .kpis .big{font-size:22px}.pan .kpis .lbl{font-size:11px}
 .g12.r1,.g12.r2{align-items:stretch}
-.g12.r1 .card{height:var(--r1)}.g12.r2 .card{height:var(--r2)}
-.g12 .card{box-sizing:border-box;overflow:auto}
+.g12.r1 .card{height:var(--r1)}.g12.r2 .card{height:auto}
+.g12 .card{box-sizing:border-box;overflow:auto}.g12.r2 .card{overflow:visible}
 .g12 .s7{grid-column:span 7;min-width:0}.g12 .s5{grid-column:span 5;min-width:0}
 .pan .pie{max-height:calc(var(--r1) - 150px);width:auto;max-width:100%;margin:0 auto}
 .pan .pleg{max-height:calc(var(--r1) - 140px)}
@@ -145,5 +145,4 @@ main{margin:0 0 0 200px;max-width:none;padding:18px 28px 40px}
 .tcard{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;align-content:flex-start}
 .tcard h2{margin:0;flex:1 1 auto}.tcard .tabs{margin:0!important}.tcard>label{margin:0!important}
 .tcard .tt{flex:1 1 100%;margin-top:4px!important}.tcard .note{display:none}
-.pan .tt{max-height:calc(var(--r2) - 100px)}
 }
