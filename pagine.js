@@ -211,19 +211,18 @@ function disParts(Dz0, single) {
 }
 /* Panoramica: solo su schermi larghi (computer) */
 /* Riquadro grafici della Panoramica: un selettore sceglie quale grafico vedere */
-const HUB = { main: 'Andamento', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita', c: 'Per account', a: 'Attivi', i: 'Classi di investimento', p: 'Passivi', l: 'Liquido / non liquido', q: 'Tutte le torte' };
-function hubBody(key, Dz, all, single, r1) {
-  const hist = all.length >= 2, W = Math.max(380, innerWidth - 200 - 56 - 40), H = Math.max(130, r1 - 150);
+const HUB = { main: 'Andamento', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita' };
+function hubBody(key, all, r1) {
+  const hist = all.length >= 2, W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40)), H = Math.max(130, r1 - 150 - 42);
   const no = t => `<div class="card"><h2>${t}</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>`;
-  if (key === 'main') return panMain(all, r1);
+  if (key === 'main') return panMain(all, r1 - 42);
   if (key === 'bar') {
     if (!hist) return no('Variazione mensile del patrimonio netto');
     const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
     return lcCard('bar', A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', aggSeries(all, A).dBar, [{ k: 'v', c: '#15803d', l: A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile', bar: 1 }], W, H);
   }
-  if (key === 'cmp1' || key === 'cmp2') { if (!hist) return no('Confronto tra periodi'); const c = cmpParts(all, true); return key === 'cmp1' ? c.a : c.b || c.a; }
-  if (key === 'q') return quadCard(Dz, single);
-  return bigPie(key, Dz, false);
+  if (!hist) return no('Confronto tra periodi');
+  const c = cmpParts(all, true); return key === 'cmp1' ? c.a : c.b || c.a;
 }
 function pagePan() {
   const D = S.data, all = D.storico;
@@ -236,14 +235,14 @@ function pagePan() {
   const eye = `<button class="eye" data-act="hide" aria-label="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}" title="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${hideAmt() ? '' : '<path d="M3 3l18 18"/>'}</svg></button>`;
   const dsub = dN !== null ? `<span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}` : '&nbsp;';
   const ind = t.attivi > 0 ? t.passivi / t.attivi : null;
-  const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28 - 40, r1 = Math.max(400, Math.round(avail * 0.62));
-  const keys = single ? ['l', 'a', 'i', 'p', 'q'] : ['main', 'bar', 'cmp1', 'cmp2', 'c', 'a', 'i', 'p', 'q'], hv = keys.includes(S.chv) ? S.chv : keys[0];
-  const pr = disParts(Dz, single), body = hubBody(hv, Dz, all, single, r1);
+  const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(single ? 300 : 290, Math.round(avail * 0.5));
+  const keys = ['main', 'bar', 'cmp1', 'cmp2'], hv = keys.includes(S.chv) ? S.chv : 'main';
+  const pr = disParts(Dz, single), body = single ? '' : hubBody(hv, all, r1);
   S.anim = false; S.tanim = false;
   const selc = `<div class="chsel">${keys.map(k => `<button class="b ${k === hv ? '' : 's'} sm" data-act="chv" data-v="${k}">${HUB[k]}</button>`).join('')}${hv.startsWith('cmp') ? `<span class="chcmp">${cmpSel()}</span>` : ''}</div>`;
   const row2 = single ? `<div class="g12 r2"><div class="s12">${pr.tree}</div></div>` : `<div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye)}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
-    <div class="g12 r1"><div class="s12">${selc}${body}</div></div>${row2}</div>`;
+    ${single ? `<div class="g12 r1"><div class="s12">${pr.pie}</div></div>` : `<div class="g12 r1"><div class="s7"><div class="hubc">${selc}${body}</div></div><div class="s5">${pr.pie}</div></div>`}${row2}</div>`;
 }
 const panTop = name => `<div class="ptop"><h2>Panoramica · ${esc(name)}</h2><div class="pbtn"><button class="b sm" data-act="nv">Nuova voce</button></div></div>`;
 

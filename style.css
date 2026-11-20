@@ -187,3 +187,10 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 .eye:hover{color:#0f766e;background:#eef6f5}
 .eye svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block}
 }
+
+@media(min-width:1000px){
+.hubc{display:flex;flex-direction:column;height:var(--r1)}
+.hubc .chsel{flex:none}
+.hubc>.card{flex:1;min-height:0;height:auto!important}
+}
+@media(min-width:1000px){.chsel .chcmp select{max-width:180px;font-size:12px;padding:5px 8px;text-overflow:ellipsis}}
