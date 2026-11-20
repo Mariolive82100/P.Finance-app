@@ -21,20 +21,18 @@ function render() {
   const IC = { pan: '<path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/>', pat: '<path d="M3 10h18M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18M12 3l9 5H3z"/>', dis: '<path d="M12 3v9h9"/><path d="M20.5 15A9 9 0 1 1 9 3.5"/>', and: '<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>', rep: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>' };
   const wide = innerWidth >= 1000;
   if (!wide && S.tab === 'pan') S.tab = 'pat';
-  if (wide && ['pat', 'dis', 'rep'].includes(S.tab)) S.tab = 'pan';
-  if (wide && !S.panSeen && S.tab === 'and') S.tab = 'pan';
+  if (wide && !S.panSeen && S.tab === 'pat') S.tab = 'pan';
   S.panSeen = true;
-  const tabs = wide ? [] : [['pat', 'Patrimonio'], ['dis', 'Distribuzione'], ['and', 'Andamento'], ['rep', 'Report']];
+  const tabs = [...(wide ? [['pan', 'Panoramica']] : []), ['pat', 'Patrimonio'], ['dis', 'Distribuzione'], ['and', 'Andamento'], ['rep', 'Report']];
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   if (S.tab === 'adm' && !isAdmin()) S.tab = 'pat';
   let body = '';
   if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat') body = pagePat(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
-  const navHtml = wide ? '' : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`;
   el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
     <button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     </header>
     <main>
-    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${wide && S.tab !== 'pan' ? '<button class="b s sm" data-act="gotab" data-v="pan" style="margin-bottom:12px">← Torna alla Panoramica</button>' : ''}${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}${navHtml}`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
   navSync();
 }
@@ -68,7 +66,7 @@ function renderAuth(el) {
 const accKey = v => v.account || 'main';
 const accName = v => { const D = S.data; if (!v.account) return D.nome; const a = D.accounts.find(x => x.id === v.account); return a ? a.nome : '(account eliminato)'; };
 
-function pagePat(mode) {
+function pagePat() {
   const D = S.data, fa = S.fAcc || 'all', ed = S.edit && D.voci.find(v => v.id === S.edit);
   const vis = vz(D.voci).filter(v => fa === 'all' || accKey(v) === fa), t = totals(vis);
   const g = (id, d) => (S.fd && S.fd[id] !== undefined) ? S.fd[id] : d;
@@ -138,9 +136,6 @@ function pagePat(mode) {
     ${isInv ? '' : `<label class="lbl">Nome (es. Conto Fineco, Mutuo casa)</label><input id="fn" maxlength="60" value="${esc(g('fn', ed ? ed.nome : ''))}">`}
     ${campi}
     <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div>` : ''}</div>`;
-  const impCard = !isAdmin() ? '' : S.timp ? `<div class="card"><h2>Importa titoli</h2><div class="lbl" style="margin-bottom:6px">Anteprima: ${S.timp.righe.length} voci da creare o aggiornare${S.timp.acc ? '' : ' (account principale)'}</div>${S.timp.righe.map(x => `<div class="row"><div class="n">${esc(x.dove)} · ${esc(x.assetClass)}<small>${x.exId ? 'aggiorna da ' + eur(x.prima) : 'nuova voce'}</small></div><div class="v">${eur(x.valore)}</div></div>`).join('')}<div class="acts"><button class="b" data-act="timpok">Conferma</button><button class="b s" data-act="timpno">Annulla</button></div></div>` : `<div class="card"><h2>Importa titoli</h2><div class="lbl">Carica il CSV della scheda "Elenco titoli": crea o aggiorna una voce per ogni conto e asset class.</div><input id="titf" type="file" accept=".csv,.txt">${S.timpErr ? `<div class="msg">${esc(S.timpErr)}</div>` : ''}</div>`;
-  if (mode === 'form') return form;
-  if (mode === 'imp') return impCard;
   return `${filtro}<div class="card"><div class="lbl">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}</div></div>
     <div class="two"><div class="card at"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
     <div class="card pa"><div class="lbl">Passivi</div><div class="big neg">${eur(t.passivi)}</div></div></div>
@@ -149,7 +144,7 @@ function pagePat(mode) {
     <div class="card pa"><h2>Passivi</h2>${listPassivi()}</div>
     ${archSec}
     ${form}
-    ${impCard}
+    ${!isAdmin() ? '' : S.timp ? `<div class="card"><h2>Importa titoli</h2><div class="lbl" style="margin-bottom:6px">Anteprima: ${S.timp.righe.length} voci da creare o aggiornare${S.timp.acc ? '' : ' (account principale)'}</div>${S.timp.righe.map(x => `<div class="row"><div class="n">${esc(x.dove)} · ${esc(x.assetClass)}<small>${x.exId ? 'aggiorna da ' + eur(x.prima) : 'nuova voce'}</small></div><div class="v">${eur(x.valore)}</div></div>`).join('')}<div class="acts"><button class="b" data-act="timpok">Conferma</button><button class="b s" data-act="timpno">Annulla</button></div></div>` : `<div class="card"><h2>Importa titoli</h2><div class="lbl">Carica il CSV della scheda "Elenco titoli": crea o aggiorna una voce per ogni conto e asset class.</div><input id="titf" type="file" accept=".csv,.txt">${S.timpErr ? `<div class="msg">${esc(S.timpErr)}</div>` : ''}</div>`}
     <div class="card"><h2>Esporta</h2><button class="b" data-act="export">Scarica i dati (CSV per Excel)</button></div>`;
 }
 
@@ -162,10 +157,6 @@ function drawer() {
     : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   const adm = isAdmin() ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
-  if (innerWidth >= 1000) {
-    const imp = isAdmin() ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><label class="lbl">Importa titoli (CSV della scheda "Elenco titoli")</label><input id="titf" type="file" accept=".csv,.txt">${S.timpErr ? `<div class="msg">${esc(S.timpErr)}</div>` : ''}` : '';
-    return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Impostazioni</h2><div class="lbl" style="margin-bottom:4px">Account</div>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it" data-act="export"><span class="t">Esporta i dati (CSV per Excel)</span></div><div class="it ${S.tab === 'and' ? 'on' : ''}" data-act="gotab" data-v="and"><span class="t">Storico mensile e importazione</span></div><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${imp}${adm}</div>`;
-  }
   return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
 }
 
@@ -212,10 +203,7 @@ function pagePan() {
   const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(290, Math.round(avail * 0.5)), r2 = Math.max(250, avail - r1);
   const pr = disParts(), ch = panMain(all, r1);
   S.anim = false; S.tanim = false;
-  const fopen = !!S.edit || !!(S.exp && S.exp.form);
-  const head = `<div class="phead"><div><h1>Panoramica</h1><div class="lbl">${esc(monthName(monthKey()))}</div></div><div class="pbt"><label class="chk"><input type="checkbox" id="pdfhide" ${S.pdfHide ? 'checked' : ''}><span>Senza importi</span></label><button class="b s" data-act="addvoce">Aggiungi voce</button><button class="b" data-act="pdfgo" ${S.pdfBusy ? 'disabled' : ''}>${S.pdfBusy ? 'Creazione PDF…' : 'Scarica report PDF'}</button></div></div>`;
-  const extra = (fopen ? `<div class="fwrap">${pagePat('form')}</div>` : '') + (S.timp ? `<div class="fwrap">${pagePat('imp')}</div>` : '');
-  return `<div class="pan" style="--r1:${r1}px;--r2:${r2}px">${head}${extra}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dN !== null ? `${dN >= 0 ? '+' : ''}${eur(dN)} su ${esc(monthName(prev.mese))}` : '&nbsp;', cls(t.netto))}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
+  return `<div class="pan" style="--r1:${r1}px;--r2:${r2}px"><div class="kpis">${kp('Patrimonio netto', eur(t.netto), dN !== null ? `${dN >= 0 ? '+' : ''}${eur(dN)} su ${esc(monthName(prev.mese))}` : '&nbsp;', cls(t.netto))}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
     <div class="g12 r1"><div class="s7">${ch}</div><div class="s5">${pr.pie}</div></div>
     <div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div></div>`;
 }
