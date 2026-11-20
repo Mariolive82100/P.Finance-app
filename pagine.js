@@ -258,7 +258,9 @@ function pageCon() {
   const tbar = fm
     ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
     : `<div class="tbar"><input id="cq" placeholder="Cerca un conto…" value="${esc(S.cq || '')}" style="max-width:260px;margin:0"><span style="flex:1"></span><button class="b sm" data-act="cfm">Aggiorna fine mese</button></div>`;
-  const tab = att.length ? `<table>${head}${att.map(v => row(v, false)).join('')}</table>` : `<div class="lbl" style="padding:10px 0">Nessun conto trovato.</div>`;
+  const sec = (t, arr) => arr.length ? `<div class="csec"><h3>${esc(t)} <span class="lbl">${arr.length} · ${eur(arr.reduce((s, v) => s + v.valore, 0))}</span></h3><table>${head}${arr.map(v => row(v, false)).join('')}</table></div>` : '';
+  const AT = att.filter(v => v.tipo === 'attivo'), cOrd = ['Liquidità', 'Investimenti', 'Beni', ...CATS.attivo.filter(c => !['Liquidità', 'Investimenti', 'Beni'].includes(c))];
+  const tab = att.length ? cOrd.map(c => sec(c, AT.filter(v => v.categoria === c))).join('') + sec('Passivi', att.filter(v => v.tipo === 'passivo')) : `<div class="lbl" style="padding:10px 0">Nessun conto trovato.</div>`;
   const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table>${head}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
   return `<div class="con">${panTop(aname, 'Conti')}<div class="card">${tbar}${tab}</div>${archSec}</div>`;
 }
