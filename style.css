@@ -109,3 +109,11 @@ th{color:#5b7370;font-weight:500}
 .b:disabled{opacity:.4;cursor:default}
 
 .legend .lt{cursor:pointer;padding:3px 8px;border:1px solid #cfdcda;border-radius:14px}.legend .lt.off{opacity:.4;text-decoration:line-through}
+
+@media(min-width:1000px){body{font-size:14px}.hw h1{font-size:16px}.un{font-size:13px}h2{font-size:15px}.big{font-size:24px}.two .big{font-size:24px}.lbl,.note,.legend,.ps,.ps2,.tip{font-size:12px}input,select{font-size:14px;padding:9px}button.b{font-size:13px;padding:9px 14px}button.b.sm{font-size:12px;padding:5px 9px}.msg{font-size:13px}.pl{font-size:13px}table{font-size:13px}.terms h3{font-size:14px}}
+@keyframes tMv{from{transform:translate(var(--dx,0),var(--dy,0))}to{transform:none}}
+@keyframes tIn{from{opacity:0;transform:translate(var(--dx,0),var(--dy,0))}to{opacity:1;transform:none}}
+@keyframes tLk{from{opacity:0}to{opacity:1}}
+.tt .tmv{animation:tMv .38s cubic-bezier(.3,.7,.3,1)}.tt .tin{animation:tIn .38s cubic-bezier(.3,.7,.3,1) both}.tt .tlk{animation:tLk .38s ease both}
+.tt g[data-act]{transition:opacity .2s}.tt g[data-act]:hover rect{filter:brightness(.97)}
+@media(prefers-reduced-motion:reduce){.tt .tmv,.tt .tin,.tt .tlk{animation:none}}

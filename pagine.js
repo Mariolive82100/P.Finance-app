@@ -180,7 +180,7 @@ function pageDis() {
   const root = alberoDati({ ...D, voci: vz(D.voci) }, S.tview || 'agg'), found = (S.pp || ['r']).slice().reverse().map(id => alberoTrova(root, id)).find(Boolean) || alberoTrova(root, 'r');
   S.pp = found.path.map(n => n.id);
   const html = `<div class="dgrid">${treeCard(root, '')}${pieCard(found)}</div>`;
-  S.anim = false;
+  S.anim = false; S.tanim = false;
   return html;
 }
 

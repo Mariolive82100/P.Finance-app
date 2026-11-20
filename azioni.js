@@ -73,19 +73,19 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
-    if (a === 'tview') { S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
+    if (a === 'tview') { S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'texp' || a === 'tcol') {
       const all = new Set(['r']);
       if (a === 'texp') { const w = n => { if (n.kids.length) { all.add(n.id); n.kids.forEach(w); } }; w(alberoDati({ ...S.data, voci: vz(S.data.voci) }, S.tview || 'agg')); }
-      S.tx = all; return render();
+      S.tanim = true; S.tx = all; return render();
     }
     if (a === 'topie') { const p = $('pie'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (a === 'tn') {
       const w0 = document.querySelector('.tt'), sl = w0 ? w0.scrollLeft : 0, lv = +el.dataset.l;
-      S.tx = S.tx || new Set(['r']); if (S.tx.has(v)) S.tx.delete(v); else S.tx.add(v);
+      S.tx = S.tx || new Set(['r']); S.tanim = true; if (S.tx.has(v)) S.tx.delete(v); else S.tx.add(v);
             render();
       const w = document.querySelector('.tt');
-      if (w) { const fine = 2 + (lv + 2) * (TN.w + TN.gx) - TN.gx; w.scrollLeft = S.tx.has(v) && fine > sl + w.clientWidth ? fine - w.clientWidth + 6 : sl; }
+      if (w) { const fine = (2 + (lv + 2) * (TN.w + TN.gx) - TN.gx) * treeK(); w.scrollLeft = S.tx.has(v) && fine > sl + w.clientWidth ? fine - w.clientWidth + 6 : sl; }
       return;
     }
     if (a === 'pies') {
