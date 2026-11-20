@@ -1,7 +1,7 @@
 'use strict';
 /* ---------- Grafici interattivi ---------- */
 const CH = {}, CHK = {}, CHS = {}, ZM = {};
-const CW = () => Math.max(300, Math.min(innerWidth, 1320) - 62), CHt = w => Math.max(210, Math.min(400, Math.round(w * 0.6)));
+const CW = () => Math.max(300, Math.min(innerWidth - (innerWidth >= 1000 ? 200 : 0), 1320) - 62), CHt = w => Math.max(210, Math.min(400, Math.round(w * 0.6)));
 const lcInit = (id, key, pts, series, W, H) => { CH[id] = { pts, raw: pts, series, key, W, H, geom: null }; CHK[key] = CH[id]; };
 function lcSvg(id) {
   const c = CH[id]; let pts = c.raw, n = pts.length; const W = c.W, H = c.H, L = 50, R = 12, T = 12, B = 28;
@@ -64,9 +64,10 @@ const lcAgg = key => {
   return `<div class="zc">${[['m', 'Mese'], ['yf', 'Anno (fine)'], ['ya', 'Anno (media)']].map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
 };
 const lcZoomBar = key => lcAgg(key) + `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
-function lcCard(key, title, pts, series) {
+function lcCard(key, title, pts, series, w) {
   CHS[key] = { title, pts, series };
-  lcInit(key, key, pts, series, CW(), CHt(CW()));
+  const ww = w || CW();
+  lcInit(key, key, pts, series, ww, CHt(ww));
   return `<div class="card"><div class="chh"><h2>${esc(title)}</h2><button class="b s sm" data-act="fs" data-v="${key}" aria-label="Schermo intero">⛶</button></div>${lcLegend(series)}${lcBlock(key)}${lcZoomBar(key)}
     <p class="note" style="margin:4px 0 0">${AGGK[0] === key ? 'Tocca i nomi in alto per mostrare o nascondere le linee. ' : ''}Tocca un punto per vedere il valore, tocca di nuovo per nasconderlo. Pizzica con due dita (o Ctrl + rotellina) per ingrandire, trascina per scorrere.</p></div>`;
 }
@@ -132,7 +133,8 @@ document.addEventListener('wheel', e => {
   const w = e.target.closest && e.target.closest('.lcw'); if (!w || !(e.ctrlKey || e.metaKey)) return;
   e.preventDefault(); const fi = lcIdx(w, e.clientX); if (fi !== null) lcZoom(w.dataset.k, e.deltaY < 0 ? 1.25 : 0.8, fi);
 }, { passive: false });
-window.addEventListener('resize', () => { if (S.fs) render(); });
+let WIDE = innerWidth >= 1000;
+window.addEventListener('resize', () => { const w = innerWidth >= 1000, ch = w !== WIDE; WIDE = w; if (S.fs || (ch && S.data)) render(); });
 
 /* confronto periodo su periodo */
 const addMk = (k, d) => { const [y, m] = k.split('-').map(Number); return monthKey(new Date(y, m - 1 + d, 1)); };
@@ -205,23 +207,14 @@ function formMese(force) {
     ${e ? '' : `<hr style="border:0;border-top:1px solid #e2eceb;margin:16px 0 10px"><label class="lbl">Oppure importa molti mesi insieme da un file (righe: mese;attivi;passivi, es. 2024-05;120000;8000)</label><input id="impf" type="file" accept=".csv,.txt"><div class="msg" id="impmsg"></div>`}</div>`;
 }
 
-function pageAnd() {
-  const all = S.data.storico, rg = String(S.range || '12');
-  if (!all.length) return formMese(true) + '<div class="card">Nessuno storico disponibile. Inserisci i mesi passati qui sopra, oppure aggiungi le voci nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
-  const yy = +monthKey().slice(0, 4);
-  const rF = S.rFrom || all[0].mese, rT = S.rTo || all[all.length - 1].mese, lo_ = rF <= rT ? rF : rT, hi_ = rF <= rT ? rT : rF;
-  const yrs = [...new Set(all.map(s => s.mese.slice(0, 4)))].reverse(), yr = yrs.includes(S.yr) ? S.yr : yrs[0];
-  const st = rg === 'year' ? all.filter(s => s.mese.slice(0, 4) === yr) : rg === 'custom' ? all.filter(s => s.mese >= lo_ && s.mese <= hi_) : rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
-  const sel = `<select data-act="range">${rg === 'year' ? '<option value="" selected disabled>Periodo…</option>' : ''}${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico'], ['custom', 'Periodo personalizzato']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-  const sel2 = `<select data-act="yrsel">${rg === 'year' ? '' : '<option value="" selected disabled>Anno…</option>'}${yrs.map(y => `<option value="${y}" ${rg === 'year' && y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
+function serMain() {
   const vis = S.sel instanceof Set && S.sel.size ? S.sel : new Set(['attivi', 'passivi', 'netto']);
-  const L = [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }, { k: 'var', c: '#6d28d9', l: 'Variazione dal primo punto visibile', zero: 1, rebase: 1 }].map(x => ({ ...x, tog: 1, off: !vis.has(x.k) }));
-  const pts0 = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto, abs: s.netto, var: 0 }));
-  const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
-  const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
-  const dBar0 = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
-  const yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))], A = yrsAll.length >= 2 ? (S.agg || 'm') : 'm', curY = monthKey().slice(0, 4);
-  let pts = pts0, dBar = dBar0;
+  return [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }, { k: 'var', c: '#6d28d9', l: 'Variazione dal primo punto visibile', zero: 1, rebase: 1 }].map(x => ({ ...x, tog: 1, off: !vis.has(x.k) }));
+}
+function aggSeries(all, A) {
+  const curY = monthKey().slice(0, 4), yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))];
+  let pts = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto, abs: s.netto, var: 0 }));
+  let dBar = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
   if (A !== 'm') {
     const avg = (a, k) => a.reduce((t, x) => t + x[k], 0) / a.length, by = yrsAll.map(y => all.filter(s => s.mese.slice(0, 4) === y));
     const lg = (g, y) => A === 'yf' ? `${y} · ${monthName(g[g.length - 1].mese)}${y === curY ? ' (in corso)' : ''}` : `Media ${y}${y === curY ? ' (in corso)' : ''}`;
@@ -233,6 +226,29 @@ function pageAnd() {
       else { const d = g.map(s => { const j = all.indexOf(s); return j > 0 ? s.netto - all[j - 1].netto : null; }).filter(x => x !== null); if (d.length) dBar.push({ lab: yrsAll[i], long: lg(g, yrsAll[i]), v: d.reduce((t, x) => t + x, 0) / d.length }); }
     });
   }
+  return { pts, dBar };
+}
+function panMain(all) {
+  if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
+  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 8 / 12 - 40));
+  return lcCard('main', 'Andamento del patrimonio', aggSeries(all, A).pts, serMain(), W);
+}
+function pageAnd() {
+  const all = S.data.storico, rg = String(S.range || '12');
+  if (!all.length) return formMese(true) + '<div class="card">Nessuno storico disponibile. Inserisci i mesi passati qui sopra, oppure aggiungi le voci nella pagina Patrimonio: ogni mese ne viene salvata una fotografia.</div>';
+  const yy = +monthKey().slice(0, 4);
+  const rF = S.rFrom || all[0].mese, rT = S.rTo || all[all.length - 1].mese, lo_ = rF <= rT ? rF : rT, hi_ = rF <= rT ? rT : rF;
+  const yrs = [...new Set(all.map(s => s.mese.slice(0, 4)))].reverse(), yr = yrs.includes(S.yr) ? S.yr : yrs[0];
+  const st = rg === 'year' ? all.filter(s => s.mese.slice(0, 4) === yr) : rg === 'custom' ? all.filter(s => s.mese >= lo_ && s.mese <= hi_) : rg === '0' ? all : rg === 'ytd' ? all.filter(s => s.mese >= (yy - 1) + '-12') : all.slice(-(+rg));
+  const sel = `<select data-act="range">${rg === 'year' ? '<option value="" selected disabled>Periodo…</option>' : ''}${[['3', 'Ultimi 3 mesi'], ['6', 'Ultimi 6 mesi'], ['ytd', 'Da inizio anno'], ['12', 'Ultimi 12 mesi'], ['36', 'Ultimi 3 anni'], ['0', 'Tutto lo storico'], ['custom', 'Periodo personalizzato']].map(([v, l]) => `<option value="${v}" ${rg === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const sel2 = `<select data-act="yrsel">${rg === 'year' ? '' : '<option value="" selected disabled>Anno…</option>'}${yrs.map(y => `<option value="${y}" ${rg === 'year' && y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
+  const L = serMain();
+  const pts0 = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto, abs: s.netto, var: 0 }));
+  const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
+  const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
+  const dBar0 = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
+  const yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))], A = yrsAll.length >= 2 ? (S.agg || 'm') : 'm', curY = monthKey().slice(0, 4);
+  const ag = aggSeries(all, A), pts = ag.pts, dBar = ag.dBar;
   const wsig = [rg, lo_, hi_, yr, all.length, A].join('|');
   if (all.length > 1 && S.wsig !== wsig) {
     S.wsig = wsig;
