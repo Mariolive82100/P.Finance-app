@@ -14,6 +14,16 @@ function exportCsv() {
 const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
 function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
 
+/* Avviso con Annulla (10 secondi): l'eliminazione vera parte solo allo scadere */
+async function commitDel() {
+  const u = S.undo; if (!u || u.kind !== 'del') return;
+  clearTimeout(S.undoT); S.undo = null; S.toast = null;
+  try { await deleteDoc(doc(db, 'users', S.data.uid, 'voci', u.x.id)); } catch (e) { (u.wasArch ? S.data.arch : S.data.voci).push(u.x); S.msg = errText(e); }
+}
+function setUndo(txt, u) {
+  clearTimeout(S.undoT); S.undo = u; S.toast = txt;
+  S.undoT = setTimeout(async () => { if (S.undo && S.undo.kind === 'del') await commitDel(); else { S.undo = null; S.toast = null; } if (S.data) render(); }, 10000);
+}
 const keepTT = () => { const t = document.querySelector('.tt'); if (t && S.ttl != null) t.scrollLeft = S.ttl; };
 async function act(el) {
   let a = el.dataset.act; const v = el.dataset.v, D = S.data;
@@ -37,7 +47,8 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
-    if (a === 'accsel') { S.tab = S.tab === 'alb' ? 'alb' : 'pan'; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'accsel') { S.tab = S.tab === 'alb' || S.tab === 'con' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'pano') { S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
     if (a === 'nv') { S.tab = 'nv'; S.edit = null; S.fd = null; S.exp = { ...(S.exp || {}), form: true }; window.scrollTo(0, 0); return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
@@ -64,6 +75,45 @@ async function act(el) {
       const x0 = D.voci.find(z => z.id === S.pop.id);
       if (x0 && x0.valore !== 0) { S.pop.mode = 'arch'; return render(); }
       a = 'poparchok';
+    }
+    if (a === 'cfm') { S.cfm = true; return render(); }
+    if (a === 'cfmno') { S.cfm = false; return render(); }
+    if (a === 'carcs') { S.carc = !S.carc; return render(); }
+    if (a === 'cedit') { S.edit = v; S.fd = null; S.back = 'con'; S.tab = 'nv'; window.scrollTo(0, 0); return render(); }
+    if (a === 'cfmsave') {
+      const ch = [];
+      for (const i of document.querySelectorAll('.cvi')) {
+        const x = D.voci.find(z => z.id === i.dataset.id), nv = pnum(i.value);
+        if (!x) continue;
+        if (!isFinite(nv) || nv < 0) { S.msg = 'Valore non valido su "' + dn(x) + '": scrivi zero o più.'; return render(); }
+        if (r2(nv) !== x.valore) ch.push([x, r2(nv)]);
+      }
+      if (!ch.length) { S.cfm = false; S.msg = 'Nessun valore cambiato.'; return render(); }
+      await Promise.all(ch.map(([x, nv]) => updateDoc(doc(db, 'users', D.uid, 'voci', x.id), { valore: nv })));
+      ch.forEach(([x, nv]) => { x.valore = nv; });
+      await syncStorico(); S.cfm = false; S.msg = 'Valori aggiornati.'; return render();
+    }
+    if (a === 'carch' || a === 'cres') {
+      const to = a === 'carch', from = to ? D.voci : D.arch, dest = to ? D.arch : D.voci, i = from.findIndex(z => z.id === v);
+      if (i < 0) return;
+      await updateDoc(doc(db, 'users', D.uid, 'voci', v), { archiviata: to });
+      const [x] = from.splice(i, 1); x.archiviata = to; if (!to) applyPiano(x); dest.push(x);
+      await syncStorico();
+      if (to) { setUndo('Archiviato: ' + dn(x), { kind: 'arch', id: v }); return render(); }
+      S.msg = 'Conto ripristinato.'; return render();
+    }
+    if (a === 'cdel') {
+      await commitDel();
+      let from = D.voci, i = from.findIndex(z => z.id === v); if (i < 0) { from = D.arch; i = from.findIndex(z => z.id === v); }
+      if (i < 0) return;
+      const wasArch = from === D.arch, [x] = from.splice(i, 1);
+      await syncStorico(); setUndo('Eliminato: ' + dn(x), { kind: 'del', x, wasArch }); return render();
+    }
+    if (a === 'undo') {
+      const u = S.undo; if (!u) return; clearTimeout(S.undoT); S.undo = null; S.toast = null;
+      if (u.kind === 'del') { (u.wasArch ? D.arch : D.voci).push(u.x); await syncStorico(); }
+      else { const i = D.arch.findIndex(z => z.id === u.id); if (i >= 0) { await updateDoc(doc(db, 'users', D.uid, 'voci', u.id), { archiviata: false }); const [x] = D.arch.splice(i, 1); x.archiviata = false; applyPiano(x); D.voci.push(x); await syncStorico(); } }
+      S.msg = 'Operazione annullata.'; return render();
     }
     if (a === 'poparchok' || a === 'popres') {
       const id = S.pop.id, to = a === 'poparchok', from = to ? D.voci : D.arch, dest = to ? D.arch : D.voci, i = from.findIndex(z => z.id === id);
@@ -185,7 +235,7 @@ async function act(el) {
     }
     if (a === 'ftipo' || a === 'fmod' || a === 'fcat') { S.fd = grabForm(); return render(); }
     if (a === 'edit') { S.edit = v; return render(); }
-    if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') S.tab = 'pan'; return render(); }
+    if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } return render(); }
     if (a === 'export') return exportCsv();
     if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
     if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;
@@ -217,7 +267,7 @@ async function act(el) {
       }
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
       else { const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati }); }
-      S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') S.tab = 'pan'; await syncStorico(); return render();
+      S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } await syncStorico(); return render();
     }
     if (a === 'del') {
       if (!confirm('Eliminare questa voce?')) return;
@@ -335,8 +385,10 @@ document.addEventListener('change', async e => {
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && el.tagName !== 'SELECT' && el.tagName !== 'INPUT') act(el); else if (!el && S.pieSel != null && S.tab === 'dis') { S.pieSel = null; S.anim = 'sel'; render(); } });
 document.addEventListener('change', e => { if ((e.target.tagName === 'SELECT' || e.target.type === 'month') && e.target.dataset.act) act(e.target); });
 document.addEventListener('change', e => { if (e.target.id === 'zt') { S.showZero = e.target.checked; try { localStorage.setItem('pf_zero', S.showZero ? '1' : '0'); } catch (x) {} render(); } });
+document.addEventListener('input', e => { if (e.target.id === 'cq') { S.cq = e.target.value; const p = e.target.selectionStart; render(); const n = $('cq'); if (n) { n.focus(); n.setSelectionRange(p, p); } } });
 document.addEventListener('change', e => { if (e.target.id === 'pdfhide') { S.pdfHide = e.target.checked; S.pdf = null; render(); } });
 document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('cvi')) { e.preventDefault(); const l = [...document.querySelectorAll('.cvi')], n = l[l.indexOf(e.target) + 1]; if (n) { n.focus(); n.select(); } else act(document.querySelector('[data-act="cfmsave"]')); return; }
   if (e.key !== 'Enter') return;
   if ($('an') && document.activeElement === $('an')) act(document.querySelector('[data-act="adda"]'));
 });

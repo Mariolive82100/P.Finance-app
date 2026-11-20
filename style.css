@@ -215,3 +215,5 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 .colc{display:flex;flex-direction:column}.colc h2{flex:none}.colc .qs{flex:1;min-height:0;position:relative}.colc .legend{flex:none;margin:6px 0 0;justify-content:center}
 .s4 .psvg{flex:0 1 44%}
 }
+
+.con td.ca{white-space:nowrap}.con .tbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}.cvi{width:130px;text-align:right;margin:0;padding:6px 8px}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#12312d;color:#fff;padding:10px 14px;border-radius:12px;display:flex;gap:14px;align-items:center;z-index:60;font-size:14px;box-shadow:0 6px 24px #0004}

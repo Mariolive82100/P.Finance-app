@@ -22,33 +22,33 @@ function render() {
   const wide = innerWidth >= 1000;
   if (!wide && S.tab === 'pan') S.tab = 'pat';
   if (!wide && S.tab === 'nv') S.tab = 'pat';
-  if (!wide && S.tab === 'alb') S.tab = 'pat';
+  if (!wide && (S.tab === 'alb' || S.tab === 'con')) S.tab = 'pat';
   if (wide && (!S.panSeen && S.tab === 'pat' || ['pat', 'dis', 'and'].includes(S.tab))) S.tab = 'pan';
   S.panSeen = true;
   const tabs = [...(wide ? [['pan', 'Panoramica']] : []), ['pat', 'Patrimonio'], ['dis', 'Distribuzione'], ['and', 'Andamento'], ['rep', 'Report']];
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   if (S.tab === 'adm' && !isAdmin()) S.tab = 'pat';
   let body = '';
-  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
+  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'con') body = pageCon(); else if (S.tab === 'dis') body = pageDis(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
     ${wide ? '' : `<button class="b s sm" data-act="hide">${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}</button>`}<button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     </header>
     <main>
-    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${arrows()}${wide ? navWide(IC, pend, D) : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`}`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|aggiornati\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${S.toast ? `<div class="toast"><span>${esc(S.toast)}</span><button class="b sm" data-act="undo">Annulla</button></div>` : ''}${arrows()}${wide ? navWide(IC, pend, D) : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`}`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
   navSync();
 }
 
 /* Barra laterale (solo computer): Panoramica, Account (Aggregato e singoli), Report, poi info, termini, amministrazione */
 function navWide(IC, pend, D) {
-  const fa = S.fAcc || 'all', pan = S.tab === 'pan', pa = pan || S.tab === 'alb', open = S.accOpen || (pa && fa !== 'all');
+  const fa = S.fAcc || 'all', pan = S.tab === 'pan', pa = pan || S.tab === 'alb' || S.tab === 'con', open = S.accOpen || (pa && fa !== 'all');
   const sv = d => `<svg viewBox="0 0 24 24">${d}</svg>`;
-  const ICX = { acc: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.8-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 0 1 0 6M18 14c2 .7 3 2.5 3 5"/>', inf: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', ter: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>', adm: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>', alb: '<circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 12h4c3 0 4-6 6-6M11 12c3 0 4 6 6 6"/>' };
+  const ICX = { acc: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.8-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 0 1 0 6M18 14c2 .7 3 2.5 3 5"/>', inf: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', ter: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>', adm: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>', con: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="7" cy="6" r=".6"/><circle cx="7" cy="12" r=".6"/><circle cx="7" cy="18" r=".6"/>', alb: '<circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 12h4c3 0 4-6 6-6M11 12c3 0 4 6 6 6"/>' };
   const row = (k, n, ed) => `<div class="nr"><button data-act="accsel" data-v="${esc(k)}" class="${pa && fa === k ? 'on' : ''}">${esc(n)}</button>${ed ? `<span class="nic" data-act="rena" data-v="${k}" title="Rinomina">✎</span><span class="nic" data-act="dela" data-v="${k}" title="Elimina">✕</span>` : ''}</div>`;
   const add = S.addAcc ? `<div class="nadd"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<button class="nplus" data-act="addo">＋ Aggiungi account</button>`;
   const sub = open ? `<div class="nsub">${row('all', 'Aggregato')}${row('main', D.nome)}${D.accounts.map(a => row(a.id, a.nome, true)).join('')}${add}</div>` : '';
   const it = (act, v, ic, l, on, extra) => `<button data-act="${act}"${v ? ` data-v="${v}"` : ''} class="${on ? 'on' : ''}">${sv(ic)}${l}${extra || ''}</button>`;
-  return `<nav><div class="nv">${it('accsel', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'alb', ICX.alb, 'Albero', S.tab === 'alb')}${it('accT', '', ICX.acc, 'Account', pa && fa !== 'all', `<span class="chev ${open ? 'open' : ''}" style="margin-left:auto">▸︎</span>`)}${sub}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
+  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'alb', ICX.alb, 'Albero', S.tab === 'alb')}${it('tab', 'con', ICX.con, 'Conti', S.tab === 'con')}${it('accT', '', ICX.acc, 'Account', pa && fa !== 'all', `<span class="chev ${open ? 'open' : ''}" style="margin-left:auto">▸︎</span>`)}${sub}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
 }
 
 /* ---------- Gesto/tasto "indietro" ---------- */
@@ -239,6 +239,28 @@ function pageAlb() {
   S.tfull = true; const pr = disParts(Dz, single); S.tfull = false;
   S.anim = false; S.tanim = false; S.tcan = false;
   return `<div class="alb">${panTop(aname, 'Albero')}${pr.tree}</div>`;
+}
+function pageCon() {
+  const D = S.data;
+  let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
+  const single = fa !== 'all', aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
+  const q = (S.cq || '').trim().toLowerCase(), fm = !!S.cfm, showAcc = !single && D.accounts.length > 0;
+  const flt = arr => arr.filter(v => (!single || accKey(v) === fa) && (!q || (dn(v) + ' ' + v.categoria + ' ' + (v.dove || '') + ' ' + accName(v)).toLowerCase().includes(q)))
+    .sort((a, b) => (a.tipo === b.tipo ? 0 : a.tipo === 'attivo' ? -1 : 1) || a.categoria.localeCompare(b.categoria) || dn(a).localeCompare(dn(b)));
+  const act = v => `<button class="b s sm" data-act="cedit" data-v="${v.id}">Modifica</button> <button class="b s sm" data-act="carch" data-v="${v.id}">Archivia</button> <button class="b s sm r" data-act="cdel" data-v="${v.id}">Elimina</button>`;
+  const actA = v => `<button class="b s sm" data-act="cres" data-v="${v.id}">Ripristina</button> <button class="b s sm r" data-act="cdel" data-v="${v.id}">Elimina</button>`;
+  const row = (v, isA) => {
+    const val = !isA && fm && !v.piano ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}">` : `<span class="${v.tipo === 'passivo' ? 'neg' : ''}">${v.tipo === 'passivo' ? '−' : ''}${eur(v.valore)}</span>`;
+    return `<tr><td>${esc(dn(v))}${v.dove && v.dove !== dn(v) ? `<small class="lbl" style="display:block">su ${esc(v.dove)}</small>` : ''}${v.piano ? '<small class="lbl" style="display:block">si aggiorna da solo (piano rate)</small>' : ''}</td><td>${esc(v.categoria)}</td>${showAcc ? `<td>${esc(accName(v))}</td>` : ''}<td>${val}</td><td class="ca">${fm && !isA ? '' : isA ? actA(v) : act(v)}</td></tr>`;
+  };
+  const head = `<tr><th>Nome</th><th>Categoria</th>${showAcc ? '<th>Account</th>' : ''}<th>Valore</th><th></th></tr>`;
+  const att = flt(D.voci), arc = flt(D.arch || []);
+  const tbar = fm
+    ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
+    : `<div class="tbar"><input id="cq" placeholder="Cerca un conto…" value="${esc(S.cq || '')}" style="max-width:260px;margin:0"><span style="flex:1"></span><button class="b sm" data-act="cfm">Aggiorna fine mese</button></div>`;
+  const tab = att.length ? `<table>${head}${att.map(v => row(v, false)).join('')}</table>` : `<div class="lbl" style="padding:10px 0">Nessun conto trovato.</div>`;
+  const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table>${head}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
+  return `<div class="con">${panTop(aname, 'Conti')}<div class="card">${tbar}${tab}</div>${archSec}</div>`;
 }
 function pagePan() {
   const D = S.data, all = D.storico;
