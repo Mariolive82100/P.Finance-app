@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.81';
+const VER = '0.82';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -136,6 +136,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.82', '20 nov 2026', ['Versione computer: una sola pagina, la Panoramica, con i pulsanti Aggiungi voce e Scarica report PDF in alto', 'Menu ☰ ridotto a Impostazioni (account, esportazione, storico, info, termini) e Amministrazione']],
   ['0.81', '20 nov 2026', ['Albero su computer ancora più grande: caratteri ingranditi fino a riempire la larghezza, il riquadro si allunga di conseguenza']],
   ['0.80', '20 nov 2026', ['Albero su computer più grande: occupa tutta la larghezza disponibile, con caratteri più leggibili']],
   ['0.79', '20 nov 2026', ['Albero sempre completamente aperto, con tutti i rami visibili', 'Tolti i tasti Espandi tutto e Comprimi tutto: resta la scelta Aggregato / Per account']],

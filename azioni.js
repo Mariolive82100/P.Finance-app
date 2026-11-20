@@ -36,6 +36,14 @@ async function act(el) {
     if (a === 'logout') { S.tab = 'pat'; S.menu = false; S.pop = null; S.fAcc = 'all'; await signOut(auth); try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {} return location.reload(); }
     if (a === 'refresh') return location.reload();
     if (a === 'tab') { S.tab = v; return render(); }
+    if (a === 'gotab') { S.tab = v; S.menu = false; render(); window.scrollTo(0, 0); return; }
+    if (a === 'addvoce') { S.exp = S.exp || {}; S.edit = null; S.fd = null; S.exp.form = true; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    if (a === 'pdfgo') {
+      S.pdfBusy = true; render(); await new Promise(r => setTimeout(r, 40));
+      try { await caricaPdfLib(); S.pdf = await creaPdf(S.data, !!S.pdfHide); } finally { S.pdfBusy = false; }
+      const u = URL.createObjectURL(S.pdf.blob), l = document.createElement('a'); l.href = u; l.download = S.pdf.name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+      return render();
+    }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'exp') { S.exp = S.exp || {}; S.exp[v] = !S.exp[v]; return render(); }
@@ -295,7 +303,7 @@ async function titoliApplica() {
 }
 document.addEventListener('change', async e => {
   if (e.target.id !== 'titf' || !e.target.files[0] || !S.data || !isAdmin()) return;
-  try { S.timp = titoliProposta(await e.target.files[0].text()); S.timpErr = ''; } catch (x) { S.timp = null; S.timpErr = x.message || 'File non valido.'; }
+  try { S.timp = titoliProposta(await e.target.files[0].text()); S.timpErr = ''; S.menu = false; } catch (x) { S.timp = null; S.timpErr = x.message || 'File non valido.'; }
   render();
 });
 document.addEventListener('mousemove', e => { const t = e.target.closest ? e.target.closest('[data-tip]') : null; tipAt(e, PTYPE === 'touch' && t && t.closest('.pie') ? null : t); });
