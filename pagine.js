@@ -86,7 +86,7 @@ function pagePat() {
   const g = (id, d) => (S.fd && S.fd[id] !== undefined) ? S.fd[id] : d;
   const tipo = g('ft', ed ? ed.tipo : 'attivo');
   const mod = tipo === 'passivo' ? g('fm', ed ? (ed.piano ? 'piano' : 'manuale') : 'piano') : 'manuale';
-  const cat = g('fc', ed ? ed.categoria : CATS[tipo][0]);
+  const cat0 = g('fc', ed ? ed.categoria : CATS[tipo][0]), cat = CATS[tipo].includes(cat0) ? cat0 : CATS[tipo][0];
   const isInv = tipo === 'attivo' && cat === 'Investimenti';
   const accOpts = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
   const clk = id => ` data-act="pop" data-v="${id}"`;
