@@ -76,6 +76,8 @@ async function act(el) {
       if (x0 && x0.valore !== 0) { S.pop.mode = 'arch'; return render(); }
       a = 'poparchok';
     }
+    if (a === 'ccol') { S.ccol = S.ccol || {}; S.ccol[v] = !S.ccol[v]; return render(); }
+    if (a === 'ccolall') { S.ccol = {}; if (v === '1') { ['Liquidità', 'Investimenti', 'Beni', 'Immobili', 'Altro', 'Passivi'].forEach(k => S.ccol[k] = true); } return render(); }
     if (a === 'cfm') { S.cfm = true; return render(); }
     if (a === 'cfmno') { S.cfm = false; return render(); }
     if (a === 'carcs') { S.carc = !S.carc; return render(); }

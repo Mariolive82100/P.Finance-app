@@ -244,24 +244,34 @@ function pageCon() {
   const D = S.data;
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
-  const q = (S.cq || '').trim().toLowerCase(), fm = !!S.cfm, showAcc = !single && D.accounts.length > 0;
+  const q = (S.cq || '').trim().toLowerCase(), fm = !!S.cfm, showAcc = !single && D.accounts.length > 0, nc = showAcc ? 4 : 3, col = S.ccol || {};
   const flt = arr => arr.filter(v => (!single || accKey(v) === fa) && (!q || (dn(v) + ' ' + v.categoria + ' ' + (v.dove || '') + ' ' + accName(v)).toLowerCase().includes(q)))
-    .sort((a, b) => (a.tipo === b.tipo ? 0 : a.tipo === 'attivo' ? -1 : 1) || a.categoria.localeCompare(b.categoria) || dn(a).localeCompare(dn(b)));
+    .sort((a, b) => dn(a).localeCompare(dn(b)));
   const act = v => `<button class="b s sm" data-act="cedit" data-v="${v.id}">Modifica</button> <button class="b s sm" data-act="carch" data-v="${v.id}">Archivia</button> <button class="b s sm r" data-act="cdel" data-v="${v.id}">Elimina</button>`;
   const actA = v => `<button class="b s sm" data-act="cres" data-v="${v.id}">Ripristina</button> <button class="b s sm r" data-act="cdel" data-v="${v.id}">Elimina</button>`;
-  const row = (v, isA) => {
+  const row = (v, isA, sub) => {
     const val = !isA && fm && !v.piano ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}">` : `<span class="${v.tipo === 'passivo' ? 'neg' : ''}">${v.tipo === 'passivo' ? '−' : ''}${eur(v.valore)}</span>`;
-    return `<tr><td>${esc(dn(v))}${v.dove && v.dove !== dn(v) ? `<small class="lbl" style="display:block">su ${esc(v.dove)}</small>` : ''}${v.piano ? '<small class="lbl" style="display:block">si aggiorna da solo (piano rate)</small>' : ''}</td><td>${esc(v.categoria)}</td>${showAcc ? `<td>${esc(accName(v))}</td>` : ''}<td>${val}</td><td class="ca">${fm && !isA ? '' : isA ? actA(v) : act(v)}</td></tr>`;
+    const nota = v.piano ? 'si aggiorna da solo (piano rate)' : v.tipo === 'passivo' ? esc(v.categoria) : (!sub && v.dove && v.dove !== dn(v) ? 'su ' + esc(v.dove) : '');
+    return `<tr class="cr${sub ? ' csub2' : ''}"><td class="cn">${esc(dn(v))}${nota ? `<small class="lbl" style="display:block">${nota}</small>` : ''}</td>${showAcc ? `<td class="cc">${esc(accName(v))}</td>` : ''}<td class="cv">${val}</td><td class="ca">${fm && !isA ? '' : isA ? actA(v) : act(v)}</td></tr>`;
   };
-  const head = `<tr><th>Nome</th><th>Categoria</th>${showAcc ? '<th>Account</th>' : ''}<th>Valore</th><th></th></tr>`;
+  const tot = arr => eur(arr.reduce((s, v) => s + v.valore, 0));
+  const hd = (key, title, arr, lvl) => `<tr class="chd l${lvl}" data-act="ccol" data-v="${esc(key)}"><td colspan="${nc}"><span class="chev ${col[key] ? '' : 'open'}">▸︎</span> ${esc(title)} <span class="lbl">${arr.length} · ${tot(arr)}</span></td></tr>`;
+  const grp = (key, title, arr, isA, lvl, sub) => !arr.length ? '' : hd(key, title, arr, lvl) + (col[key] ? '' : arr.map(v => row(v, isA, sub)).join(''));
   const att = flt(D.voci), arc = flt(D.arch || []);
+  const AT = att.filter(v => v.tipo === 'attivo'), cOrd = ['Liquidità', 'Investimenti', 'Beni', ...CATS.attivo.filter(c => !['Liquidità', 'Investimenti', 'Beni'].includes(c))];
+  const invSec = arr => {
+    if (!arr.length) return '';
+    const key = 'Investimenti', ds = [...new Set(arr.map(v => v.dove || 'Senza conto'))].sort((a, b) => a.localeCompare(b));
+    return hd(key, 'Investimenti', arr, 0) + (col[key] ? '' : ds.map(d => grp(key + '|' + d, d, arr.filter(v => (v.dove || 'Senza conto') === d), false, 1, true)).join(''));
+  };
+  const body = cOrd.map(c => c === 'Investimenti' ? invSec(AT.filter(v => v.categoria === c)) : grp(c, c, AT.filter(v => v.categoria === c), false, 0)).join('') + grp('Passivi', 'Passivi', att.filter(v => v.tipo === 'passivo'), false, 0);
+  const head = `<tr><th class="cn">Nome</th>${showAcc ? '<th class="cc">Account</th>' : ''}<th class="cv">Valore</th><th></th></tr>`;
+  const cg = `<colgroup><col style="width:34%">${showAcc ? '<col style="width:20%">' : ''}<col style="width:16%"><col></colgroup>`;
   const tbar = fm
     ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
-    : `<div class="tbar"><input id="cq" placeholder="Cerca un conto…" value="${esc(S.cq || '')}" style="max-width:260px;margin:0"><span style="flex:1"></span><button class="b sm" data-act="cfm">Aggiorna fine mese</button></div>`;
-  const sec = (t, arr) => arr.length ? `<div class="csec"><h3>${esc(t)} <span class="lbl">${arr.length} · ${eur(arr.reduce((s, v) => s + v.valore, 0))}</span></h3><table>${head}${arr.map(v => row(v, false)).join('')}</table></div>` : '';
-  const AT = att.filter(v => v.tipo === 'attivo'), cOrd = ['Liquidità', 'Investimenti', 'Beni', ...CATS.attivo.filter(c => !['Liquidità', 'Investimenti', 'Beni'].includes(c))];
-  const tab = att.length ? cOrd.map(c => sec(c, AT.filter(v => v.categoria === c))).join('') + sec('Passivi', att.filter(v => v.tipo === 'passivo')) : `<div class="lbl" style="padding:10px 0">Nessun conto trovato.</div>`;
-  const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table>${head}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
+    : `<div class="tbar"><input id="cq" placeholder="Cerca un conto…" value="${esc(S.cq || '')}" style="max-width:260px;margin:0"><span style="flex:1"></span><button class="b s sm" data-act="ccolall" data-v="${Object.values(col).some(x => x) ? 0 : 1}">${Object.values(col).some(x => x) ? 'Espandi tutto' : 'Comprimi tutto'}</button><button class="b sm" data-act="cfm">Aggiorna fine mese</button></div>`;
+  const tab = att.length ? `<table class="ct">${cg}${head}${body}</table>` : `<div class="lbl" style="padding:10px 0">Nessun conto trovato.</div>`;
+  const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table class="ct">${cg}${head}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
   return `<div class="con">${panTop(aname, 'Conti')}<div class="card">${tbar}${tab}</div>${archSec}</div>`;
 }
 function pagePan() {

@@ -218,3 +218,5 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 
 .con td.ca{white-space:nowrap}.con .tbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}.cvi{width:130px;text-align:right;margin:0;padding:6px 8px}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#12312d;color:#fff;padding:10px 14px;border-radius:12px;display:flex;gap:14px;align-items:center;z-index:60;font-size:14px;box-shadow:0 6px 24px #0004}
 .csec{margin-top:14px}.csec h3{margin:0 0 4px;font-size:14px;display:flex;gap:10px;align-items:baseline}
+table.ct{table-layout:fixed}.ct th,.ct td{text-align:left;overflow:hidden;text-overflow:ellipsis}.ct th.cv,.ct td.cv{text-align:right}.ct td.ca,.ct th:last-child{text-align:right}.ct .cvi{width:100%;max-width:140px}
+.ct tr.chd{cursor:pointer;background:#f3f8f7}.ct tr.chd td{font-weight:600;padding:9px 6px;border-bottom:1px solid #dbe8e6}.ct tr.chd.l1 td{padding-left:26px;font-weight:500;background:#f9fcfb}.ct tr.chd .lbl{font-weight:400;margin-left:8px}.ct tr.csub2 td.cn{padding-left:46px}.ct .chev{display:inline-block;transition:transform .15s}.ct .chev.open{transform:rotate(90deg)}
