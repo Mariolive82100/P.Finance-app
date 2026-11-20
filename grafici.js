@@ -148,8 +148,8 @@ function cmpData(all, mode) {
   const cu = ks => { const base = map[addMk(ks[0], -1)]; return ks.map(k => base != null && map[k] != null ? map[k] - base : null); };
   return { kA, kB, dA: kA.map(dl), dB: kB.map(dl), cA: cu(kA), cB: cu(kB) };
 }
-function cmpBars(d) {
-  const n = d.kA.length, W = CW(), H = Math.round(CHt(W) * 0.85), L = 50, R = 12, T = 12, B = 28, half = (H - T - B) / 2, mid = T + half;
+function cmpBars(d, w, h) {
+  const n = d.kA.length, W = w || CW(), H = h || Math.round(CHt(W) * 0.85), L = 50, R = 12, T = 12, B = 28, half = (H - T - B) / 2, mid = T + half;
   const mx = Math.max(1, ...d.dA.concat(d.dB).filter(v => v != null).map(Math.abs)), slot = (W - L - R) / n, bw = Math.min(18, slot * 0.38), step = Math.ceil(n / 8);
   let o = [mx, 0, -mx].map(t => `<line x1="${L}" x2="${W - R}" y1="${(mid - t / mx * half).toFixed(1)}" y2="${(mid - t / mx * half).toFixed(1)}" stroke="${t === 0 ? '#9db3af' : '#e2eceb'}"/><text x="${L - 6}" y="${(mid - t / mx * half + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`).join('');
   const bar = (v, cx, col, tip) => { if (v == null) return ''; const h = Math.abs(v) / mx * half; return `<rect x="${cx.toFixed(1)}" y="${(v >= 0 ? mid - h : mid).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h, 1.5).toFixed(1)}" rx="2.5" fill="${col}" data-tip="${esc(tip)}"/>`; };
@@ -162,13 +162,13 @@ function cmpBars(d) {
 }
 const CMP_OPT = [['y', 'Anno in corso vs anno precedente'], ['12', 'Ultimi 12 mesi vs 12 precedenti'], ['6', 'Ultimi 6 mesi vs 6 precedenti'], ['3', 'Ultimi 3 mesi vs 3 precedenti']];
 const cmpSel = () => { const mode = S.cmp || 'y'; return `<select data-act="cmpm">${CMP_OPT.map(([v, l]) => `<option value="${v}" ${mode === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`; };
-function cmpParts(all, noSel) {
+function cmpParts(all, noSel, w, h1, h2) {
   const mode = S.cmp || 'y', sel = noSel ? '' : cmpSel(), d = cmpData(all, mode);
   if (!d.dB.some(v => v != null) && !d.cB.some(v => v != null)) return { a: `<div class="card"><h2>Confronto tra periodi</h2>${sel}<p class="note">Per questo confronto servono più mesi di storico (anche quelli del periodo precedente).</p></div>`, b: '' };
   const lg = [{ k: 'a', c: '#1d4ed8', l: 'Periodo attuale' }, { k: 'b', c: '#9aa9c7', l: 'Periodo precedente', dash: true }];
   const pts = d.kA.map((k, i) => ({ lab: shortM(k), long: shortM(k) + ' / ' + shortM(d.kB[i]), a: d.cA[i], b: d.cB[i] }));
   return { a: `<div class="card"><h2>Confronto tra periodi</h2>${sel}<div class="legend"><span><i style="background:#1d4ed8"></i>Periodo attuale</span><span><i style="background:#9aa9c7"></i>Periodo precedente</span></div>
-    <h3 style="font-size:14px;margin:8px 0 2px">Variazione mensile del patrimonio netto</h3>${cmpBars(d)}</div>`, b: lcCard('cmp', 'Crescita accumulata: periodo attuale e precedente', pts, lg) };
+    <h3 style="font-size:14px;margin:8px 0 2px">Variazione mensile del patrimonio netto</h3>${cmpBars(d, w, h1)}</div>`, b: lcCard('cmp', 'Crescita accumulata: periodo attuale e precedente', pts, lg, w, h2) };
 }
 function cmpCards(all) { const c = cmpParts(all); return c.a + c.b; }
 
@@ -228,6 +228,33 @@ function aggSeries(all, A) {
     });
   }
   return { pts, dBar };
+}
+/* ---------- Computer: riquadro andamento a quattro sottoquadranti (mini grafici, tocco = si ingrandisce) ---------- */
+const HUB = { main: 'Andamento', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita' };
+const mnSvg = o => `<svg viewBox="0 0 320 110" preserveAspectRatio="none" style="width:100%;height:100%">${o}</svg>`;
+function mnLines(sers) {
+  const all = sers.flatMap(x => x.v).filter(v => v != null); if (!all.length) return '';
+  let mn = Math.min(...all), mx = Math.max(...all); if (mx === mn) { mx += 1; mn -= 1; }
+  const n = Math.max(...sers.map(x => x.v.length)), X = i => 4 + i / Math.max(1, n - 1) * 312, Y = v => 104 - (v - mn) / (mx - mn) * 98;
+  return sers.map(x => { let d = '', pen = false; x.v.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`; pen = true; }); return `<path d="${d}" fill="none" stroke="${x.c}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`; }).join('');
+}
+function mnBars(sers) {
+  const all = sers.flatMap(x => x.v).filter(v => v != null); if (!all.length) return '';
+  const mn = Math.min(0, ...all), mx = Math.max(0, ...all) || 1, rg = (mx - mn) || 1, Y = v => 104 - (v - mn) / rg * 98, y0 = Y(0), n = Math.max(...sers.map(x => x.v.length)), slot = 312 / n, bw = Math.max(1.5, slot * 0.8 / sers.length);
+  let o = `<line x1="4" x2="316" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#9db3af" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  sers.forEach((x, k) => x.v.forEach((v, i) => { if (v == null) return; const yv = Y(v), c = x.c || (v >= 0 ? '#15803d' : '#b91c1c'); o += `<rect x="${(4 + slot * i + slot * 0.1 + bw * k).toFixed(1)}" y="${Math.min(y0, yv).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(yv - y0)).toFixed(1)}" fill="${c}"/>`; }));
+  return o;
+}
+function hubGrid(all) {
+  const ok = all.length >= 2, A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
+  const ag = ok ? aggSeries(all, A) : null, d = ok ? cmpData(all, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
+  const last = ok ? all[all.length - 1] : null, dl = ok ? last.netto - all[all.length - 2].netto : 0;
+  const cell = (k, svg, val) => `<div class="qc" data-act="hopen" data-v="${k}"><div class="qh"><b>${HUB[k]}</b>${val || ''}</div><div class="qs">${svg ? mnSvg(svg) : `<p class="note" style="margin:8px 0 0">${ok ? 'Servono più mesi di storico.' : 'Servono almeno 2 mesi di dati.'}</p>`}</div></div>`;
+  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><h2>Andamento del patrimonio</h2><div class="qg">
+    ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.attivi), c: '#0f766e' }, { v: ag.pts.map(x => x.passivi), c: '#b91c1c' }, { v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
+    ${cell('bar', ok && mnBars([{ v: ag.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
+    ${cell('cmp1', cmpOk && mnBars([{ v: d.dB, c: '#9aa9c7' }, { v: d.dA, c: '#1d4ed8' }]))}
+    ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';

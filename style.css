@@ -195,3 +195,11 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 }
 @media(min-width:1000px){.chsel .chcmp select{max-width:180px;font-size:12px;padding:5px 8px;text-overflow:ellipsis}}
 @media(min-width:1000px){.pan .kpis .dsub{font-size:15px;font-weight:600;color:#3f5a57}.pan .kpis .dsub .pos{color:#15803d}.pan .kpis .dsub .neg{color:#b91c1c}}
+@media(min-width:1000px){.qh{display:flex;justify-content:space-between;align-items:baseline;gap:6px;flex:none}.qv{font-size:12px;font-weight:700}}
+@media(min-width:1000px){.hubc .note{display:none}}
+@keyframes zIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:none}}
+@keyframes cIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:none}}
+.anim-in{animation:zIn .3s cubic-bezier(.2,.8,.2,1)}
+.anim-out .qc{animation:cIn .34s cubic-bezier(.2,.8,.2,1) both}
+.anim-out .qc:nth-child(2){animation-delay:.05s}.anim-out .qc:nth-child(3){animation-delay:.1s}.anim-out .qc:nth-child(4){animation-delay:.15s}
+@media(prefers-reduced-motion:reduce){.anim-in,.anim-out .qc{animation:none}}

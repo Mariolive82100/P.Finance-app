@@ -79,9 +79,10 @@ async function act(el) {
     }
     if (a === 'tview') { S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
-    if (a === 'chv') { S.chv = v; S.qd = null; return render(); }
-    if (a === 'qopen') { S.qd = v; return render(); }
-    if (a === 'qclose') { S.qd = null; return render(); }
+    if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
+    if (a === 'hclose') { S.hq = null; S.hanim = 'out'; return render(); }
+    if (a === 'qopen') { S.qd = v; S.panim = 'in'; return render(); }
+    if (a === 'qclose') { S.qd = null; S.panim = 'out'; return render(); }
     if (a === 'qdes') { if (S.qsel && S.qsel[v] != null) { S.qsel[v] = null; render(); } return; }
     if (a === 'texp' || a === 'tcol') {
       const all = new Set(['r']);
@@ -365,3 +366,6 @@ onAuthStateChanged(auth, async user => {
   } catch (e) { S.msg = errText(e); }
   S.loading = false; render();
 });
+
+/* Esc = indietro dai grafici ingranditi (computer) */
+document.addEventListener('keydown', e => { if (e.key !== 'Escape' || !S.data || S.tab !== 'pan' || innerWidth < 1000) return; if (S.hq) { S.hq = null; S.hanim = 'out'; render(); } else if (S.qd) { S.qd = null; S.panim = 'out'; render(); } });

@@ -209,14 +209,14 @@ function miniPie(key, Dz) {
   return `<div class="qc" data-act="qopen" data-v="${key}"><b>${QT[key]}</b><div class="qs"><svg class="qp" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${r.svg}</svg></div></div>`;
 }
 function bigPie(key, Dz, back = true) {
-  const r = qSvg(key, Dz, true), head = `<div class="chh"><h2>${QT[key]}</h2>${back ? '<button class="b s sm" data-act="qclose">▦ Tutti i grafici</button>' : ''}</div>`;
+  const r = qSvg(key, Dz, true), head = `<div class="chh"><h2>${QT[key]}</h2>${back ? '<button class="b s sm" data-act="qclose">← Indietro</button>' : ''}</div>`;
   if (!r.pb.groups.length) return `<div class="card pcard qcard" id="pie">${head}<p>Nessuna voce da mostrare.</p></div>`;
   const leg = r.pb.groups.map((g, i) => `<div class="pl ${i === r.sel ? 'on' : ''}" data-act="qs" data-v="${key}:${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
-  return `<div class="card pcard qcard" id="pie" data-act="qdes" data-v="${key}">${head}<div class="pbody"><div class="psvg"><svg class="pie" viewBox="0 0 400 400"><g>${r.svg}</g></svg></div><div class="pleg">${leg}</div></div></div>`;
+  return `<div class="card pcard qcard${S.panim === 'in' ? ' anim-in' : ''}" id="pie" data-act="qdes" data-v="${key}">${head}<div class="pbody"><div class="psvg"><svg class="pie" viewBox="0 0 400 400"><g>${r.svg}</g></svg></div><div class="pleg">${leg}</div></div></div>`;
 }
 function quadCard(Dz, single) {
   const keys = single ? ['l', 'a', 'i', 'p'] : ['c', 'a', 'i', 'p'];
   if (S.qd && !keys.includes(S.qd)) S.qd = null;
   if (S.qd) return bigPie(S.qd, Dz, true);
-  return `<div class="card pcard qcard" id="pie"><h2>Grafici a torta</h2><div class="qg">${keys.map(k => miniPie(k, Dz)).join('')}</div></div>`;
+  return `<div class="card pcard qcard${S.panim === 'out' ? ' anim-out' : ''}" id="pie"><h2>Grafici a torta</h2><div class="qg">${keys.map(k => miniPie(k, Dz)).join('')}</div></div>`;
 }

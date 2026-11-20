@@ -211,18 +211,17 @@ function disParts(Dz0, single) {
 }
 /* Panoramica: solo su schermi larghi (computer) */
 /* Riquadro grafici della Panoramica: un selettore sceglie quale grafico vedere */
-const HUB = { main: 'Andamento', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita' };
 function hubBody(key, all, r1) {
-  const hist = all.length >= 2, W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40)), H = Math.max(130, r1 - 150 - 42);
+  const hist = all.length >= 2, W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40)), H = Math.max(80, r1 - 144);
   const no = t => `<div class="card"><h2>${t}</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>`;
-  if (key === 'main') return panMain(all, r1 - 42);
+  if (key === 'main') return panMain(all, r1 + 46);
   if (key === 'bar') {
     if (!hist) return no('Variazione mensile del patrimonio netto');
     const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
     return lcCard('bar', A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', aggSeries(all, A).dBar, [{ k: 'v', c: '#15803d', l: A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile', bar: 1 }], W, H);
   }
   if (!hist) return no('Confronto tra periodi');
-  const c = cmpParts(all, true); return key === 'cmp1' ? c.a : c.b || c.a;
+  const c = cmpParts(all, true, W, Math.max(80, r1 - 162), Math.max(80, r1 - 172)); return key === 'cmp1' ? c.a : c.b || c.a;
 }
 function pagePan() {
   const D = S.data, all = D.storico;
@@ -236,13 +235,14 @@ function pagePan() {
   const dsub = dN !== null ? `<span class="dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</span>` : '&nbsp;';
   const ind = t.attivi > 0 ? t.passivi / t.attivi : null;
   const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(single ? 300 : 290, Math.round(avail * 0.5));
-  const keys = ['main', 'bar', 'cmp1', 'cmp2'], hv = keys.includes(S.chv) ? S.chv : 'main';
-  const pr = disParts(Dz, single), body = single ? '' : hubBody(hv, all, r1);
+  const keys = ['main', 'bar', 'cmp1', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
+  const pr = disParts(Dz, single);
   S.anim = false; S.tanim = false;
-  const selc = `<div class="chsel">${keys.map(k => `<button class="b ${k === hv ? '' : 's'} sm" data-act="chv" data-v="${k}">${HUB[k]}</button>`).join('')}${hv.startsWith('cmp') ? `<span class="chcmp">${cmpSel()}</span>` : ''}</div>`;
+  const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}"><div class="chsel"><button class="b s sm" data-act="hclose">← Indietro</button>${hv.startsWith('cmp') ? `<span class="chcmp">${cmpSel()}</span>` : ''}</div>${hubBody(hv, all, r1)}</div>` : hubGrid(all);
+  S.hanim = false; S.panim = false;
   const row2 = single ? `<div class="g12 r2"><div class="s12">${pr.tree}</div></div>` : `<div class="g12 r2"><div class="s9">${pr.tree}</div><div class="s3">${all.length ? indicatori(D, all) : ''}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye)}${kp('Attivi', eur(t.attivi), '&nbsp;', 'pos')}${kp('Passivi', eur(t.passivi), '&nbsp;', t.passivi ? 'neg' : '')}${kp('Indebitamento', ind === null ? '–' : (ind * 100).toFixed(1).replace('.', ',') + '%', 'passivi su attivi', '')}</div>
-    ${single ? `<div class="g12 r1"><div class="s12">${pr.pie}</div></div>` : `<div class="g12 r1"><div class="s7"><div class="hubc">${selc}${body}</div></div><div class="s5">${pr.pie}</div></div>`}${row2}</div>`;
+    ${single ? `<div class="g12 r1"><div class="s12">${pr.pie}</div></div>` : `<div class="g12 r1"><div class="s7">${left}</div><div class="s5">${pr.pie}</div></div>`}${row2}</div>`;
 }
 const panTop = name => `<div class="ptop"><h2>Panoramica · ${esc(name)}</h2><div class="pbtn"><button class="b sm" data-act="nv">Nuova voce</button></div></div>`;
 

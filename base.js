@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.88';
+const VER = '0.90';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -138,6 +138,8 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['0.90', '20 nov 2026', ['Computer: transizioni quando si apre e si chiude un sottoquadrante (grafici e torte)', 'Il tasto per tornare alla vista con i quattro sottoquadranti ora si chiama Indietro (vale anche il tasto Esc)', 'Grafici ingranditi più alti, per riempire meglio il riquadro']],
+  ['0.89', '20 nov 2026', ['Computer: il riquadro a sinistra è fatto come quello delle torte: quattro sottoquadranti (Andamento, Variazione mensile, Confronto variazioni, Confronto crescita) con un mini grafico ciascuno; tocca un sottoquadrante per ingrandirlo, il tasto Tutti i grafici torna indietro']],
   ['0.88', '20 nov 2026', ['Computer: la variazione rispetto al mese precedente è scritta con un carattere più grande']],
   ['0.87', '20 nov 2026', ['Computer: le torte tornano sempre visibili nel riquadro a destra; il riquadro a sinistra ha un selettore con Andamento, Variazione mensile, Confronto variazioni e Confronto crescita']],
   ['0.86', '20 nov 2026', ['Computer: tutti i grafici sono nel riquadro in alto della Panoramica, a tutta larghezza, con un selettore per scegliere quale vedere (andamento, variazione mensile, confronti, torte)', 'La scheda delle quattro torte non c\'è più come riquadro a parte: è la voce Tutte le torte del selettore', 'Nuova voce: aggiunto il tasto Annulla, che riporta alla Panoramica', 'Computer: tolto il tasto Genera report; il tasto per nascondere gli importi è un occhio accanto al patrimonio netto', 'Computer: la variazione rispetto al mese precedente è verde se positiva e rossa se negativa', 'Computer: la pagina Report mostra solo il riquadro del report PDF']],
