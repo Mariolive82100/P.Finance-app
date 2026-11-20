@@ -214,7 +214,7 @@ function disParts(Dz0, single) {
 function hubBody(key, all, r1) {
   const hist = all.length >= 2, W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40)), H = Math.max(80, r1 - 144);
   const no = t => `<div class="card"><h2>${t}</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>`;
-  if (key === 'main') return panMain(all, r1 + 46);
+  if (key === 'main') return panMain(all, r1 + 24);
   if (key === 'bar') {
     if (!hist) return no('Variazione mensile del patrimonio netto');
     const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';

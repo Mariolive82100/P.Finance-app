@@ -15,7 +15,7 @@ function lcSvg(id) {
   let mn = Infinity, mx = -Infinity;
   for (let i = lo; i <= hi; i++) SV.forEach(s => { const v = pts[i][s.k]; if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; } });
   if (!isFinite(mn)) { mn = 0; mx = 1; }
-  if (!zoomed || isBar) { mn = Math.min(0, mn); mx = Math.max(0, mx); } else { const p = (mx - mn) * 0.08 || 1; mn -= p; mx += p; }
+  if (SV.some(q => q.fit) || (zoomed && !isBar)) { const p = (mx - mn) * 0.08 || 1; mn -= p; mx += p; } else { mn = Math.min(0, mn); mx = Math.max(0, mx); }
   if (mx === mn) mx = mn + 1;
   const x = i => L + (i - a + pad) / (b - a + 2 * pad) * (W - L - R), y = v => T + (mx - v) / (mx - mn) * (H - T - B);
   c.geom = { a, b, L, R, T, B, x, n, pad };
@@ -56,7 +56,7 @@ function lcSvg(id) {
   return `<svg class="lc" viewBox="0 0 ${W} ${H}">${o}<g class="xh"></g></svg>`;
 }
 function lcBlock(id) { return `<div class="lcw" data-ch="${id}" data-k="${CH[id].key}">${lcSvg(id)}</div>`; }
-const lcLegend = ser => `<div class="legend">${ser.filter(x => !x.bar && !x.ghost).map(x => x.tog ? `<span class="lt${x.off ? ' off' : ''}" data-act="ser" data-v="${x.k}"><i style="background:${x.c}"></i>${x.l}</span>` : `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : ''}</div>`;
+const lcLegend = ser => ser.every(x => x.nolg) ? '' : `<div class="legend">${ser.filter(x => !x.bar && !x.ghost).map(x => x.tog ? `<span class="lt${x.off ? ' off' : ''}" data-act="ser" data-v="${x.k}"><i style="background:${x.c}"></i>${x.l}</span>` : `<span><i style="background:${x.c}"></i>${x.l}</span>`).join('')}${ser.some(x => x.bar) ? '<span><i style="background:#15803d"></i>Aumento</span><span><i style="background:#b91c1c"></i>Calo</span>' : ''}</div>`;
 const AGGK = ['main', 'net', 'bar'];
 const lcAgg = key => {
   if (!AGGK.includes(key)) return '';
@@ -230,7 +230,7 @@ function aggSeries(all, A) {
   return { pts, dBar };
 }
 /* ---------- Computer: riquadro andamento a quattro sottoquadranti (mini grafici, tocco = si ingrandisce) ---------- */
-const HUB = { main: 'Andamento', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita' };
+const HUB = { main: 'Patrimonio netto', bar: 'Variazione mensile', cmp1: 'Confronto variazioni', cmp2: 'Confronto crescita' };
 const mnSvg = o => `<svg viewBox="0 0 320 110" preserveAspectRatio="none" style="width:100%;height:100%">${o}</svg>`;
 function mnLines(sers) {
   const all = sers.flatMap(x => x.v).filter(v => v != null); if (!all.length) return '';
@@ -251,15 +251,15 @@ function hubGrid(all) {
   const last = ok ? all[all.length - 1] : null, dl = ok ? last.netto - all[all.length - 2].netto : 0;
   const cell = (k, svg, val) => `<div class="qc" data-act="hopen" data-v="${k}"><div class="qh"><b>${HUB[k]}</b>${val || ''}</div><div class="qs">${svg ? mnSvg(svg) : `<p class="note" style="margin:8px 0 0">${ok ? 'Servono più mesi di storico.' : 'Servono almeno 2 mesi di dati.'}</p>`}</div></div>`;
   return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><h2>Andamento del patrimonio</h2><div class="qg">
-    ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.attivi), c: '#0f766e' }, { v: ag.pts.map(x => x.passivi), c: '#b91c1c' }, { v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
+    ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
     ${cell('bar', ok && mnBars([{ v: ag.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
     ${cell('cmp1', cmpOk && mnBars([{ v: d.dB, c: '#9aa9c7' }, { v: d.dA, c: '#1d4ed8' }]))}
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
-  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, innerWidth - 200 - 56 - 40);
-  return lcCard('main', 'Andamento del patrimonio', aggSeries(all, A).pts, serMain(), W, Math.max(130, r1 - 150));
+  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 14) * 7 / 12 - 40));
+  return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1 }], W, Math.max(130, r1 - 150));
 }
 function pageAnd() {
   const all = S.data.storico, rg = String(S.range || '12');
