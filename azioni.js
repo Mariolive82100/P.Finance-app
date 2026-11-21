@@ -12,7 +12,11 @@ function exportCsv() {
 }
 
 const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
-function grabForm() { const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; }); return o; }
+function grabForm() {
+  const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; });
+  if ($('prodbox')) o.prod = [...document.querySelectorAll('.prow')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value }));
+  return o;
+}
 
 /* Avviso con Annulla (10 secondi): l'eliminazione vera parte solo allo scadere */
 async function commitDel() {
@@ -241,12 +245,15 @@ async function act(el) {
     if (a === 'edit') { S.edit = v; return render(); }
     if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } return render(); }
     if (a === 'export') return exportCsv();
+    if (a === 'prezzi') return aggiornaPrezzi(true);
+    if (a === 'padd' || a === 'prm') { S.fd = grabForm(); const L = S.fd.prod || []; if (a === 'padd') L.push({ isin: '', nome: '', quote: '', manuale: '' }); else L.splice(+v, 1); S.fd.prod = L; return render(); }
     if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
     if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;
     if (a === 'save') {
       S.fd = grabForm();
       const tipo = $('ft').value, categoria = $('fc').value; let nome = $('fn') ? $('fn').value.trim() : '', fm = $('fm'), fa2 = $('fa');
       const base = { tipo, categoria, nome, account: fa2 && fa2.value !== 'main' ? fa2.value : '' };
+      const ed0 = S.edit ? D.voci.find(x => x.id === S.edit) : null;
       let dati;
       if (tipo === 'passivo' && fm && fm.value === 'piano') {
         const cap = pnum($('fk').value), ini = $('fi').value, fin = $('ff').value;
@@ -254,8 +261,20 @@ async function act(el) {
         if (!ini || !fin || fin <= ini) { S.msg = 'Inserisci le date: la fine deve essere dopo l\'inizio.'; return render(); }
         dati = applyPiano({ ...base, piano: true, capitale: r2(cap), inizio: ini, fine: fin, valore: 0 });
       } else {
-        const valore = pnum($('fv').value);
         const isI = tipo === 'attivo' && categoria === 'Investimenti';
+        let prod = null;
+        if (isI && $('prodbox')) {
+          prod = [];
+          for (const r of document.querySelectorAll('.prow')) {
+            const isin = r.querySelector('.pi').value.trim().toUpperCase(), q = pnum(r.querySelector('.pq').value), nm = r.querySelector('.pn').value.trim(), mv = r.querySelector('.pm').value.trim();
+            if (!isin && !nm && !r.querySelector('.pq').value.trim()) continue;
+            if (!/^[A-Z0-9]{12}$/.test(isin) || !(q > 0)) { S.msg = 'Prodotti: ogni riga ha bisogno di un ISIN (12 caratteri) e di quote maggiori di zero.'; return render(); }
+            const m = mv ? pnum(mv) : 0; if (!isFinite(m) || m < 0) { S.msg = 'Prodotti: il valore manuale deve essere zero o più.'; return render(); }
+            prod.push({ isin, nome: nm, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m) });
+          }
+        } else if (isI && ed0 && hasProd(ed0)) prod = ed0.prodotti;
+        const conProd = !!(prod && prod.length);
+        const valore = conProd ? 0 : pnum($('fv') ? $('fv').value : '');
         if (isI) { nome = ($('fw') ? ($('fw').value === '__new' ? ($('fwn') ? $('fwn').value.trim() : '') : $('fw').value) : ''); base.nome = nome; if (!nome) { S.msg = 'Scegli il conto di riferimento o scrivi il nome del nuovo conto.'; return render(); } if (!$('fac') || !$('fac').value) { S.msg = 'Scegli l\'asset class.'; return render(); } }
         if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
         dati = { ...base, valore: r2(valore) };
@@ -267,6 +286,7 @@ async function act(el) {
             const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
           }
           if (isFinite(ob) && ob > 0) dati.obiettivo = r2(ob);
+          if (conProd) { dati.prodotti = prod; dati.valore = S.prezzi || !ed0 ? valoreProd(dati) : ed0.valore; }
         }
       }
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
@@ -317,9 +337,9 @@ function csvRighe(t) {
 function titoliProposta(txt) {
   const D = S.data, R = csvRighe(txt); if (R.length < 2) throw new Error('File vuoto.');
   const H = R[0].map(x => x.trim().toLowerCase()), ix = n => H.indexOf(n);
-  const iC = ix('classe'), iN = ix('nome'), iV = ix('valore'), iQ = H.findIndex(h => h === 'quantità' || h === 'quantita');
+  const iC = ix('classe'), iI = ix('isin'), iN = ix('nome'), iV = ix('valore'), iQ = H.findIndex(h => h === 'quantità' || h === 'quantita');
   const iCo = H.map((h, i) => /^quantit[àa] .+/.test(h) ? i : -1).filter(i => i >= 0);
-  if (iC < 0 || iV < 0 || iQ < 0 || !iCo.length) throw new Error('Non trovo le colonne Classe, Valore, Quantità e le quantità per conto. Hai scaricato la scheda "Elenco titoli"?');
+  if (iC < 0 || iI < 0 || iV < 0 || iQ < 0 || !iCo.length) throw new Error('Non trovo le colonne Classe, Isin, Valore, Quantità e le quantità per conto. Hai scaricato la scheda "Elenco titoli"?');
   const mapC = c => { c = c.trim().toLowerCase(); return /^azion/.test(c) ? 'Azioni' : /^obblig/.test(c) ? 'Obbligazioni' : /^cript/.test(c) ? 'Criptovalute' : /^(commod|oro)/.test(c) ? 'Oro e materie prime' : 'Altro'; };
   const g = new Map(), conti = new Map(); let letti = 0;
   R.slice(1).forEach(r => {
@@ -328,8 +348,9 @@ function titoliProposta(txt) {
       const qt = pnum(r[i]); if (!(qt > 0)) return;
       const broker = H[i].replace(/^quantit[àa] /, '').trim().split(/\s+/)[0]; const dove = broker.charAt(0).toUpperCase() + broker.slice(1);
       const k = dove.toLowerCase() + '|' + mapC(r[iC]);
-      if (!g.has(k)) g.set(k, { dove, assetClass: mapC(r[iC]), valore: 0 });
-      g.get(k).valore += val * qt / tot;
+      if (!g.has(k)) g.set(k, { dove, assetClass: mapC(r[iC]), valore: 0, prodotti: [] });
+      const G = g.get(k), isin = String(r[iI] || '').trim().toUpperCase(), man = val * qt / tot; G.valore += man;
+      if (/^[A-Z0-9]{12}$/.test(isin)) { const p = G.prodotti.find(z => z.isin === isin); if (p) { p.quote += qt; p.manuale = r2(p.manuale + man); } else G.prodotti.push({ isin, nome: String(r[iN] || '').trim(), quote: qt, manuale: r2(man) }); }
     });
   });
   const acc = S.fAcc && S.fAcc !== 'all' && S.fAcc !== 'main' ? S.fAcc : '';
@@ -346,18 +367,18 @@ async function titoliApplica() {
   for (const x of P.righe) {
     if (x.exId) {
       const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
-      const { id, ...rest } = v; const dati = { ...rest, valore: x.valore };
+      const { id, ...rest } = v; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti };
       await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); Object.assign(v, dati);
     } else {
       if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
         const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: x.dove, account: P.acc, valore: 0 };
         const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
       }
-      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, assetClass: x.assetClass, account: P.acc, valore: x.valore };
+      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, assetClass: x.assetClass, account: P.acc, valore: x.valore, prodotti: x.prodotti };
       const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
     }
   }
-  S.timp = null; await syncStorico(); S.msg = 'Titoli importati e aggiornati.'; render();
+  D.voci.forEach(applyPiano); S.timp = null; await syncStorico(); S.msg = 'Titoli importati e aggiornati.'; render();
 }
 document.addEventListener('change', async e => {
   if (e.target.id !== 'titf' || !e.target.files[0] || !S.data || !isAdmin()) return;
@@ -420,6 +441,7 @@ onAuthStateChanged(auth, async user => {
     if (S.profile.approved) {
       await loadData(user.uid, S.profile.nome, false);
       if (isAdmin()) await loadUsers();
+      aggiornaPrezzi(false);
     }
   } catch (e) { S.msg = errText(e); }
   S.loading = false; render();

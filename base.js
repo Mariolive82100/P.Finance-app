@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.00';
+const VER = '1.01';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -41,7 +41,55 @@ function piano(v, oggi = new Date()) {
   const k = Math.min(N, cnt(a, t));
   return { N, k, rata, residuo: r2(v.capitale * (N - k) / N), partito: true };
 }
-const applyPiano = v => { if (v.piano) v.valore = piano(v).residuo; return v; };
+/* ---------- Prezzi: CSV pubblicato dalla scheda "Prezzi app" del foglio Google (solo ISIN e prezzo) ---------- */
+const PREZZI_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTQLIoxqaiEgv5tI0uFp_tZMmgClOc2FWmBp7KdNMp9OzY___I0fj__kVbBEoy6LQDHXGTm8__iJ6gm/pub?gid=2026112101&single=true&output=csv';
+const leggiPrezzi = () => { try { const x = JSON.parse(localStorage.getItem('pf_prezzi')); return x && x.map ? x : null; } catch (e) { return null; } };
+/* Accetta sia 159,39 sia 159.39 sia 1.234,56 */
+const numPrezzo = s => {
+  s = String(s ?? '').replace(/[\s€]/g, ''); if (!s) return NaN;
+  const c = s.lastIndexOf(','), p = s.lastIndexOf('.');
+  if (c >= 0 && p >= 0) s = c > p ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (c >= 0) s = s.replace(',', '.');
+  return /^\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
+};
+function parsePrezzi(txt) {
+  const map = {};
+  csvRighe(txt).forEach(r => { const k = String(r[0] || '').trim().toUpperCase(), p = numPrezzo(r[1]); if (/^[A-Z0-9]{12}$/.test(k) && p > 0) map[k] = p; });
+  return map;
+}
+const hasProd = v => !!(v && v.prodotti && v.prodotti.length);
+/* Prodotto con prezzo nel foglio: quote x prezzo. Senza prezzo: valore manuale */
+const prodVal = p => { const pr = S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]; return pr > 0 ? p.quote * pr : (p.manuale || 0); };
+const valoreProd = v => r2(v.prodotti.reduce((s, p) => s + prodVal(p), 0));
+const applyPiano = v => { if (v.piano) v.valore = piano(v).residuo; else if (hasProd(v) && S.prezzi) v.valore = valoreProd(v); return v; };
+const prezziStato = () => {
+  if (S.prezziBusy) return 'Aggiorno i prezzi…';
+  if (!S.prezzi) return S.prezziErr || 'Prezzi non ancora letti';
+  const d = new Date(S.prezzi.quando), oggi = d.toDateString() === new Date().toDateString();
+  return 'Prezzi delle ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + (oggi ? '' : ' del ' + d.toLocaleDateString('it-IT')) + (S.prezziErr ? ' (ultima lettura non riuscita)' : '');
+};
+/* Legge i prezzi (all'apertura e con il tasto) e ricalcola le voci con prodotti. Nulla viene salvato per i prezzi; lo storico del mese segue i totali. */
+async function aggiornaPrezzi(manuale) {
+  const D = S.data; if (!D || !isAdmin() || S.prezziBusy) return;
+  const tutte = () => [...D.voci, ...(D.arch || [])];
+  if (!manuale && !tutte().some(hasProd)) return;
+  S.prezziBusy = true; if (manuale) render();
+  try {
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 12000);
+    let r; try { r = await fetch(PREZZI_URL + '&_=' + Date.now(), { cache: 'no-store', signal: ac.signal }); } finally { clearTimeout(tm); }
+    if (!r.ok) throw new Error('http');
+    const map = parsePrezzi(await r.text());
+    if (!Object.keys(map).length) throw new Error('vuoto');
+    S.prezzi = { map, quando: Date.now() }; S.prezziErr = '';
+    try { localStorage.setItem('pf_prezzi', JSON.stringify(S.prezzi)); } catch (e) {}
+    if (manuale) S.msg = 'Prezzi aggiornati.';
+  } catch (e) { S.prezziErr = 'Prezzi non aggiornati: uso gli ultimi disponibili.'; if (manuale) S.msg = S.prezziErr; }
+  S.prezziBusy = false;
+  if (S.data !== D) return;
+  tutte().forEach(applyPiano);
+  try { await syncStorico(); } catch (e) {}
+  if (manuale || !(S.cfm || S.edit || S.pop || S.popm || (S.exp && S.exp.form))) render();
+}
 const RENAME = { 'Conto corrente': 'Liquidità', 'Immobile': 'Immobili', 'Altro attivo': 'Altro' };
 /* Porta i vecchi dati alle nuove categorie: Liquidità, Investimenti, Immobili, Beni, Altro */
 async function migraCategorie(uid, voci) {
@@ -66,7 +114,7 @@ async function migraCategorie(uid, voci) {
 }
 const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
 
-const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, loading: true, msg: '' };
+const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, loading: true, msg: '', prezzi: leggiPrezzi() };
 
 function errText(e) {
   const c = e && e.code || '';
@@ -138,6 +186,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.01','21 nov 2026',['Prezzi in tempo reale (amministratore, computer): le voci di investimento elencano i prodotti con ISIN e quote e il valore si calcola con i prezzi del foglio Google, letti all\'apertura e con il tasto Aggiorna prezzi nella pagina Conti','I prodotti senza prezzo nel foglio restano a valore manuale','Importa titoli ora carica anche ISIN e quote di ogni prodotto']],
   ['1.00','21 nov 2026',['Computer: Attivi, passivi e netto si ingrandisce al tocco, senza legenda, con blocchi interattivi al passaggio del mouse (elenco delle voci a destra)','Albero: passando il mouse su un blocco si evidenzia il suo ramo e si sbiadisce il resto']],
   ['0.99','21 nov 2026',['Computer: in Panoramica gli indicatori hanno la larghezza dell\'andamento e l\'albero sta alla loro destra; toccandolo si ingrandisce']],
   ['0.98','20 nov 2026',['Computer: nuova pagina Conti con aggiornamento di fine mese (tutti i valori in una volta), archivia ed elimina con avviso Annulla; conti divisi per categoria comprimibili, investimenti per conto']],
