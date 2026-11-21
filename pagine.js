@@ -278,7 +278,8 @@ function pageCon() {
   const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
     const mine = att.filter(v => accKey(v) === k);
     const t = totals(mine), body = cOrd.map(c => grp(k + '|' + c, c, mine.filter(v => v.tipo === 'attivo' && v.categoria === c))).join('') + portRows(mine) + grp(k + '|Passivi', 'Passivi', mine.filter(v => v.tipo === 'passivo'));
-    return `<div class="card"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl">Patrimonio netto ${eur(t.netto)}</span></div>${mine.length ? `<table class="ct">${cg}${head}${body}</table>` : '<div class="lbl" style="padding:6px 0">Nessuna voce.</div>'}</div>`;
+    const ac = !!(S.acol && S.acol[k]);
+    return `<div class="card"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">Patrimonio netto ${eur(t.netto)}</span></div>${ac ? '' : mine.length ? `<table class="ct">${cg}${head}${body}</table>` : '<div class="lbl" style="padding:6px 0">Nessuna voce.</div>'}</div>`;
   }).join('');
   const tbar = fm
     ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola. I portafogli si aggiornano dai prodotti.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
@@ -306,19 +307,21 @@ function pagePort() {
     ${L.map((p, i) => { const k = String(p.isin || '').trim().toUpperCase(), pr = S.prezzi && S.prezzi.map[k]; return `<div class="ppr"><input class="pi" maxlength="12" placeholder="ISIN" value="${esc(p.isin)}"><input class="pn" placeholder="Nome" value="${esc(p.nome)}"><select class="pc">${classOpts(p.classe)}</select><input class="pq" inputmode="decimal" placeholder="Quote" value="${esc(p.quote)}"><input class="pm" inputmode="decimal" placeholder="Solo senza prezzo" value="${esc(p.manuale)}"><button class="b s sm r" type="button" data-act="prrm" data-v="${i}">✕</button></div>${k ? `<div class="lbl" style="margin:-2px 0 8px">${pr ? 'prezzo ' + nfm(pr) + ' nel foglio' : 'nessun prezzo nel foglio: vale il valore manuale'}</div>` : ''}`; }).join('')}
     <button class="b s sm" type="button" data-act="pradd">＋ Aggiungi prodotto</button>
     <p class="note">Un prodotto per riga. Con ISIN e quote il valore si calcola con il prezzo del foglio; il valore manuale vale solo se il prezzo manca. Senza ISIN scrivi solo il valore manuale (utile per Alessandra e Famiglia).</p>`; };
+  const viewHead = v => `<div class="phd"><b class="grow" data-act="pcol" data-v="${v.id}" style="cursor:pointer"><span class="chev ${S.pcol && S.pcol[v.id] ? '' : 'open'}">▸︎</span> ${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span><button class="b s sm" data-act="pedit" data-v="${v.id}">Modifica</button><button class="b s sm r" data-act="pdel" data-v="${v.id}">Elimina</button></div>`;
   const viewBlock = v => {
     const L = v.prodotti || [], m = new Map(); L.forEach(p => { const c = p.classe || 'Altro'; m.set(c, (m.get(c) || 0) + prodVal(p)); });
     const t = v.valore, cl = [...m].sort((a, b) => b[1] - a[1]).map(([c, x]) => `${esc(c)} ${t > 0 ? Math.round(x / t * 100) : 0}%`).join(' · ');
-    return `<div class="phd"><b class="grow">${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span><button class="b s sm" data-act="pedit" data-v="${v.id}">Modifica</button><button class="b s sm r" data-act="pdel" data-v="${v.id}">Elimina</button></div>
+    return `${viewHead(v)}
     ${L.length ? `<table class="ct"><colgroup><col style="width:38%"><col style="width:20%"><col style="width:12%"><col style="width:12%"><col></colgroup><tr><th class="cn">Prodotto</th><th>Classe</th><th class="cv">Quote</th><th class="cv">Prezzo</th><th class="cv">Valore</th></tr>${L.map(prodRow).join('')}</table>${cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : ''}` : '<div class="lbl">Nessun prodotto: premi Modifica per aggiungerli.</div>'}`;
   };
   const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
     const ports = D.voci.filter(v => isPort(v) && accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
-    return `<div class="card"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl">${ports.length} ${ports.length === 1 ? 'portafoglio' : 'portafogli'} · ${eur(t)}</span></div>
-      ${ports.map(v => `<div class="pblk">${S.pe === v.id ? editBlock(v) : viewBlock(v)}</div>`).join('') || '<div class="lbl">Nessun portafoglio.</div>'}
-      <div class="tbar" style="margin-top:10px"><input id="pnn_${esc(k)}" maxlength="40" placeholder="Nuovo portafoglio (es. Directa)" style="max-width:260px;margin:0"><button class="b s sm" data-act="pnew" data-v="${esc(k)}">＋ Aggiungi portafoglio</button></div></div>`;
+    const ac = !!(S.acol && S.acol[k]) && !ports.some(v => S.pe === v.id);
+    return `<div class="card"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">${ports.length} ${ports.length === 1 ? 'portafoglio' : 'portafogli'} · ${eur(t)}</span></div>
+      ${ac ? '' : ports.map(v => `<div class="pblk">${S.pe === v.id ? editBlock(v) : S.pcol && S.pcol[v.id] ? viewHead(v) : viewBlock(v)}</div>`).join('') || (ac ? '' : '<div class="lbl">Nessun portafoglio.</div>')}
+      ${ac ? '' : `<div class="tbar" style="margin-top:10px"><input id="pnn_${esc(k)}" maxlength="40" placeholder="Nuovo portafoglio (es. Directa)" style="max-width:260px;margin:0"><button class="b s sm" data-act="pnew" data-v="${esc(k)}">＋ Aggiungi portafoglio</button></div>`}</div>`;
   }).join('');
-  return `<div class="con"><div class="ptop"><h2>Portafogli · ${esc(aname)}</h2><div class="pbtn">${stato}</div></div>${convCard}${secs}${importCard()}</div>`;
+  return `<div class="con"><div class="ptop"><h2>Portafogli · ${esc(aname)}</h2><div class="pbtn">${stato}<button class="b s sm" data-act="pcolall" data-v="${S.acol && Object.values(S.acol).some(Boolean) ? 0 : 1}">${S.acol && Object.values(S.acol).some(Boolean) ? 'Espandi tutto' : 'Comprimi tutto'}</button></div></div>${convCard}${secs}${importCard()}</div>`;
 }
 
 function pagePan() {

@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.03';
+const VER = '1.04';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -219,6 +219,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.04','21 nov 2026',['Portafogli: corretto il salvataggio dopo una modifica (non partiva mai)','Conti e Portafogli: account e singoli portafogli si possono comprimere con un tocco sul titolo; tasto Comprimi tutto / Espandi tutto']],
   ['1.03','21 nov 2026',['Prezzi: ora letti dal nuovo foglio "Lista prodotti quotati"; i prodotti in dollari o franchi svizzeri sono convertiti in euro con i cambi del foglio','Portafogli: se il salvataggio non va a buon fine, il motivo compare subito sopra la tabella (prima restava nascosto in cima alla pagina)']],
   ['1.02','21 nov 2026',['Computer: nuova pagina Portafogli, con un portafoglio per conto (es. Directa, Fineco) dentro ogni account e un prodotto per riga: ISIN, nome, classe di investimento, quote','La pagina Conti ora non contiene più gli investimenti: per ogni portafoglio c\'è una riga di riepilogo che rimanda a Portafogli','Conti e Portafogli sono divise per account','Le voci di investimento già presenti si riuniscono nei portafogli con un\'anteprima da confermare','Importa titoli si trova ora nella pagina Portafogli']],
   ['1.01','21 nov 2026',['Prezzi in tempo reale (amministratore, computer): le voci di investimento elencano i prodotti con ISIN e quote e il valore si calcola con i prezzi del foglio Google, letti all\'apertura e con il tasto Aggiorna prezzi nella pagina Conti','I prodotti senza prezzo nel foglio restano a valore manuale','Importa titoli ora carica anche ISIN e quote di ogni prodotto']],

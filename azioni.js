@@ -81,7 +81,10 @@ async function act(el) {
       a = 'poparchok';
     }
     if (a === 'ccol') { S.ccol = S.ccol || {}; S.ccol[v] = !(S.ccol[v] !== undefined ? S.ccol[v] : !!S.ccAll); return render(); }
-    if (a === 'ccolall') { S.ccol = {}; S.ccAll = v === '1'; return render(); }
+    if (a === 'ccolall') { S.ccol = {}; S.ccAll = v === '1'; S.acol = {}; if (v === '1') accList(D).forEach(([k]) => { S.acol[k] = true; }); return render(); }
+    if (a === 'acol') { S.acol = S.acol || {}; S.acol[v] = !S.acol[v]; return render(); }
+    if (a === 'pcol') { S.pcol = S.pcol || {}; S.pcol[v] = !S.pcol[v]; return render(); }
+    if (a === 'pcolall') { S.acol = {}; S.pcol = {}; if (v === '1') accList(D).forEach(([k]) => { S.acol[k] = true; }); return render(); }
     if (a === 'cfm') { S.cfm = true; return render(); }
     if (a === 'cfmno') { S.cfm = false; return render(); }
     if (a === 'carcs') { S.carc = !S.carc; return render(); }
@@ -387,7 +390,7 @@ async function titoliApplica() {
 }
 /* ---------- Portafogli: modifica prodotti, nuovo portafoglio, riunione delle voci vecchie ---------- */
 function grabPort() {
-  return [...document.querySelectorAll('.ppr')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value }));
+  return [...document.querySelectorAll('.ppr:not(.lbl)')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value }));
 }
 async function portSalva() {
   try { await portSalva0(); } catch (e) { S.pd = grabPort(); S.msg = 'Salvataggio non riuscito' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + (e && e.message || 'errore') + '.'); render(); }
