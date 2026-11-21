@@ -131,11 +131,8 @@ async function act(el) {
     }
     if (a === 'tview') { S.thl = null; S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
-    if (a === 'thl') { const w = document.querySelector('.tfs .tt, .tw.tt'), sl = w ? w.scrollLeft : 0, st = w ? w.scrollTop : 0; S.thl = v && S.thl !== v ? v : null; S.tanim = false; render(); const n = document.querySelector('.tfs .tt, .tw.tt'); if (n) { n.scrollLeft = sl; n.scrollTop = st; } return; }
     if (a === 'copen') { S.cx = true; S.csel = null; return render(); }
     if (a === 'cclose') { S.cx = false; return render(); }
-    if (a === 'cseg') { S.csel = S.csel === v ? null : v; return render(); }
-    if (a === 'cdes') { if (S.csel) { S.csel = null; render(); } return; }
     if (a === 'topen') { S.tex = true; S.tcan = true; return render(); }
     if (a === 'tclose') { S.tex = false; S.tcan = true; return render(); }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
