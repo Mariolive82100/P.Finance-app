@@ -220,3 +220,11 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 .csec{margin-top:14px}.csec h3{margin:0 0 4px;font-size:14px;display:flex;gap:10px;align-items:baseline}
 table.ct{table-layout:fixed}.ct th,.ct td{text-align:left;overflow:hidden;text-overflow:ellipsis}.ct th.cv,.ct td.cv{text-align:right}.ct td.ca,.ct th:last-child{text-align:right}.ct .cvi{width:100%;max-width:140px}
 .ct tr.chd{cursor:pointer;background:#f3f8f7}.ct tr.chd td{font-weight:600;padding:9px 6px;border-bottom:1px solid #dbe8e6}.ct tr.chd.l1 td{padding-left:26px;font-weight:500;background:#f9fcfb}.ct tr.chd .lbl{font-weight:400;margin-left:8px}.ct tr.csub2 td.cn{padding-left:46px}.ct .chev{display:inline-block;transition:transform .15s}.ct .chev.open{transform:rotate(90deg)}
+@media(min-width:1000px){
+.g12.r2 .s7{position:relative;min-height:250px}
+.g12.r2 .s7>.tcol{position:absolute;inset:0;height:auto;display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;overflow:hidden}
+.g12.r2 .s7>.tcol h2{flex:0 0 auto}
+.tcol .tmini{height:auto!important;flex:1 1 0;min-height:0;margin-top:4px}
+.tcol .tmini svg{width:100%!important;height:100%!important;min-width:0!important;max-width:100%!important}
+.tfs .tabs{display:flex;gap:6px}
+}

@@ -208,7 +208,7 @@ function disParts(Dz0, single, noTree) {
   /* l'albero è sempre tutto aperto */
   const op = new Set(['r']); const wk = n => { if (n.kids.length) { op.add(n.id); n.kids.forEach(wk); } }; wk(root); S.tx = op;
   /* computer: quattro torte piccole; telefono: torta unica come prima */
-  return { tree: noTree ? '' : treeCard(root, '', single), pie: wide ? quadCard(Dz, single) : pieCard(found) };
+  return { tree: noTree ? '' : treeCard(root, '', single), over: !noTree && wide && S.tex ? treeCard(root, '', single, true) : '', pie: wide ? quadCard(Dz, single) : pieCard(found) };
 }
 /* Panoramica: solo su schermi larghi (computer) */
 /* Riquadro grafici della Panoramica: un selettore sceglie quale grafico vedere */
@@ -286,13 +286,13 @@ function pagePan() {
   const dsub = dN !== null ? `<span class="dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</span>` : '&nbsp;';
   const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(single ? 300 : 290, Math.round(avail * 0.5));
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
-  const pr = disParts(Dz, single, true);
+  const pr = disParts(Dz, single, single || !all.length);
   S.anim = false; S.tanim = false;
   const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, all, r1)}</div>` : hubGrid(all);
   S.hanim = false; S.panim = false; S.tcan = false;
-  const row2 = single || !all.length ? '' : `<div class="g12 r2"><div class="s12">${indicatori(D, all)}</div></div>`;
+  const row2 = single || !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(D, all)}</div><div class="s7">${pr.tree}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye)}</div>
-    ${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${pr.pie}</div></div>`}${row2}</div>`;
+    ${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${pr.pie}</div></div>`}${row2}</div>${pr.over}`;
 }
 const panTop = (name, title) => `<div class="ptop"><h2>${title || 'Panoramica'} · ${esc(name)}</h2><div class="pbtn"><button class="b sm" data-act="nv">Nuova voce</button></div></div>`;
 
