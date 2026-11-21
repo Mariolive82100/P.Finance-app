@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.05';
+const VER = '1.06';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -113,7 +113,7 @@ async function aggiornaPrezzi(manuale) {
     if (!r.ok) throw new Error('errore ' + r.status);
     const map = parsePrezzi(await r.text());
     if (!Object.keys(map).length) throw new Error('nessun prezzo nel file ricevuto');
-    S.prezzi = { map, quando: Date.now() }; S.prezziErr = ''; S.prezziN = Object.keys(map).length;
+    const vecchi = (S.prezzi && S.prezzi.map) || {}; S.prezzi = { map: { ...vecchi, ...map }, quando: Date.now() }; S.prezziErr = ''; S.prezziN = Object.keys(map).length;
     try { localStorage.setItem('pf_prezzi', JSON.stringify(S.prezzi)); } catch (e) {}
     if (manuale) S.msg = 'Prezzi aggiornati.';
   } catch (e) { const why = e && e.name === 'AbortError' ? 'tempo scaduto' : e instanceof TypeError ? 'il link non risponde o è bloccato dal browser' : (e && e.message) || 'errore'; S.prezziErr = 'Prezzi non aggiornati (' + why + '): uso gli ultimi disponibili.'; if (manuale) S.msg = S.prezziErr; }
@@ -219,6 +219,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.06','21 nov 2026',['Prezzi: se una lettura del foglio arriva incompleta (alcuni prodotti vuoti), l\'app tiene l\'ultimo prezzo noto di quei prodotti invece di azzerarli']],
   ['1.05','21 nov 2026',['Prezzi: se la lettura non riesce, l\'app dice il motivo; mostra quanti prodotti ha letto dal foglio e, per ogni prodotto senza prezzo, "non nel foglio"']],
   ['1.04','21 nov 2026',['Portafogli: corretto il salvataggio dopo una modifica (non partiva mai)','Conti e Portafogli: account e singoli portafogli si possono comprimere con un tocco sul titolo; tasto Comprimi tutto / Espandi tutto']],
   ['1.03','21 nov 2026',['Prezzi: ora letti dal nuovo foglio "Lista prodotti quotati"; i prodotti in dollari o franchi svizzeri sono convertiti in euro con i cambi del foglio','Portafogli: se il salvataggio non va a buon fine, il motivo compare subito sopra la tabella (prima restava nascosto in cima alla pagina)']],
