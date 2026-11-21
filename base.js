@@ -1,5 +1,5 @@
 'use strict';
-const VER = '0.99';
+const VER = '1.00';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -138,6 +138,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.00','21 nov 2026',['Computer: Attivi, passivi e netto si ingrandisce al tocco, senza legenda, con blocchi cliccabili e l\'elenco delle voci','Albero: toccando un blocco si evidenzia il suo ramo e si sbiadisce il resto']],
   ['0.99','21 nov 2026',['Computer: in Panoramica gli indicatori hanno la larghezza dell\'andamento e l\'albero sta alla loro destra; toccandolo si ingrandisce']],
   ['0.98','20 nov 2026',['Computer: nuova pagina Conti con aggiornamento di fine mese (tutti i valori in una volta), archivia ed elimina con avviso Annulla; conti divisi per categoria comprimibili, investimenti per conto']],
   ['0.97', '20 nov 2026', ['Computer: l\'albero del patrimonio ha una pagina tutta sua (voce Albero nel menu a sinistra, dopo Panoramica); in Panoramica restano grafici, torte e indicatori']],

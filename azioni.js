@@ -47,8 +47,8 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
-    if (a === 'accsel') { S.tab = S.tab === 'alb' || S.tab === 'con' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
-    if (a === 'pano') { S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
     if (a === 'nv') { S.tab = 'nv'; S.edit = null; S.fd = null; S.exp = { ...(S.exp || {}), form: true }; window.scrollTo(0, 0); return render(); }
     if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
@@ -129,8 +129,13 @@ async function act(el) {
       await deleteDoc(doc(db, 'users', D.uid, 'voci', id));
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
-    if (a === 'tview') { S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
+    if (a === 'tview') { S.thl = null; S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
+    if (a === 'thl') { const w = document.querySelector('.tfs .tt, .tw.tt'), sl = w ? w.scrollLeft : 0, st = w ? w.scrollTop : 0; S.thl = v && S.thl !== v ? v : null; S.tanim = false; render(); const n = document.querySelector('.tfs .tt, .tw.tt'); if (n) { n.scrollLeft = sl; n.scrollTop = st; } return; }
+    if (a === 'copen') { S.cx = true; S.csel = null; return render(); }
+    if (a === 'cclose') { S.cx = false; return render(); }
+    if (a === 'cseg') { S.csel = S.csel === v ? null : v; return render(); }
+    if (a === 'cdes') { if (S.csel) { S.csel = null; render(); } return; }
     if (a === 'topen') { S.tex = true; S.tcan = true; return render(); }
     if (a === 'tclose') { S.tex = false; S.tcan = true; return render(); }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
@@ -424,4 +429,4 @@ onAuthStateChanged(auth, async user => {
 });
 
 /* Esc = indietro dai grafici ingranditi (computer) */
-document.addEventListener('keydown', e => { if (e.key !== 'Escape' || !S.data || S.tab !== 'pan' || innerWidth < 1000) return; if (S.tex) { S.tex = false; S.tcan = true; render(); } else if (S.hq) { S.hq = null; S.hanim = 'out'; render(); } else if (S.qd) { S.qd = null; S.panim = 'out'; render(); } });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape' || !S.data || S.tab !== 'pan' || innerWidth < 1000) return; if (S.cx) { S.cx = false; render(); } else if (S.tex) { S.tex = false; S.tcan = true; render(); } else if (S.hq) { S.hq = null; S.hanim = 'out'; render(); } else if (S.qd) { S.qd = null; S.panim = 'out'; render(); } });

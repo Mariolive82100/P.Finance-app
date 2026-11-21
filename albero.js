@@ -72,10 +72,12 @@ function alberoSvg(root, open, focus) {
   const L = alberoLayout(root, open), anim = !!S.tanim && Object.keys(TPOS).length > 0, W = L.depth * (TN.w + TN.gx) - TN.gx + 4, H = Math.max(1, L.rows) * (TN.h + TN.gy) - TN.gy + 4;
   const X = lvl => 2 + lvl * (TN.w + TN.gx), Y = m => 2 + m.y;
   const T = (x, y, s, sz, w, f, an = 'start') => `<text x="${x}" y="${y}" font-size="${sz}" font-weight="${w}" fill="${f}" text-anchor="${an}">${esc(s)}</text>`;
-  let o = '';
+  let o = `<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" data-act="thl" data-v=""/>`;
+  const hf = S.thl ? alberoTrova(root, S.thl) : null, hl = new Set();
+  if (hf) { hf.path.forEach(n => hl.add(n.id)); const dw = n => { hl.add(n.id); n.kids.forEach(dw); }; dw(hf.node); }
   const NP = {}; L.nodes.forEach(m => { NP[m.n.id] = { x: X(m.lvl), y: Y(m) }; });
   L.links.forEach(([p, c]) => { const x1 = X(p.lvl) + TN.w, y1 = Y(p) + TN.h / 2, x2 = X(c.lvl), y2 = Y(c) + TN.h / 2, mx = (x1 + x2) / 2;
-    o += `<path${anim ? ' class="tlk"' : ''} d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" stroke="${tsty(c.n).ln}" stroke-width="2.2"/>`; });
+    o += `<path${anim ? ' class="tlk"' : ''}${hf && !(hl.has(p.n.id) && hl.has(c.n.id)) ? ' opacity=".15"' : ''} d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" stroke="${tsty(c.n).ln}" stroke-width="2.2"/>`; });
   L.nodes.forEach(m => {
     const n = m.n, c = tsty(n), x = X(m.lvl), y = Y(m), pc = n.pct != null ? ' · ' + (n.pct * 100).toFixed(1).replace('.', ',') + '%' : '';
     let cl = '', st = '';
@@ -84,11 +86,11 @@ function alberoSvg(root, open, focus) {
       if (pv) { const dy = pv.y - NP[n.id].y, dx = pv.x - NP[n.id].x; if (Math.abs(dy) > 0.5 || Math.abs(dx) > 0.5) { cl = ' class="tmv"'; st = `--dx:${dx.toFixed(1)}px;--dy:${dy.toFixed(1)}px;`; } }
       else { const pp = TPOS[m.par] || NP[m.par]; if (pp) { cl = ' class="tin"'; st = `--dx:${(pp.x - NP[n.id].x).toFixed(1)}px;--dy:${(pp.y - NP[n.id].y).toFixed(1)}px;`; } else cl = ' class="tin"'; }
     }
-    const ptr = n.vid ? 'cursor:pointer;' : '', sty = ` style="${st}${ptr}"`;
-    o += `<g${cl}${st || ptr ? sty : ''}${n.vid ? ` data-act="tleaf" data-v="${esc(n.vid)}"` : ''}><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
-      + `<rect x="${x}" y="${y}" width="${TN.w}" height="${TN.h}" rx="10" fill="${c.f}" stroke="${c.s}" stroke-width="${n.id === focus ? 4 : n.lv === 'v' ? 1.5 : 2}"/>`
+    const ptr = 'cursor:pointer;', dim = hf && !hl.has(n.id) ? 'opacity:.2;' : '', sty = ` style="${st}${ptr}${dim}"`;
+    o += `<g${cl}${sty} data-act="thl" data-v="${esc(n.id)}"><title>${esc(n.label + (n.sub ? ' · ' + n.sub : '') + ' · ' + eur(n.val) + pc)}</title>`
+      + `<rect x="${x}" y="${y}" width="${TN.w}" height="${TN.h}" rx="10" fill="${c.f}" stroke="${c.s}" stroke-width="${n.id === focus || n.id === S.thl ? 4 : n.lv === 'v' ? 1.5 : 2}"/>`
       + T(x + 10, y + 19, trunc(n.label, 20), 11, 600, c.t1) + T(x + 10, y + 35, eur0(n.val) + pc, 10.5, 600, n.val < 0 ? '#b91c1c' : c.t2);
-    if (n.vid) o += `<circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 4, '✎', 12, 700, c.s, 'middle');
+    if (n.vid) o += `<g data-act="tleaf" data-v="${esc(n.vid)}"><circle cx="${x + TN.w}" cy="${y + TN.h / 2}" r="10" fill="#fff" stroke="${c.s}" stroke-width="2"/>` + T(x + TN.w, y + TN.h / 2 + 4, '✎', 12, 700, c.s, 'middle') + '</g>';
     o += '</g>';
   });
   Object.keys(TPOS).forEach(k => delete TPOS[k]); Object.assign(TPOS, NP);

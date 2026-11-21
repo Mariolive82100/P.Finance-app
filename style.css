@@ -228,3 +228,7 @@ table.ct{table-layout:fixed}.ct th,.ct td{text-align:left;overflow:hidden;text-o
 .tcol .tmini svg{width:100%!important;height:100%!important;min-width:0!important;max-width:100%!important}
 .tfs .tabs{display:flex;gap:6px}
 }
+@media(min-width:1000px){
+.cfb{flex:1;min-height:0;display:flex;gap:16px}.cfsv{flex:1;min-width:0}.cfsv svg{width:100%;height:100%}.cfp{width:340px;flex:none;overflow:auto;margin:0}.cfp h2{margin:0 0 2px}
+}
+svg g{transition:opacity .2s}

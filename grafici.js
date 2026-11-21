@@ -286,8 +286,37 @@ function colCard(t, vis) {
   o += bar(170, y0, nn * sc, '#1d4ed8', 'Patrimonio netto', N);
   const ty = T0 + (top + nn) * sc + 18;
   o += T(80, ty, 13, 600, '#16302d', 'Attivi') + T(220, ty, 13, 600, '#16302d', 'Passivi + netto');
-  const lg = '<div class="legend">' + (cats.length ? cats.map(([n], i) => `<span><i style="background:${PA[i % PA.length]}"></i>${esc(n)}</span>`).join('') : '<span><i style="background:#0f766e"></i>Attivi</span>') + '<span><i style="background:#b91c1c"></i>Passivi</span><span><i style="background:#1d4ed8"></i>Patrimonio netto</span></div>';
-  return `<div class="card colc">${head}<div class="qs"><svg viewBox="0 0 300 ${Math.ceil(ty + 8)}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${o}</svg></div>${lg}</div>`;
+  return `<div class="card colc tcol" data-act="copen">${head}<div class="qs"><svg viewBox="0 0 300 ${Math.ceil(ty + 8)}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">${o}</svg></div></div>`;
+}
+/* Attivi, passivi e netto ingranditi: blocchi cliccabili, gli altri si sbiadiscono e a destra compare l'elenco delle voci */
+function colBig(t, vis) {
+  const D = S.data, A = t.attivi, P = t.passivi, N = t.netto, pp = Math.max(P, 0), np = Math.max(N, 0), nn = Math.max(-N, 0);
+  const top = Math.max(A, pp + np, 1), H = 420, T0 = 20, sc = H / (top + nn), y0 = T0 + top * sc, W = 840;
+  const PA = ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'], cm = {};
+  vis.filter(v => v.tipo === 'attivo').forEach(v => { const k = v.categoria || 'Altro'; cm[k] = (cm[k] || 0) + v.valore; });
+  const cats = Object.entries(cm).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]), segs = [];
+  let acc = 0; cats.forEach(([n, v], i) => { acc += v; segs.push({ key: 'a:' + n, x: 230, y: y0 - acc * sc, h: v * sc, col: PA[i % PA.length], name: n, v, side: 'l', pc: 1 }); });
+  segs.push({ key: 'p', x: 470, y: y0 - pp * sc, h: pp * sc, col: '#b91c1c', name: 'Passivi', v: P, side: 'r', pc: 1 });
+  segs.push({ key: 'n', x: 470, y: N >= 0 ? y0 - (pp + np) * sc : y0, h: (N >= 0 ? np : nn) * sc, col: '#1d4ed8', name: 'Patrimonio netto', v: N, side: 'r', pc: 1 });
+  const ok = segs.filter(s => s.h > 0), sel = ok.some(s => s.key === S.csel) ? S.csel : null;
+  const pcs = v => A > 0 ? ' · ' + (v / A * 100).toFixed(1).replace('.', ',') + '%' : '';
+  const ty = T0 + (top + nn) * sc + 24;
+  let o = `<rect x="0" y="0" width="${W}" height="${Math.ceil(ty + 10)}" fill="transparent" data-act="cdes"/><line x1="40" x2="${W - 40}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#9db3af" stroke-width="1.2"/>`;
+  ok.forEach(s => {
+    const dim = sel && sel !== s.key ? ' opacity=".2"' : '';
+    o += `<g${dim} style="transition:opacity .2s"><rect x="${s.x}" y="${s.y.toFixed(1)}" width="130" height="${s.h.toFixed(1)}" fill="${s.col}" stroke="${sel === s.key ? '#16302d' : '#fff'}" stroke-width="${sel === s.key ? 3 : 1.5}" style="cursor:pointer" data-act="cseg" data-v="${esc(s.key)}" data-tip="${esc(s.name + ' · ' + eur(s.v) + pcs(s.v))}"/>`;
+    if (s.h >= 14) o += `<text x="${s.side === 'l' ? s.x - 8 : s.x + 138}" y="${(s.y + s.h / 2 + 4).toFixed(1)}" text-anchor="${s.side === 'l' ? 'end' : 'start'}" font-size="13" font-weight="600" fill="#16302d" style="pointer-events:none">${esc(s.name + ' · ' + eur0(s.v) + pcs(s.v))}</text>`;
+    o += '</g>';
+  });
+  o += `<text x="295" y="${ty.toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#16302d">Attivi</text><text x="535" y="${ty.toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#16302d">Passivi + netto</text>`;
+  const rows = arr => arr.length ? arr.slice().sort((a, b) => b.valore - a.valore).map(v => `<div class="row"><div class="n">${esc(dn(v))}<small>${esc([v.dove && v.dove !== dn(v) ? 'su ' + v.dove : '', D.accounts.length ? accName(v) : ''].filter(Boolean).join(' · '))}</small></div><div class="v">${eur(v.valore)}</div></div>`).join('') : '<p class="note">Nessuna voce.</p>';
+  const sm = (l, v, c) => `<div class="row"><div class="n">${l}</div><div class="v ${c || ''}">${eur(v)}</div></div>`;
+  let panel;
+  if (sel && sel.startsWith('a:')) { const c = sel.slice(2), arr = vis.filter(v => v.tipo === 'attivo' && (v.categoria || 'Altro') === c); panel = `<h2>${esc(c)}</h2><div class="lbl">${eur(cm[c])}${pcs(cm[c])} degli attivi</div>${rows(arr)}`; }
+  else if (sel === 'p') panel = `<h2>Passivi</h2><div class="lbl">${eur(P)}${pcs(P)} degli attivi</div>${rows(vis.filter(v => v.tipo === 'passivo'))}`;
+  else if (sel === 'n') panel = `<h2>Patrimonio netto</h2><div class="lbl">Ciò che possiedi meno ciò che devi</div>${sm('Attivi', A)}${sm('Passivi', -P, 'neg')}${sm('Netto', N, cls(N))}`;
+  else panel = `<h2>Riepilogo</h2>${sm('Attivi', A)}${sm('Passivi', -P, 'neg')}${sm('Patrimonio netto', N, cls(N))}<p class="note" style="margin-top:12px">Tocca un blocco per vederne le voci e mettere in evidenza il resto.</p>`;
+  return `<div class="fs cfs"><div class="chh"><h2>Attivi, passivi e netto</h2><button class="b sm" data-act="cclose">✕ Chiudi</button></div><div class="cfb"><div class="cfsv"><svg viewBox="0 0 ${W} ${Math.ceil(ty + 10)}" preserveAspectRatio="xMidYMid meet">${o}</svg></div><div class="cfp card">${panel}</div></div></div>`;
 }
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
