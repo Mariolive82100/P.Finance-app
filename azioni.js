@@ -390,6 +390,10 @@ function grabPort() {
   return [...document.querySelectorAll('.ppr')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value }));
 }
 async function portSalva() {
+  try { await portSalva0(); } catch (e) { S.pd = grabPort(); S.msg = 'Salvataggio non riuscito' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + (e && e.message || 'errore') + '.'); render(); }
+  const m = $('pmsg'); if (m) m.scrollIntoView({ block: 'center' });
+}
+async function portSalva0() {
   const D = S.data, v = D.voci.find(z => z.id === S.pe); if (!v) { S.pe = null; return render(); }
   const prod = [], err = m => { S.pd = grabPort(); S.msg = m; render(); };
   for (const r of grabPort()) {

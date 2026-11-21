@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.02';
+const VER = '1.03';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -41,8 +41,8 @@ function piano(v, oggi = new Date()) {
   const k = Math.min(N, cnt(a, t));
   return { N, k, rata, residuo: r2(v.capitale * (N - k) / N), partito: true };
 }
-/* ---------- Prezzi: CSV pubblicato dalla scheda "Prezzi app" del foglio Google (solo ISIN e prezzo) ---------- */
-const PREZZI_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTQLIoxqaiEgv5tI0uFp_tZMmgClOc2FWmBp7KdNMp9OzY___I0fj__kVbBEoy6LQDHXGTm8__iJ6gm/pub?gid=2026112101&single=true&output=csv';
+/* ---------- Prezzi: CSV pubblicato dal foglio "Lista prodotti quotati" (ticker, ISIN, valuta, prezzo + righe dei cambi EURUSD, EURCHF…) ---------- */
+const PREZZI_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSf5Jzc_Y30pFBidAh_M8rYM-9J30iyC67mtfWRZVhk0NEAFACjweMNc7gF7BYlpz4V7mOasY3IKtGN/pub?gid=0&single=true&output=csv';
 const leggiPrezzi = () => { try { const x = JSON.parse(localStorage.getItem('pf_prezzi')); return x && x.map ? x : null; } catch (e) { return null; } };
 /* Accetta sia 159,39 sia 159.39 sia 1.234,56 */
 const numPrezzo = s => {
@@ -53,9 +53,17 @@ const numPrezzo = s => {
   return /^\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
 };
 function parsePrezzi(txt) {
-  const map = {};
-  csvRighe(txt).forEach(r => { const k = String(r[0] || '').trim().toUpperCase(), p = numPrezzo(r[1]); if (/^[A-Z0-9]{12}$/.test(k) && p > 0) map[k] = p; });
-  return map;
+  const map = {}, cambi = {}, R = csvRighe(txt);
+  const h = (R[0] || []).map(x => String(x || '').trim().toUpperCase()), ci = n => { const i = h.indexOf(n); return i; };
+  const iT = Math.max(ci('TICKER'), 0), iI = ci('ISIN') >= 0 ? ci('ISIN') : 1, iV = ci('VALUTA') >= 0 ? ci('VALUTA') : 2, iP = ci('PREZZO') >= 0 ? ci('PREZZO') : 3;
+  R.forEach(r => {
+    const t = String(r[iT] || '').trim().toUpperCase(), k = String(r[iI] || '').trim().toUpperCase(), p = numPrezzo(r[iP]);
+    if (/^EUR[A-Z]{3}$/.test(t) && !k) { if (p > 0) cambi[t.slice(3)] = p; return; }
+    if (/^[A-Z0-9]{12}$/.test(k) && p > 0) map[k] = { p, v: String(r[iV] || 'EUR').trim().toUpperCase() };
+  });
+  const out = {};
+  for (const k in map) { const { p, v } = map[k]; if (v === 'EUR' || !v) out[k] = p; else if (cambi[v]) out[k] = Math.round(p / cambi[v] * 1e6) / 1e6; }
+  return out;
 }
 const hasProd = v => !!(v && v.prodotti && v.prodotti.length);
 const isPort = v => !!(v && v.portafoglio);
@@ -211,6 +219,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.03','21 nov 2026',['Prezzi: ora letti dal nuovo foglio "Lista prodotti quotati"; i prodotti in dollari o franchi svizzeri sono convertiti in euro con i cambi del foglio','Portafogli: se il salvataggio non va a buon fine, il motivo compare subito sopra la tabella (prima restava nascosto in cima alla pagina)']],
   ['1.02','21 nov 2026',['Computer: nuova pagina Portafogli, con un portafoglio per conto (es. Directa, Fineco) dentro ogni account e un prodotto per riga: ISIN, nome, classe di investimento, quote','La pagina Conti ora non contiene più gli investimenti: per ogni portafoglio c\'è una riga di riepilogo che rimanda a Portafogli','Conti e Portafogli sono divise per account','Le voci di investimento già presenti si riuniscono nei portafogli con un\'anteprima da confermare','Importa titoli si trova ora nella pagina Portafogli']],
   ['1.01','21 nov 2026',['Prezzi in tempo reale (amministratore, computer): le voci di investimento elencano i prodotti con ISIN e quote e il valore si calcola con i prezzi del foglio Google, letti all\'apertura e con il tasto Aggiorna prezzi nella pagina Conti','I prodotti senza prezzo nel foglio restano a valore manuale','Importa titoli ora carica anche ISIN e quote di ogni prodotto']],
   ['1.00','21 nov 2026',['Computer: Attivi, passivi e netto si ingrandisce al tocco, senza legenda, con blocchi interattivi al passaggio del mouse (elenco delle voci a destra)','Albero: passando il mouse su un blocco si evidenzia il suo ramo e si sbiadisce il resto']],
