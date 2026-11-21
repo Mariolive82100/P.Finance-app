@@ -5,12 +5,13 @@ const TN = { w: 150, h: 46, gx: 44, gy: 12 };
 /* Costruisce l'albero: patrimonio netto > (account >) attivi/passivi > macro categorie > (classi, solo per gli investimenti) > voci.
    La stessa classe presente su più conti viene sommata. */
 function alberoDati(D, mode) {
+  D = { ...D, voci: espandi(D.voci) };
   const att = D.voci.filter(v => v.tipo === 'attivo'), pas = D.voci.filter(v => v.tipo === 'passivo'), multi = D.accounts.length > 0;
   const sum = a => a.reduce((s, v) => s + v.valore, 0);
   const lato = (pid, t, voci, showAcc) => {
     if (!voci.length) return null;
     const tot = sum(voci), cats = [...new Set([...CATS[t === 'a' ? 'attivo' : 'passivo'], ...voci.map(v => v.categoria)])].filter(c => voci.some(v => v.categoria === c));
-    const leaf = (base, v, ps, label, sub) => ({ id: base + '/' + v.id, lv: 'v', vid: v.piano ? '' : v.id, tone: t, kids: [], val: v.valore, pct: ps > 0 ? v.valore / ps : null, label, sub });
+    const leaf = (base, v, ps, label, sub) => ({ id: base + '/' + v.id, lv: 'v', vid: v.piano || v.virt ? '' : v.id, tone: t, kids: [], val: v.valore, pct: ps > 0 ? v.valore / ps : null, label, sub });
     const leaves = (base, arr, ps) => {
       const srt = arr.slice().sort((x, y) => y.valore - x.valore), inv = v => v.categoria === 'Investimenti' && v.dove;
       if (!(showAcc && multi)) return srt.map(v => leaf(base, v, ps, inv(v) ? 'su ' + v.dove : dn(v), ''));

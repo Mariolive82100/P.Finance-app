@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.01';
+const VER = '1.02';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -58,9 +58,34 @@ function parsePrezzi(txt) {
   return map;
 }
 const hasProd = v => !!(v && v.prodotti && v.prodotti.length);
+const isPort = v => !!(v && v.portafoglio);
+const nfm = x => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 4 }).format(x);
 /* Prodotto con prezzo nel foglio: quote x prezzo. Senza prezzo: valore manuale */
 const prodVal = p => { const pr = S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]; return pr > 0 ? p.quote * pr : (p.manuale || 0); };
 const valoreProd = v => r2(v.prodotti.reduce((s, p) => s + prodVal(p), 0));
+/* Grafici e report ragionano per classe di investimento: un portafoglio si divide in una riga per classe (solo per il calcolo, non si salva) */
+const espandi = voci => voci.flatMap(v => {
+  if (!isPort(v) || !hasProd(v)) return [v];
+  const m = new Map();
+  v.prodotti.forEach(p => { const c = p.classe || v.assetClass || 'Altro'; m.set(c, (m.get(c) || 0) + prodVal(p)); });
+  return [...m].map(([c, val]) => ({ ...v, id: v.id + '#' + c, virt: v.id, assetClass: c, valore: r2(val), prodotti: undefined }));
+});
+/* Voci di investimento "vecchio stile" (una per conto e classe): da riunire nei portafogli */
+const isInvLegacy = v => v.tipo === 'attivo' && v.categoria === 'Investimenti' && !isPort(v);
+function portProposta(D) {
+  const g = new Map();
+  D.voci.filter(isInvLegacy).forEach(v => {
+    const dove = (v.dove || v.nome || '').trim() || 'Senza conto', k = (v.account || '') + '|' + dove.toLowerCase();
+    if (!g.has(k)) g.set(k, { dove, account: v.account || '', voci: [], prodotti: [], valore: 0, obiettivo: 0 });
+    const G = g.get(k), cl = v.assetClass || 'Altro';
+    G.voci.push(v); G.valore = r2(G.valore + v.valore); if (v.obiettivo && !G.obiettivo) G.obiettivo = v.obiettivo;
+    if (hasProd(v)) v.prodotti.forEach(p => G.prodotti.push({ isin: p.isin, nome: p.nome || '', classe: p.classe || cl, quote: p.quote, manuale: p.manuale || 0 }));
+    else G.prodotti.push({ isin: '', nome: v.assetClass || v.nome, classe: cl, quote: 0, manuale: v.valore });
+  });
+  const out = [...g.values()];
+  out.forEach(G => { const ex = D.voci.find(v => isPort(v) && (v.account || '') === G.account && (v.dove || '').trim().toLowerCase() === G.dove.toLowerCase()); G.exId = ex ? ex.id : ''; });
+  return out;
+}
 const applyPiano = v => { if (v.piano) v.valore = piano(v).residuo; else if (hasProd(v) && S.prezzi) v.valore = valoreProd(v); return v; };
 const prezziStato = () => {
   if (S.prezziBusy) return 'Aggiorno i prezzi…';
@@ -186,6 +211,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.02','21 nov 2026',['Computer: nuova pagina Portafogli, con un portafoglio per conto (es. Directa, Fineco) dentro ogni account e un prodotto per riga: ISIN, nome, classe di investimento, quote','La pagina Conti ora non contiene più gli investimenti: per ogni portafoglio c\'è una riga di riepilogo che rimanda a Portafogli','Conti e Portafogli sono divise per account','Le voci di investimento già presenti si riuniscono nei portafogli con un\'anteprima da confermare','Importa titoli si trova ora nella pagina Portafogli']],
   ['1.01','21 nov 2026',['Prezzi in tempo reale (amministratore, computer): le voci di investimento elencano i prodotti con ISIN e quote e il valore si calcola con i prezzi del foglio Google, letti all\'apertura e con il tasto Aggiorna prezzi nella pagina Conti','I prodotti senza prezzo nel foglio restano a valore manuale','Importa titoli ora carica anche ISIN e quote di ogni prodotto']],
   ['1.00','21 nov 2026',['Computer: Attivi, passivi e netto si ingrandisce al tocco, senza legenda, con blocchi interattivi al passaggio del mouse (elenco delle voci a destra)','Albero: passando il mouse su un blocco si evidenzia il suo ramo e si sbiadisce il resto']],
   ['0.99','21 nov 2026',['Computer: in Panoramica gli indicatori hanno la larghezza dell\'andamento e l\'albero sta alla loro destra; toccandolo si ingrandisce']],

@@ -177,7 +177,7 @@ async function creaPdf(D, hide) {
   }
 
   /* composizione attivi */
-  const vv0 = vz(D.voci), att = vv0.filter(v => v.tipo === 'attivo'), pas = vv0.filter(v => v.tipo === 'passivo');
+  const vv0 = espandi(vz(D.voci)), att = vv0.filter(v => v.tipo === 'attivo'), pas = vv0.filter(v => v.tipo === 'passivo');
   const sum = a => a.reduce((s, v) => s + v.valore, 0), totA = sum(att), totP = sum(pas);
   const group = (arr, key) => { const m = {}; arr.forEach(v => { const k = key(v); m[k] = (m[k] || 0) + v.valore; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); };
   const share = (title, entries, tot) => {

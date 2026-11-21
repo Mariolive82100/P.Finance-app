@@ -14,7 +14,6 @@ function exportCsv() {
 const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
 function grabForm() {
   const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; });
-  if ($('prodbox')) o.prod = [...document.querySelectorAll('.prow')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value }));
   return o;
 }
 
@@ -51,7 +50,7 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
-    if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
     if (a === 'nv') { S.tab = 'nv'; S.edit = null; S.fd = null; S.exp = { ...(S.exp || {}), form: true }; window.scrollTo(0, 0); return render(); }
@@ -67,6 +66,7 @@ async function act(el) {
     if (a === 'popback') { if (S.pop.only) { S.pop = null; render(); return keepTT(); } S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
+    if (a === 'popedit' && innerWidth >= 1000 && (D.voci.find(z => z.id === S.pop.id) || {}).categoria === 'Investimenti') { const x = D.voci.find(z => z.id === S.pop.id); S.tab = 'por'; S.pe = isPort(x) ? x.id : null; S.pd = null; S.pop = null; return render(); }
     if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; if (innerWidth >= 1000) S.tab = 'nv'; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
     if (a === 'updsave') {
       const x = D.voci.find(z => z.id === S.pop.id), nv = pnum($('pv').value);
@@ -80,8 +80,8 @@ async function act(el) {
       if (x0 && x0.valore !== 0) { S.pop.mode = 'arch'; return render(); }
       a = 'poparchok';
     }
-    if (a === 'ccol') { S.ccol = S.ccol || {}; S.ccol[v] = !S.ccol[v]; return render(); }
-    if (a === 'ccolall') { S.ccol = {}; if (v === '1') { ['Liquidità', 'Investimenti', 'Beni', 'Immobili', 'Altro', 'Passivi'].forEach(k => S.ccol[k] = true); } return render(); }
+    if (a === 'ccol') { S.ccol = S.ccol || {}; S.ccol[v] = !(S.ccol[v] !== undefined ? S.ccol[v] : !!S.ccAll); return render(); }
+    if (a === 'ccolall') { S.ccol = {}; S.ccAll = v === '1'; return render(); }
     if (a === 'cfm') { S.cfm = true; return render(); }
     if (a === 'cfmno') { S.cfm = false; return render(); }
     if (a === 'carcs') { S.carc = !S.carc; return render(); }
@@ -246,7 +246,17 @@ async function act(el) {
     if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } return render(); }
     if (a === 'export') return exportCsv();
     if (a === 'prezzi') return aggiornaPrezzi(true);
-    if (a === 'padd' || a === 'prm') { S.fd = grabForm(); const L = S.fd.prod || []; if (a === 'padd') L.push({ isin: '', nome: '', quote: '', manuale: '' }); else L.splice(+v, 1); S.fd.prod = L; return render(); }
+    if (a === 'pedit') { S.pe = v; S.pd = null; S.msg = ''; return render(); }
+    if (a === 'pcancel') { S.pe = null; S.pd = null; return render(); }
+    if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
+    if (a === 'psave') return portSalva();
+    if (a === 'pnew') return portNuovo(v);
+    if (a === 'pdel') {
+      const x = D.voci.find(z => z.id === v); if (!x || !confirm('Eliminare il portafoglio ' + x.nome + ' con tutti i suoi prodotti?')) return;
+      await deleteDoc(doc(db, 'users', D.uid, 'voci', v)); D.voci = D.voci.filter(z => z.id !== v); if (S.pe === v) { S.pe = null; S.pd = null; }
+      await syncStorico(); return render();
+    }
+    if (a === 'pconv') return portConverti();
     if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
     if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;
     if (a === 'save') {
@@ -262,25 +272,16 @@ async function act(el) {
         dati = applyPiano({ ...base, piano: true, capitale: r2(cap), inizio: ini, fine: fin, valore: 0 });
       } else {
         const isI = tipo === 'attivo' && categoria === 'Investimenti';
-        let prod = null;
-        if (isI && $('prodbox')) {
-          prod = [];
-          for (const r of document.querySelectorAll('.prow')) {
-            const isin = r.querySelector('.pi').value.trim().toUpperCase(), q = pnum(r.querySelector('.pq').value), nm = r.querySelector('.pn').value.trim(), mv = r.querySelector('.pm').value.trim();
-            if (!isin && !nm && !r.querySelector('.pq').value.trim()) continue;
-            if (!/^[A-Z0-9]{12}$/.test(isin) || !(q > 0)) { S.msg = 'Prodotti: ogni riga ha bisogno di un ISIN (12 caratteri) e di quote maggiori di zero.'; return render(); }
-            const m = mv ? pnum(mv) : 0; if (!isFinite(m) || m < 0) { S.msg = 'Prodotti: il valore manuale deve essere zero o più.'; return render(); }
-            prod.push({ isin, nome: nm, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m) });
-          }
-        } else if (isI && ed0 && hasProd(ed0)) prod = ed0.prodotti;
+        const porta = isI && ed0 && isPort(ed0);
+        const prod = porta ? ed0.prodotti || [] : isI && ed0 && hasProd(ed0) ? ed0.prodotti : null;
         const conProd = !!(prod && prod.length);
         const valore = conProd ? 0 : pnum($('fv') ? $('fv').value : '');
-        if (isI) { nome = ($('fw') ? ($('fw').value === '__new' ? ($('fwn') ? $('fwn').value.trim() : '') : $('fw').value) : ''); base.nome = nome; if (!nome) { S.msg = 'Scegli il conto di riferimento o scrivi il nome del nuovo conto.'; return render(); } if (!$('fac') || !$('fac').value) { S.msg = 'Scegli l\'asset class.'; return render(); } }
+        if (isI) { nome = ($('fw') ? ($('fw').value === '__new' ? ($('fwn') ? $('fwn').value.trim() : '') : $('fw').value) : ''); base.nome = nome; if (!nome) { S.msg = 'Scegli il conto di riferimento o scrivi il nome del nuovo conto.'; return render(); } if (!porta && (!$('fac') || !$('fac').value)) { S.msg = 'Scegli l\'asset class.'; return render(); } }
         if (!nome || !isFinite(valore) || valore < 0) { S.msg = 'Inserisci un nome e un valore valido (zero o più).'; return render(); }
         dati = { ...base, valore: r2(valore) };
         if (tipo === 'attivo' && categoria === 'Investimenti') {
           const dove = nome, ob = $('fo') ? pnum($('fo').value) : NaN;
-          dati.dove = dove; dati.nome = dove; dati.assetClass = $('fac').value;
+          dati.dove = dove; dati.nome = dove; if (porta) dati.portafoglio = true; else dati.assetClass = $('fac').value;
           if (!D.voci.some(x => x.categoria === 'Liquidità' && x.nome.toLowerCase() === dove.toLowerCase())) {
             const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: dove, account: base.account, valore: 0 };
             const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
@@ -340,25 +341,29 @@ function titoliProposta(txt) {
   const iC = ix('classe'), iI = ix('isin'), iN = ix('nome'), iV = ix('valore'), iQ = H.findIndex(h => h === 'quantità' || h === 'quantita');
   const iCo = H.map((h, i) => /^quantit[àa] .+/.test(h) ? i : -1).filter(i => i >= 0);
   if (iC < 0 || iI < 0 || iV < 0 || iQ < 0 || !iCo.length) throw new Error('Non trovo le colonne Classe, Isin, Valore, Quantità e le quantità per conto. Hai scaricato la scheda "Elenco titoli"?');
+  const acc = S.fAcc && S.fAcc !== 'all' && S.fAcc !== 'main' ? S.fAcc : '';
+  if (D.voci.some(v => isInvLegacy(v) && (v.account || '') === acc)) throw new Error('Prima riunisci le voci di investimento esistenti nei portafogli (riquadro in alto, pagina Portafogli).');
   const mapC = c => { c = c.trim().toLowerCase(); return /^azion/.test(c) ? 'Azioni' : /^obblig/.test(c) ? 'Obbligazioni' : /^cript/.test(c) ? 'Criptovalute' : /^(commod|oro)/.test(c) ? 'Oro e materie prime' : 'Altro'; };
-  const g = new Map(), conti = new Map(); let letti = 0;
+  const g = new Map(); let letti = 0;
   R.slice(1).forEach(r => {
     const tot = pnum(r[iQ]), val = pnum(r[iV]); if (!(tot > 0) || !(val > 0)) return; letti++;
     iCo.forEach(i => {
       const qt = pnum(r[i]); if (!(qt > 0)) return;
       const broker = H[i].replace(/^quantit[àa] /, '').trim().split(/\s+/)[0]; const dove = broker.charAt(0).toUpperCase() + broker.slice(1);
-      const k = dove.toLowerCase() + '|' + mapC(r[iC]);
-      if (!g.has(k)) g.set(k, { dove, assetClass: mapC(r[iC]), valore: 0, prodotti: [] });
-      const G = g.get(k), isin = String(r[iI] || '').trim().toUpperCase(), man = val * qt / tot; G.valore += man;
-      if (/^[A-Z0-9]{12}$/.test(isin)) { const p = G.prodotti.find(z => z.isin === isin); if (p) { p.quote += qt; p.manuale = r2(p.manuale + man); } else G.prodotti.push({ isin, nome: String(r[iN] || '').trim(), quote: qt, manuale: r2(man) }); }
+      if (!g.has(dove.toLowerCase())) g.set(dove.toLowerCase(), { dove, valore: 0, prodotti: [] });
+      const G = g.get(dove.toLowerCase()), isin = String(r[iI] || '').trim().toUpperCase(), man = r2(val * qt / tot), cl = mapC(r[iC]), nm = String(r[iN] || '').trim();
+      G.valore += man;
+      const p = /^[A-Z0-9]{12}$/.test(isin) ? G.prodotti.find(z => z.isin === isin) : null;
+      if (p) { p.quote += qt; p.manuale = r2(p.manuale + man); }
+      else if (/^[A-Z0-9]{12}$/.test(isin)) G.prodotti.push({ isin, nome: nm, classe: cl, quote: qt, manuale: man });
+      else G.prodotti.push({ isin: '', nome: nm, classe: cl, quote: 0, manuale: man });
     });
   });
-  const acc = S.fAcc && S.fAcc !== 'all' && S.fAcc !== 'main' ? S.fAcc : '';
   const righe = [...g.values()].map(x => {
     x.valore = r2(x.valore);
-    const ex = D.voci.find(v => v.tipo === 'attivo' && v.categoria === 'Investimenti' && (v.dove || '').trim().toLowerCase() === x.dove.toLowerCase() && v.assetClass === x.assetClass && (v.account || '') === acc);
-    return { ...x, exId: ex ? ex.id : '', prima: ex ? ex.valore : null };
-  }).sort((a, b) => a.dove.localeCompare(b.dove) || b.valore - a.valore);
+    const ex = D.voci.find(v => isPort(v) && (v.dove || '').trim().toLowerCase() === x.dove.toLowerCase() && (v.account || '') === acc);
+    return { ...x, exId: ex ? ex.id : '', prima: ex ? ex.valore : null, nPrima: ex ? (ex.prodotti || []).length : 0 };
+  }).sort((a, b) => a.dove.localeCompare(b.dove));
   if (!righe.length) throw new Error('Nessun titolo con quantità trovato.');
   return { righe, acc, letti };
 }
@@ -367,18 +372,68 @@ async function titoliApplica() {
   for (const x of P.righe) {
     if (x.exId) {
       const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
-      const { id, ...rest } = v; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti };
-      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); Object.assign(v, dati);
+      const { id, assetClass, ...rest } = v; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti, portafoglio: true };
+      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
     } else {
       if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
         const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: x.dove, account: P.acc, valore: 0 };
         const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
       }
-      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, assetClass: x.assetClass, account: P.acc, valore: x.valore, prodotti: x.prodotti };
+      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, account: P.acc, valore: x.valore, prodotti: x.prodotti, portafoglio: true };
       const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
     }
   }
   D.voci.forEach(applyPiano); S.timp = null; await syncStorico(); S.msg = 'Titoli importati e aggiornati.'; render();
+}
+/* ---------- Portafogli: modifica prodotti, nuovo portafoglio, riunione delle voci vecchie ---------- */
+function grabPort() {
+  return [...document.querySelectorAll('.ppr')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value }));
+}
+async function portSalva() {
+  const D = S.data, v = D.voci.find(z => z.id === S.pe); if (!v) { S.pe = null; return render(); }
+  const prod = [], err = m => { S.pd = grabPort(); S.msg = m; render(); };
+  for (const r of grabPort()) {
+    const isin = r.isin.trim().toUpperCase(), nome = r.nome.trim(), qs = r.quote.trim(), ms = r.manuale.trim();
+    if (!isin && !nome && !qs && !ms) continue;
+    if (!r.classe) return err('Scegli la classe di investimento di ogni prodotto.');
+    const m = ms ? pnum(ms) : 0; if (!isFinite(m) || m < 0) return err('Il valore manuale deve essere zero o più.');
+    if (isin) {
+      const q = pnum(qs); if (!/^[A-Z0-9]{12}$/.test(isin) || !(q > 0)) return err('Ogni prodotto con ISIN ha bisogno di 12 caratteri e di quote maggiori di zero.');
+      prod.push({ isin, nome, classe: r.classe, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m) });
+    } else {
+      if (!(m > 0)) return err('Un prodotto senza ISIN ha bisogno del valore manuale in euro.');
+      prod.push({ isin: '', nome, classe: r.classe, quote: 0, manuale: r2(m) });
+    }
+  }
+  const { id, assetClass, ...rest } = v, dati = { ...rest, portafoglio: true, prodotti: prod };
+  dati.valore = prod.length ? valoreProd(dati) : 0;
+  await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
+  await syncStorico(); S.pe = null; S.pd = null; S.msg = 'Portafoglio salvato.'; render();
+}
+async function portNuovo(acc) {
+  const D = S.data, inp = $('pnn_' + acc), nm = inp ? inp.value.trim() : '', account = acc === 'main' ? '' : acc;
+  if (!nm) { S.msg = 'Scrivi il nome del conto (es. Directa).'; return render(); }
+  if (D.voci.some(x => isPort(x) && (x.account || '') === account && (x.dove || '').trim().toLowerCase() === nm.toLowerCase())) { S.msg = 'Esiste già un portafoglio con questo nome in questo account.'; return render(); }
+  if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === nm.toLowerCase() && (y.account || '') === account)) {
+    const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: nm, account, valore: 0 };
+    const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
+  }
+  const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: nm, dove: nm, account, valore: 0, portafoglio: true, prodotti: [] };
+  const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
+  S.pe = r.id; S.pd = null; S.msg = ''; render();
+}
+async function portConverti() {
+  const D = S.data;
+  for (const G of portProposta(D)) {
+    const ex = G.exId ? D.voci.find(v => v.id === G.exId) : null, tgt = ex || G.voci[0];
+    const { id, assetClass, ...rest } = tgt;
+    const dati = ex ? { ...rest, portafoglio: true, prodotti: [...(ex.prodotti || []), ...G.prodotti] }
+      : { tipo: 'attivo', categoria: 'Investimenti', nome: G.dove, dove: G.dove, account: G.account, valore: 0, portafoglio: true, prodotti: G.prodotti, ...(G.obiettivo ? { obiettivo: G.obiettivo } : {}) };
+    dati.valore = valoreProd(dati);
+    await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete tgt.assetClass; Object.assign(tgt, dati);
+    for (const o of G.voci) if (o !== tgt) { await deleteDoc(doc(db, 'users', D.uid, 'voci', o.id)); D.voci = D.voci.filter(z => z !== o); }
+  }
+  D.voci.forEach(applyPiano); await syncStorico(); S.msg = 'Portafogli aggiornati.'; render();
 }
 document.addEventListener('change', async e => {
   if (e.target.id !== 'titf' || !e.target.files[0] || !S.data || !isAdmin()) return;
