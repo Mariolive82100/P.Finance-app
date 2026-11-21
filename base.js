@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.04';
+const VER = '1.05';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -99,7 +99,7 @@ const prezziStato = () => {
   if (S.prezziBusy) return 'Aggiorno i prezzi…';
   if (!S.prezzi) return S.prezziErr || 'Prezzi non ancora letti';
   const d = new Date(S.prezzi.quando), oggi = d.toDateString() === new Date().toDateString();
-  return 'Prezzi delle ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + (oggi ? '' : ' del ' + d.toLocaleDateString('it-IT')) + (S.prezziErr ? ' (ultima lettura non riuscita)' : '');
+  return 'Prezzi delle ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + (oggi ? '' : ' del ' + d.toLocaleDateString('it-IT')) + (S.prezziN ? ' · ' + S.prezziN + ' prodotti' : '') + (S.prezziErr ? ' · ' + S.prezziErr : '');
 };
 /* Legge i prezzi (all'apertura e con il tasto) e ricalcola le voci con prodotti. Nulla viene salvato per i prezzi; lo storico del mese segue i totali. */
 async function aggiornaPrezzi(manuale) {
@@ -110,13 +110,13 @@ async function aggiornaPrezzi(manuale) {
   try {
     const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 12000);
     let r; try { r = await fetch(PREZZI_URL + '&_=' + Date.now(), { cache: 'no-store', signal: ac.signal }); } finally { clearTimeout(tm); }
-    if (!r.ok) throw new Error('http');
+    if (!r.ok) throw new Error('errore ' + r.status);
     const map = parsePrezzi(await r.text());
-    if (!Object.keys(map).length) throw new Error('vuoto');
-    S.prezzi = { map, quando: Date.now() }; S.prezziErr = '';
+    if (!Object.keys(map).length) throw new Error('nessun prezzo nel file ricevuto');
+    S.prezzi = { map, quando: Date.now() }; S.prezziErr = ''; S.prezziN = Object.keys(map).length;
     try { localStorage.setItem('pf_prezzi', JSON.stringify(S.prezzi)); } catch (e) {}
     if (manuale) S.msg = 'Prezzi aggiornati.';
-  } catch (e) { S.prezziErr = 'Prezzi non aggiornati: uso gli ultimi disponibili.'; if (manuale) S.msg = S.prezziErr; }
+  } catch (e) { const why = e && e.name === 'AbortError' ? 'tempo scaduto' : e instanceof TypeError ? 'il link non risponde o è bloccato dal browser' : (e && e.message) || 'errore'; S.prezziErr = 'Prezzi non aggiornati (' + why + '): uso gli ultimi disponibili.'; if (manuale) S.msg = S.prezziErr; }
   S.prezziBusy = false;
   if (S.data !== D) return;
   tutte().forEach(applyPiano);
@@ -219,6 +219,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.05','21 nov 2026',['Prezzi: se la lettura non riesce, l\'app dice il motivo; mostra quanti prodotti ha letto dal foglio e, per ogni prodotto senza prezzo, "non nel foglio"']],
   ['1.04','21 nov 2026',['Portafogli: corretto il salvataggio dopo una modifica (non partiva mai)','Conti e Portafogli: account e singoli portafogli si possono comprimere con un tocco sul titolo; tasto Comprimi tutto / Espandi tutto']],
   ['1.03','21 nov 2026',['Prezzi: ora letti dal nuovo foglio "Lista prodotti quotati"; i prodotti in dollari o franchi svizzeri sono convertiti in euro con i cambi del foglio','Portafogli: se il salvataggio non va a buon fine, il motivo compare subito sopra la tabella (prima restava nascosto in cima alla pagina)']],
   ['1.02','21 nov 2026',['Computer: nuova pagina Portafogli, con un portafoglio per conto (es. Directa, Fineco) dentro ogni account e un prodotto per riga: ISIN, nome, classe di investimento, quote','La pagina Conti ora non contiene più gli investimenti: per ogni portafoglio c\'è una riga di riepilogo che rimanda a Portafogli','Conti e Portafogli sono divise per account','Le voci di investimento già presenti si riuniscono nei portafogli con un\'anteprima da confermare','Importa titoli si trova ora nella pagina Portafogli']],

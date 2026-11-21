@@ -297,7 +297,7 @@ function pagePort() {
   const stato = isAdmin() ? `<span class="lbl">${esc(prezziStato())}</span><button class="b sm" data-act="prezzi">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : '';
   const prodRow = p => {
     const k = String(p.isin || '').toUpperCase(), pr = S.prezzi && S.prezzi.map[k], v = prodVal(p);
-    return `<tr class="cr"><td class="cn">${esc(p.nome || p.isin || 'Valore manuale')}${p.isin ? `<small class="lbl" style="display:block">${esc(p.isin)}</small>` : ''}</td><td class="cc">${esc(p.classe || '')}</td><td class="cv">${p.isin ? nfm(p.quote) : ''}</td><td class="cv">${pr ? nfm(pr) : p.isin ? 'manuale' : ''}</td><td class="cv">${eur(v)}</td></tr>`;
+    return `<tr class="cr"><td class="cn">${esc(p.nome || p.isin || 'Valore manuale')}${p.isin ? `<small class="lbl" style="display:block">${esc(p.isin)}</small>` : ''}</td><td class="cc">${esc(p.classe || '')}</td><td class="cv">${p.isin ? nfm(p.quote) : ''}</td><td class="cv">${pr ? nfm(pr) : p.isin ? (S.prezzi ? 'non nel foglio' : 'manuale') : ''}</td><td class="cv">${eur(v)}</td></tr>`;
   };
   const draftOf = v => S.pd || (v.prodotti || []).map(p => ({ isin: p.isin, nome: p.nome || '', classe: p.classe || v.assetClass || '', quote: p.isin ? String(p.quote).replace('.', ',') : '', manuale: p.manuale ? String(p.manuale).replace('.', ',') : '' }));
   const classOpts = sel => `<option value="">Classe…</option>${ASSET.map(o => `<option ${sel === o ? 'selected' : ''}>${o}</option>`).join('')}`;
