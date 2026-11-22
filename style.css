@@ -241,10 +241,12 @@ svg g{transition:opacity .2s}
 th.srt{cursor:pointer;user-select:none}th.srt:hover{color:#0f766e}th.srt.on{color:#0f766e;font-weight:600}th.srt i{font-style:normal;display:inline-block;min-width:12px;font-size:11px}
 .card.acc{background:var(--at,#fff)}.acc .ct tr.chd td,.acc .ct tr.chd.l1 td{background:rgba(255,255,255,.6)}.acc .pblk{background:rgba(255,255,255,.6)}
 
-/* v1.08: pulsanti account e aggiornamento accanto al patrimonio netto */
-.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
-.chp{border:1px solid #cfe0de;background:var(--at,#fff);color:#0f3f3a;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}
-.chp.on{border-color:#0f766e;box-shadow:0 0 0 1px #0f766e;font-weight:600}
-.chpe{margin-left:auto;display:flex;gap:4px}
+/* v1.10: caselle account accanto al patrimonio netto */
 .eye.spin svg{animation:rfsr 1s linear infinite}@keyframes rfsr{to{transform:rotate(360deg)}}
-@media(min-width:1000px){.pan .kpis .card{position:relative}.pan .kpis .chips{position:absolute;right:16px;top:50%;transform:translateY(-50%);margin:0;max-width:62%;justify-content:flex-end}}
+.accs{display:flex;gap:10px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
+.acard{position:relative;flex:0 0 auto;min-width:120px;background:var(--at,#fff);border-radius:14px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:pointer;border:2px solid transparent;box-sizing:border-box}
+.acard.on{border-color:#0f766e}.acard .av{font-size:17px;font-weight:600;margin-top:2px;white-space:nowrap}
+.acard.plus{display:flex;align-items:center;justify-content:center;min-width:56px;font-size:24px;color:#0f766e;background:#fff}
+.acard.add{cursor:default;min-width:200px;background:#fff}.acard.add input{margin:0 0 6px}
+.chpe{position:absolute;top:2px;right:2px;display:flex}.chpe .ic{padding:2px 5px;font-size:13px}
+@media(min-width:1000px){.pan .kpis{display:flex;gap:14px;align-items:stretch}.pan .kpis>.card{flex:0 0 25%;box-sizing:border-box}.pan .kpis .accs{flex:1;min-width:0;margin:0;align-items:stretch}.pan .kpis .acard{display:flex;flex-direction:column;justify-content:center}}

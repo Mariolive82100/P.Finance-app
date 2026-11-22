@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.09';
+const VER = '1.10';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -233,6 +233,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.10','22 nov 2026',['Home: Aggregato e gli account sono in caselle dedicate accanto a quella del patrimonio netto, ognuna con il proprio patrimonio netto; la casella scelta è evidenziata']],
   ['1.09','22 nov 2026',['Corretto: la sezione Account è tolta dal menu laterale (computer), non dal menu a panino, che torna com\'era; Bilanciamento resta nel menu laterale']],
   ['1.08','22 nov 2026',['Home: accanto al patrimonio netto c\'è il simbolo di aggiornamento (amministratore: rilegge i prezzi; gli altri: ricarica i dati) e i pulsanti Aggregato, account e + per aggiungerne uno','Menu laterale: tolta la sezione Account; al suo posto la nuova pagina Bilanciamento (per ora vuota). Rinomina ed elimina account sono accanto ai pulsanti quando un account è selezionato']],
   ['1.07','22 nov 2026',['Tabelle: toccando il titolo di una colonna (Conti, Archiviati, prodotti dei Portafogli, Storico mese per mese) le righe si ordinano; un secondo tocco inverte l\'ordine','Conti e Portafogli: ogni account ha un leggero sfondo colorato, per distinguere le persone','Corretto il file sw.js (era vuoto dalla v1.04): torna la copia offline dell\'app']],
