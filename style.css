@@ -264,3 +264,5 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 
 /* v1.18 */
 .ppr{grid-template-columns:1.1fr 1.5fr 1.2fr .7fr .8fr .6fr .9fr auto}
+
+.pqc{display:flex;flex-direction:column;gap:3px;min-width:0}.nl{font-size:11px;color:var(--mut,#667);display:flex;align-items:center;gap:4px;cursor:pointer;line-height:1.1}.nl input{width:auto;margin:0}
