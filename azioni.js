@@ -258,7 +258,7 @@ async function act(el) {
     if (a === 'prezzi') return aggiornaPrezzi(true);
     if (a === 'pedit') { S.pe = v; S.pd = null; S.msg = ''; return render(); }
     if (a === 'pcancel') { S.pe = null; S.pd = null; return render(); }
-    if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', pmc: '', aliq: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
+    if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', nom: false, pmc: '', aliq: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
     if (a === 'psave') return portSalva();
     if (a === 'pnew') return portNuovo(v);
     if (a === 'pdel') {
@@ -382,7 +382,7 @@ async function titoliApplica() {
   for (const x of P.righe) {
     if (x.exId) {
       const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
-      const { id, assetClass, ...rest } = v; const keep = p => { const o = (v.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.pmc > 0 ? { pmc: o.pmc } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; }; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti.map(keep), portafoglio: true };
+      const { id, assetClass, ...rest } = v; const keep = p => { const o = (v.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.pmc > 0 ? { pmc: o.pmc } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; }; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti.map(keep), portafoglio: true };
       await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
     } else {
       if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
@@ -397,7 +397,7 @@ async function titoliApplica() {
 }
 /* ---------- Portafogli: modifica prodotti, nuovo portafoglio, riunione delle voci vecchie ---------- */
 function grabPort() {
-  return [...document.querySelectorAll('.ppr:not(.lbl)')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value, pmc: r.querySelector('.pp').value, aliq: r.querySelector('.pa').value }));
+  const NM = [...document.querySelectorAll('.pnom')]; return [...document.querySelectorAll('.ppr:not(.lbl)')].map((r, i) => ({ nom: !!(NM[i] && NM[i].checked), isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value, pmc: r.querySelector('.pp').value, aliq: r.querySelector('.pa').value }));
 }
 async function portSalva() {
   try { await portSalva0(); } catch (e) { S.pd = grabPort(); S.msg = 'Salvataggio non riuscito' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + (e && e.message || 'errore') + '.'); render(); }
@@ -416,7 +416,7 @@ async function portSalva0() {
       const pm = r.pmc.trim() ? pnum(r.pmc) : 0, al = r.aliq.trim() ? pnum(r.aliq) : null;
       if (!isFinite(pm) || pm < 0) return err('Il prezzo medio di carico deve essere zero o più.');
       if (al !== null && (!isFinite(al) || al < 0 || al > 100)) return err('L\'aliquota va da 0 a 100.');
-      prod.push({ isin, nome, classe: r.classe, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m), ...(pm > 0 ? { pmc: Math.round(pm * 1e6) / 1e6 } : {}), ...(al !== null ? { aliq: al } : {}) });
+      prod.push({ isin, nome, classe: r.classe, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m), ...(r.nom ? { nom: true } : {}), ...(pm > 0 ? { pmc: Math.round(pm * 1e6) / 1e6 } : {}), ...(al !== null ? { aliq: al } : {}) });
     } else {
       if (!(m > 0)) return err('Un prodotto senza ISIN ha bisogno del valore manuale in euro.');
       prod.push({ isin: '', nome, classe: r.classe, quote: 0, manuale: r2(m) });

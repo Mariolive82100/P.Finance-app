@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.18';
+const VER = '1.19';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -86,14 +86,14 @@ const hasProd = v => !!(v && v.prodotti && v.prodotti.length);
 const isPort = v => !!(v && v.portafoglio);
 const nfm = x => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 4 }).format(x);
 /* Prodotto con prezzo nel foglio: quote x prezzo. Senza prezzo: valore manuale */
-const prodVal = p => { const pr = S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]; return pr > 0 ? p.quote * pr : (p.manuale || 0); };
+const prodVal = p => { const pr = S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]; return pr > 0 ? p.quote * pr * (p.nom ? .01 : 1) : (p.manuale || 0); };
 /* Compressi di default: account, categorie e portafogli (true = compresso) */
 const accCol = k => S.acol && S.acol[k] !== undefined ? S.acol[k] : true;
 const pCol = id => S.pcol && S.pcol[id] !== undefined ? S.pcol[id] : true;
 const aliqDef = cl => cl === 'Obbligazioni' ? 12.5 : 26;
 const prodAliq = p => p.aliq != null && p.aliq !== '' && isFinite(+p.aliq) ? +p.aliq : aliqDef(p.classe);
 /* Capital gain = (prezzo - prezzo medio di carico) x quote; imposte latenti solo sulle plusvalenze */
-const prodFisc = p => { const pr = p.isin && S.prezzi && S.prezzi.map[String(p.isin).toUpperCase()]; if (!(pr > 0) || !(p.pmc > 0)) return null; const gain = (pr - p.pmc) * p.quote; return { gain, imp: Math.max(0, gain) * prodAliq(p) / 100 }; };
+const prodFisc = p => { const pr = p.isin && S.prezzi && S.prezzi.map[String(p.isin).toUpperCase()]; if (!(pr > 0) || !(p.pmc > 0)) return null; const gain = (pr - p.pmc) * p.quote * (p.nom ? .01 : 1); return { gain, imp: Math.max(0, gain) * prodAliq(p) / 100 }; };
 const valoreProd = v => r2(v.prodotti.reduce((s, p) => s + prodVal(p), 0));
 /* Grafici e report ragionano per classe di investimento: un portafoglio si divide in una riga per classe (solo per il calcolo, non si salva) */
 const espandi = voci => voci.flatMap(v => {
@@ -111,7 +111,7 @@ function portProposta(D) {
     if (!g.has(k)) g.set(k, { dove, account: v.account || '', voci: [], prodotti: [], valore: 0, obiettivo: 0 });
     const G = g.get(k), cl = v.assetClass || 'Altro';
     G.voci.push(v); G.valore = r2(G.valore + v.valore); if (v.obiettivo && !G.obiettivo) G.obiettivo = v.obiettivo;
-    if (hasProd(v)) v.prodotti.forEach(p => G.prodotti.push({ isin: p.isin, nome: p.nome || '', classe: p.classe || cl, quote: p.quote, manuale: p.manuale || 0 }));
+    if (hasProd(v)) v.prodotti.forEach(p => G.prodotti.push({ isin: p.isin, nome: p.nome || '', classe: p.classe || cl, quote: p.quote, nom: !!p.nom, pmc: p.pmc, aliq: p.aliq, manuale: p.manuale || 0 }));
     else G.prodotti.push({ isin: '', nome: v.assetClass || v.nome, classe: cl, quote: 0, manuale: v.valore });
   });
   const out = [...g.values()];
@@ -243,6 +243,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.19','22 nov 2026',['Obbligazioni: nella scheda del portafoglio spunta «Obbligazione» e scrivi il nominale in € (es. 7000): il valore usa il prezzo in % del foglio','Capital gain e imposte latenti seguono lo stesso calcolo']],
   ['1.18','22 nov 2026',['Portafogli: nuove colonne prezzo medio di carico, capital gain netto (rosso se negativo), aliquota e imposte latenti; PMC e aliquota si inseriscono nel modulo del prodotto (aliquota predefinita: 12,5% obbligazioni, 26% il resto)','Liquidità e Portafogli: account, categorie e portafogli sono compressi di default','Portafogli: gli ISIN nuovi si aggiungono anche al foglio Google "Lista prodotti quotati" (serve collegare lo script, vedi Info) così il prezzo si recupera da Borsa Italiana']],
   ['1.17','22 nov 2026',['Telefono, Patrimonio: tolti i due riquadri con il totale di Attivi e Passivi e il riquadro Importa titoli']],
   ['1.16','22 nov 2026',['Telefono: sistemato il simbolo di aggiornamento (appariva come un grande cerchio nero) e reso più compatto l\'intestazione']],
