@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.17';
+const VER = '1.18';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -87,6 +87,13 @@ const isPort = v => !!(v && v.portafoglio);
 const nfm = x => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 4 }).format(x);
 /* Prodotto con prezzo nel foglio: quote x prezzo. Senza prezzo: valore manuale */
 const prodVal = p => { const pr = S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]; return pr > 0 ? p.quote * pr : (p.manuale || 0); };
+/* Compressi di default: account, categorie e portafogli (true = compresso) */
+const accCol = k => S.acol && S.acol[k] !== undefined ? S.acol[k] : true;
+const pCol = id => S.pcol && S.pcol[id] !== undefined ? S.pcol[id] : true;
+const aliqDef = cl => cl === 'Obbligazioni' ? 12.5 : 26;
+const prodAliq = p => p.aliq != null && p.aliq !== '' && isFinite(+p.aliq) ? +p.aliq : aliqDef(p.classe);
+/* Capital gain = (prezzo - prezzo medio di carico) x quote; imposte latenti solo sulle plusvalenze */
+const prodFisc = p => { const pr = p.isin && S.prezzi && S.prezzi.map[String(p.isin).toUpperCase()]; if (!(pr > 0) || !(p.pmc > 0)) return null; const gain = (pr - p.pmc) * p.quote; return { gain, imp: Math.max(0, gain) * prodAliq(p) / 100 }; };
 const valoreProd = v => r2(v.prodotti.reduce((s, p) => s + prodVal(p), 0));
 /* Grafici e report ragionano per classe di investimento: un portafoglio si divide in una riga per classe (solo per il calcolo, non si salva) */
 const espandi = voci => voci.flatMap(v => {
@@ -236,6 +243,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.18','22 nov 2026',['Portafogli: nuove colonne prezzo medio di carico, capital gain netto (rosso se negativo), aliquota e imposte latenti; PMC e aliquota si inseriscono nel modulo del prodotto (aliquota predefinita: 12,5% obbligazioni, 26% il resto)','Liquidità e Portafogli: account, categorie e portafogli sono compressi di default','Portafogli: gli ISIN nuovi si aggiungono anche al foglio Google "Lista prodotti quotati" (serve collegare lo script, vedi Info) così il prezzo si recupera da Borsa Italiana']],
   ['1.17','22 nov 2026',['Telefono, Patrimonio: tolti i due riquadri con il totale di Attivi e Passivi e il riquadro Importa titoli']],
   ['1.16','22 nov 2026',['Telefono: sistemato il simbolo di aggiornamento (appariva come un grande cerchio nero) e reso più compatto l\'intestazione']],
   ['1.15','22 nov 2026',['Torte: la fetta si deseleziona appena il mouse esce dalla fetta (o dalla voce in legenda)']],
@@ -300,6 +308,27 @@ const CHANGELOG = [
   ['0.35 – 0.43', '18 nov 2026', ['Tasto indietro del telefono per schede, menu e finestre', 'Barra di navigazione in basso con icone', 'Grafico del patrimonio netto interattivo nella pagina Andamento']],
   ['0.30 – 0.34', '17 nov 2026', ['Grafici con zoom, schermo intero e valori al tocco', 'Confronto tra periodi e indicatori nel report', 'Importazione dello storico da file']]
 ];
+/* Collegamento al foglio Google dei prezzi: l'indirizzo dello script e la chiave restano solo su questo dispositivo */
+const sheetCfg = () => { try { const c = JSON.parse(localStorage.getItem('pf_sheet') || 'null'); return c && c.url && c.token ? c : null; } catch (e) { return null; } };
+const sheetCard = () => { const c = sheetCfg() || {}; return `<div class="card"><h2>Foglio dei prezzi</h2><p class="lbl" style="margin-top:0">Quando salvi un portafoglio con un ISIN nuovo, l'app lo aggiunge al foglio "Lista prodotti quotati" e il prezzo arriva da Borsa Italiana. Serve lo script Google (file script_isin_foglio.txt): incolla qui l'indirizzo e la chiave.</p>
+  <label class="lbl">Indirizzo dello script</label><input id="shu" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(c.url || '')}">
+  <label class="lbl">Chiave</label><input id="sht" placeholder="La chiave scelta nello script" value="${esc(c.token || '')}">
+  <div class="acts"><button class="b sm" data-act="shsave">Salva</button>${c.url ? '<button class="b s sm" data-act="shtest">Prova collegamento</button><button class="b s sm r" data-act="shdel">Scollega</button>' : ''}</div></div>`; };
+/* Aggiunge al foglio gli ISIN senza prezzo (solo amministratore); restituisce un messaggio */
+async function sheetAggiungi(prodotti) {
+  const c = sheetCfg(), mancanti = prodotti.filter(p => p.isin && S.prezzi && !S.prezzi.map[p.isin]);
+  if (!mancanti.length) return '';
+  if (!c) return ' Per prendere il prezzo di ' + mancanti.map(p => p.isin).join(', ') + ' collega il foglio dalla pagina Info.';
+  const out = [];
+  for (const p of mancanti) {
+    try {
+      const q = new URLSearchParams({ token: c.token, isin: p.isin, nome: p.nome || '', classe: p.classe || '' });
+      const r = await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' }), j = await r.json();
+      out.push(j.ok ? (j.esito === 'presente' ? p.isin + ' è già nel foglio' : p.isin + ' aggiunto al foglio' + (j.prezzo ? ' (prezzo ' + nfm(j.prezzo) + ')' : '')) : p.isin + ': ' + (j.errore || 'errore'));
+    } catch (e) { out.push(p.isin + ': foglio non raggiungibile'); }
+  }
+  return ' ' + out.join('; ') + '. Il prezzo compare in app quando il foglio pubblicato si aggiorna.';
+}
 function pageInfo() {
   return `<div class="card"><h2>P.Finance</h2><p class="lbl">Versione ${VER} beta</p>
     <p>App per tenere traccia del proprio patrimonio, della situazione mese per mese e per imparare le basi della finanza personale.</p>
@@ -308,5 +337,6 @@ function pageInfo() {
     <div class="row"><div class="n">Funziona anche offline</div><div class="v">Sì</div></div>
     <p class="note">Strumento educativo, non consulenza finanziaria. I tuoi dati restano visibili solo a te.</p>
     <button class="b s sm" data-act="terms">Termini e condizioni</button></div>
+    ${isAdmin() ? sheetCard() : ''}
     <div class="card"><h2>Novità</h2>${CHANGELOG.map(([v, d, l]) => `<h3 style="margin:12px 0 2px;font-size:15px">Versione ${v}</h3><div class="lbl">${d}</div><ul class="c">${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')}</div>`;
 }

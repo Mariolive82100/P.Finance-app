@@ -261,3 +261,6 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .ov.povl{z-index:50}.pop{z-index:52}
 
 @media(max-width:480px){.hw{gap:6px;padding:10px 10px}.hw h1{font-size:16px}.hw .ver{display:none}.hw button.b.sm{font-size:12px;padding:6px 9px}}
+
+/* v1.18 */
+.ppr{grid-template-columns:1.1fr 1.5fr 1.2fr .7fr .8fr .6fr .9fr auto}

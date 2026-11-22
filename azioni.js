@@ -32,6 +32,9 @@ async function act(el) {
   let a = el.dataset.act; const v = el.dataset.v, D = S.data;
   S.msg = '';
   try {
+    if (a === 'shsave') { const u = $('shu').value.trim(), t = $('sht').value.trim(); if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u) || !t) { S.msg = 'Servono l\'indirizzo dello script (finisce con /exec) e la chiave.'; return render(); } try { localStorage.setItem('pf_sheet', JSON.stringify({ url: u, token: t })); } catch (e) {} S.msg = 'Collegamento salvato.'; return render(); }
+    if (a === 'shdel') { try { localStorage.removeItem('pf_sheet'); } catch (e) {} S.msg = 'Foglio scollegato.'; return render(); }
+    if (a === 'shtest') { const c = sheetCfg(); if (!c) return; try { const j = await (await fetch(c.url + '?token=' + encodeURIComponent(c.token) + '&prova=1', { cache: 'no-store' })).json(); S.msg = j.ok ? 'Collegamento riuscito.' : 'Lo script risponde ma: ' + (j.errore || 'errore') + '.'; } catch (e) { S.msg = 'Lo script non risponde: controlla indirizzo e pubblicazione.'; } return render(); }
     if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
     if (a === 'accept') {
@@ -83,11 +86,11 @@ async function act(el) {
       a = 'poparchok';
     }
     if (a === 'sort') { const [t, c] = v.split('|'), s = sortSt(t); S.sort = S.sort || {}; S.sort[t] = s && s.c === c ? { c, d: s.d === 'a' ? 'd' : 'a' } : { c, d: 'a' }; return render(); }
-    if (a === 'ccol') { S.ccol = S.ccol || {}; S.ccol[v] = !(S.ccol[v] !== undefined ? S.ccol[v] : !!S.ccAll); return render(); }
-    if (a === 'ccolall') { S.ccol = {}; S.ccAll = v === '1'; S.acol = {}; if (v === '1') accList(D).forEach(([k]) => { S.acol[k] = true; }); return render(); }
-    if (a === 'acol') { S.acol = S.acol || {}; S.acol[v] = !S.acol[v]; return render(); }
-    if (a === 'pcol') { S.pcol = S.pcol || {}; S.pcol[v] = !S.pcol[v]; return render(); }
-    if (a === 'pcolall') { S.acol = {}; S.pcol = {}; if (v === '1') accList(D).forEach(([k]) => { S.acol[k] = true; }); return render(); }
+    if (a === 'ccol') { S.ccol = S.ccol || {}; S.ccol[v] = !(S.ccol[v] !== undefined ? S.ccol[v] : S.ccAll !== false); return render(); }
+    if (a === 'ccolall') { S.ccol = {}; S.ccAll = v === '1'; S.acol = {}; accList(D).forEach(([k]) => { S.acol[k] = v === '1'; }); return render(); }
+    if (a === 'acol') { S.acol = S.acol || {}; S.acol[v] = !accCol(v); return render(); }
+    if (a === 'pcol') { S.pcol = S.pcol || {}; S.pcol[v] = !pCol(v); return render(); }
+    if (a === 'pcolall') { S.acol = {}; S.pcol = {}; accList(D).forEach(([k]) => { S.acol[k] = v === '1'; }); D.voci.filter(isPort).forEach(x => { S.pcol[x.id] = v === '1'; }); return render(); }
     if (a === 'cfm') { S.cfm = true; return render(); }
     if (a === 'cfmno') { S.cfm = false; return render(); }
     if (a === 'carcs') { S.carc = !S.carc; return render(); }
@@ -255,7 +258,7 @@ async function act(el) {
     if (a === 'prezzi') return aggiornaPrezzi(true);
     if (a === 'pedit') { S.pe = v; S.pd = null; S.msg = ''; return render(); }
     if (a === 'pcancel') { S.pe = null; S.pd = null; return render(); }
-    if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
+    if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', pmc: '', aliq: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
     if (a === 'psave') return portSalva();
     if (a === 'pnew') return portNuovo(v);
     if (a === 'pdel') {
@@ -379,7 +382,7 @@ async function titoliApplica() {
   for (const x of P.righe) {
     if (x.exId) {
       const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
-      const { id, assetClass, ...rest } = v; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti, portafoglio: true };
+      const { id, assetClass, ...rest } = v; const keep = p => { const o = (v.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.pmc > 0 ? { pmc: o.pmc } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; }; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti.map(keep), portafoglio: true };
       await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
     } else {
       if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
@@ -394,7 +397,7 @@ async function titoliApplica() {
 }
 /* ---------- Portafogli: modifica prodotti, nuovo portafoglio, riunione delle voci vecchie ---------- */
 function grabPort() {
-  return [...document.querySelectorAll('.ppr:not(.lbl)')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value }));
+  return [...document.querySelectorAll('.ppr:not(.lbl)')].map(r => ({ isin: r.querySelector('.pi').value, nome: r.querySelector('.pn').value, classe: r.querySelector('.pc').value, quote: r.querySelector('.pq').value, manuale: r.querySelector('.pm').value, pmc: r.querySelector('.pp').value, aliq: r.querySelector('.pa').value }));
 }
 async function portSalva() {
   try { await portSalva0(); } catch (e) { S.pd = grabPort(); S.msg = 'Salvataggio non riuscito' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + (e && e.message || 'errore') + '.'); render(); }
@@ -410,7 +413,10 @@ async function portSalva0() {
     const m = ms ? pnum(ms) : 0; if (!isFinite(m) || m < 0) return err('Il valore manuale deve essere zero o più.');
     if (isin) {
       const q = pnum(qs); if (!/^[A-Z0-9]{12}$/.test(isin) || !(q > 0)) return err('Ogni prodotto con ISIN ha bisogno di 12 caratteri e di quote maggiori di zero.');
-      prod.push({ isin, nome, classe: r.classe, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m) });
+      const pm = r.pmc.trim() ? pnum(r.pmc) : 0, al = r.aliq.trim() ? pnum(r.aliq) : null;
+      if (!isFinite(pm) || pm < 0) return err('Il prezzo medio di carico deve essere zero o più.');
+      if (al !== null && (!isFinite(al) || al < 0 || al > 100)) return err('L\'aliquota va da 0 a 100.');
+      prod.push({ isin, nome, classe: r.classe, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m), ...(pm > 0 ? { pmc: Math.round(pm * 1e6) / 1e6 } : {}), ...(al !== null ? { aliq: al } : {}) });
     } else {
       if (!(m > 0)) return err('Un prodotto senza ISIN ha bisogno del valore manuale in euro.');
       prod.push({ isin: '', nome, classe: r.classe, quote: 0, manuale: r2(m) });
@@ -420,6 +426,7 @@ async function portSalva0() {
   dati.valore = prod.length ? valoreProd(dati) : 0;
   await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
   await syncStorico(); S.pe = null; S.pd = null; S.msg = 'Portafoglio salvato.'; render();
+  if (isAdmin()) { const extra = await sheetAggiungi(prod); if (extra) { S.msg = 'Portafoglio salvato.' + extra; render(); } }
 }
 async function portNuovo(acc) {
   const D = S.data, inp = $('pnn_' + acc), nm = inp ? inp.value.trim() : '', account = acc === 'main' ? '' : acc;
