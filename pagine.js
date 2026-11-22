@@ -48,7 +48,7 @@ function navWide(IC, pend, D) {
   const add = S.addAcc ? `<div class="nadd"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<button class="nplus" data-act="addo">＋ Aggiungi account</button>`;
   const sub = open ? `<div class="nsub">${row('all', 'Aggregato')}${row('main', D.nome)}${D.accounts.map(a => row(a.id, a.nome, true)).join('')}${add}</div>` : '';
   const it = (act, v, ic, l, on, extra) => `<button data-act="${act}"${v ? ` data-v="${v}"` : ''} class="${on ? 'on' : ''}">${sv(ic)}${l}${extra || ''}</button>`;
-  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'alb', ICX.alb, 'Albero', S.tab === 'alb')}${it('tab', 'con', ICX.con, 'Conti', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('accT', '', ICX.acc, 'Account', pa && fa !== 'all', `<span class="chev ${open ? 'open' : ''}" style="margin-left:auto">▸︎</span>`)}${sub}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
+  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'alb', ICX.alb, 'Albero', S.tab === 'alb')}${it('tab', 'con', ICX.con, 'Conti', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
 }
 
 /* ---------- Gesto/tasto "indietro" ---------- */
@@ -170,10 +170,15 @@ function importCard() {
 }
 
 function drawer() {
-  const D = S.data;
+  const D = S.data, fa = S.fAcc || 'all';
+  const item = (k, n, sub, extra) => `<div class="it ${fa === k ? 'on' : ''}" data-act="facc" data-v="${esc(k)}"><span class="t">${esc(n)}${sub ? `<small class="lbl" style="display:block;font-weight:400">${sub}</small>` : ''}</span>${extra || ''}</div>`;
+  const rows = D.accounts.map(a => item(a.id, a.nome, '', `<button class="ic" data-act="rena" data-v="${a.id}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${a.id}" aria-label="Elimina account">✕</button>`)).join('');
+  const add = (S.addAcc
+    ? `<div style="margin-top:14px"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b" data-act="adda">Aggiungi</button><button class="b s" data-act="addc">Annulla</button></div></div>`
+    : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
-  const adm = isAdmin() ? `<div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
-  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Menu</h2><div class="it ${S.tab === 'bil' ? 'on' : ''}" data-act="bil"><span class="t">Bilanciamento</span></div><div class="msg">${esc(S.msg)}</div><hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
+  const adm = isAdmin() ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
+  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
 }
 
 /* Simbolo di aggiornamento e pulsanti account (Aggregato, account, +) accanto al patrimonio netto */
@@ -181,8 +186,8 @@ const rfsBtn = () => `<button class="eye${S.prezziBusy ? ' spin' : ''}" data-act
 function accChips() {
   const D = S.data, fa = S.fAcc || 'all', wide = innerWidth >= 1000, ac = wide ? 'accsel' : 'facc';
   const chip = (k, n) => `<button class="chp${fa === k ? ' on' : ''}" data-act="${ac}" data-v="${esc(k)}"${k !== 'all' ? ` style="--at:${accTint(k)}"` : ''}>${esc(n)}</button>`;
-  const ed = !wide && fa !== 'all' && fa !== 'main' && D.accounts.some(a => a.id === fa) ? `<span class="chpe"><button class="ic" data-act="rena" data-v="${fa}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${fa}" aria-label="Elimina account">✕</button></span>` : '';
-  const add = S.addAcc ? (wide ? '' : `<div class="nadd" style="flex-basis:100%"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>`) : `<button class="chp" data-act="addo" aria-label="Aggiungi account" title="Aggiungi account">+</button>`;
+  const ed = fa !== 'all' && fa !== 'main' && D.accounts.some(a => a.id === fa) ? `<span class="chpe"><button class="ic" data-act="rena" data-v="${fa}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${fa}" aria-label="Elimina account">✕</button></span>` : '';
+  const add = S.addAcc ? (`<div class="nadd" style="flex-basis:100%"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>`) : `<button class="chp" data-act="addo" aria-label="Aggiungi account" title="Aggiungi account">+</button>`;
   return `<div class="chips">${chip('all', 'Aggregato')}${chip('main', D.nome)}${D.accounts.map(a => chip(a.id, a.nome)).join('')}${add}${ed}</div>`;
 }
 function pageBil() { return `<div class="card"><h2>Bilanciamento</h2><p class="note">Pagina in preparazione.</p></div>`; }

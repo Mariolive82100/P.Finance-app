@@ -60,7 +60,7 @@ async function act(el) {
     if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'exp') { S.exp = S.exp || {}; S.exp[v] = !S.exp[v]; return render(); }
     if (a === 'menu') { S.menu = !S.menu; S.addAcc = false; return render(); }
-    if (a === 'addo') { S.addAcc = true; if (innerWidth >= 1000) S.accOpen = true; render(); const i = $('an'); if (i) i.focus(); return; }
+    if (a === 'addo') { S.addAcc = true; render(); const i = $('an'); if (i) i.focus(); return; }
     if (a === 'addc') { S.addAcc = false; return render(); }
     if (a === 'pop') { S.pop = { id: v, mode: 'menu' }; return render(); }
     if (a === 'popclose') { S.pop = null; render(); return keepTT(); }
