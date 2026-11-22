@@ -268,6 +268,16 @@ function hubGrid(all0, all) {
     ${cell('pas', ok && mnLines([{ v: agP.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
+/* Quattro riquadri: variazione rispetto al mese precedente (Liquidità, Portafoglio, Beni, Passivi) */
+function deltaCard(vis, cur, prev) {
+  const c = { ...totals(vis), ...catTot(vis) };
+  const items = [['Liquidità', c.liq, prev && prev.liq, 0], ['Portafoglio', c.port, prev && prev.port, 0], ['Beni', c.beni, prev && prev.beni, 0], ['Passivi', c.passivi, prev && prev.passivi, 1]];
+  const tile = ([l, now, old, inv]) => {
+    const ok = typeof old === 'number', d = ok ? now - old : 0, good = inv ? -d : d;
+    return `<div class="qc dq"><b>${l}</b>${ok ? `<div class="dv ${good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : ''}">${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}</div><div class="dp ${good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : ''}">${old ? pct(d / Math.abs(old)) : ''}</div>` : '<div class="dv">—</div><div class="dp lbl">dal prossimo mese</div>'}<div class="dn">Ora ${eur(now)}</div></div>`;
+  };
+  return `<div class="card pcard qcard"><h2>Variazione su ${prev ? esc(monthName(prev.mese)) : 'mese precedente'}</h2><div class="qg">${items.map(tile).join('')}</div></div>`;
+}
 /* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
 function colCard(t, vis) {
   const A = t.attivi, P = t.passivi, N = t.netto, pp = Math.max(P, 0), np = Math.max(N, 0), nn = Math.max(-N, 0);

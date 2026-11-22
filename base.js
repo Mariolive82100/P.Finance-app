@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.23';
+const VER = '1.24';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -43,6 +43,8 @@ const totals = voci => {
   const p = voci.filter(v => v.tipo === 'passivo').reduce((s, v) => s + v.valore, 0);
   return { attivi: a, passivi: p, netto: a - p };
 };
+/* Attivi divisi in: Liquidità, Portafoglio (categoria Investimenti), Beni (Immobili, Beni, Altro) */
+const catTot = voci => { const at = voci.filter(v => v.tipo === 'attivo'), s = f => at.filter(f).reduce((a, v) => a + v.valore, 0); return { liq: s(v => v.categoria === 'Liquidità'), port: s(v => v.categoria === 'Investimenti'), beni: s(v => v.categoria !== 'Liquidità' && v.categoria !== 'Investimenti') }; };
 const cls = v => v >= 0 ? 'pos' : 'neg';
 const pnum = s => parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
 const r2 = v => Math.round(v * 100) / 100;
@@ -207,11 +209,11 @@ async function loadData(uid, nome) {
 async function syncStorico() {
   const D = S.data;
   if (!D) return;
-  const t = totals(D.voci);
+  const t = { ...totals(D.voci), ...catTot(D.voci) };
   const mk = monthKey();
   const cur = D.storico.find(x => x.mese === mk);
   if (!D.voci.length && !cur) return;
-  if (cur && cur.attivi === t.attivi && cur.passivi === t.passivi) return;
+  if (cur && cur.attivi === t.attivi && cur.passivi === t.passivi && cur.liq === t.liq && cur.port === t.port && cur.beni === t.beni) return;
   await setDoc(doc(db, 'users', D.uid, 'storico', mk), { ...t, aggiornato: serverTimestamp() });
   if (cur) Object.assign(cur, t); else { D.storico.push({ mese: mk, ...t }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
 }
@@ -243,6 +245,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.24','22 nov 2026',['Panoramica: al posto dei grafici a torta ci sono 4 riquadri con la variazione su mese precedente (Liquidità, Portafoglio, Beni, Passivi); le torte passano in basso a destra e l\'albero, ingrandito, in fondo alla pagina. Le variazioni compaiono dal mese successivo al primo salvataggio']],
   ['1.23','22 nov 2026',['Se il nome non si trova, il campo spiega il motivo']],
   ['1.22','22 nov 2026',['Il nome del prodotto si compila da solo partendo dall\'ISIN (da Borsa Italiana, tramite il foglio)']],
   ['1.21','22 nov 2026',['Se il prezzo manca (es. mercato fermo, 0,00%) il valore usa il prezzo medio di carico']],

@@ -266,3 +266,8 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .ppr{grid-template-columns:1.1fr 1.5fr 1.2fr .7fr .8fr .6fr .9fr auto}
 
 .pqc{display:flex;flex-direction:column;gap:3px;min-width:0}.nl{font-size:11px;color:var(--mut,#667);display:flex;align-items:center;gap:4px;cursor:pointer;line-height:1.1}.nl input{width:auto;margin:0}
+
+/* Riquadri variazione e torte nella Panoramica */
+.dq{cursor:default;justify-content:center;gap:2px;padding:8px 12px}.dq:hover{border-color:#e2eceb;background:#fafdfc}
+.dq .dv{font-size:20px;font-weight:700;margin-top:6px}.dq .dp{font-size:13px;font-weight:600}.dq .dn{font-size:12px;color:#5b7370;margin-top:auto}
+.g12.r2 .s7>.qcard{height:100%;min-height:400px}
