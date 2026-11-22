@@ -528,11 +528,12 @@ document.addEventListener('keydown', e => { if (e.key !== 'Escape' || !S.data ||
 const isTouch = () => typeof PTYPE !== 'undefined' && PTYPE === 'touch';
 document.addEventListener('mouseover', e => {
   if (isTouch() || !e.target.closest) return; const el = e.target.closest('[data-act="qs"]');
-  if (!el) { if (S.qd && S.qsel && S.qsel[S.qd] != null && !e.target.closest('.pleg')) { S.qsel[S.qd] = null; render(); } return; }
+  if (!el) { if (S.qsel && Object.values(S.qsel).some(x => x != null) && !e.target.closest('.pleg')) { S.qsel = {}; render(); } return; }
   const [k, i] = el.dataset.v.split(':'); S.qsel = S.qsel || {}; if (S.qsel[k] === +i) return; S.qsel[k] = +i; render();
 });
 document.addEventListener('mouseout', e => {
-  if (isTouch()) return; const c = e.target.closest && e.target.closest('#pie .pbody'); if (!c || (e.relatedTarget && c.contains(e.relatedTarget) && e.relatedTarget.closest && e.relatedTarget.closest('[data-act="qs"]'))) return;
+  if (isTouch()) return; if (!e.relatedTarget && S.qsel && Object.values(S.qsel).some(x => x != null)) { S.qsel = {}; render(); return; }
+  const c = e.target.closest && e.target.closest('#pie .pbody'); if (!c || (e.relatedTarget && c.contains(e.relatedTarget) && e.relatedTarget.closest && e.relatedTarget.closest('[data-act="qs"]'))) return;
   if (S.qd && S.qsel && S.qsel[S.qd] != null) { S.qsel[S.qd] = null; render(); }
 });
 

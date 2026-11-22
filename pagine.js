@@ -341,7 +341,7 @@ function pagePan() {
   const dsub = dN !== null ? `<span class="dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</span>` : '&nbsp;';
   const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(single ? 300 : 290, Math.round(avail * 0.5));
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
-  S.tfull = !single && all.length > 0; const pr = disParts(Dz, single, single || !all.length); S.tfull = false;
+  S.tfull = S.tpan = !single && all.length > 0; const pr = disParts(Dz, single, single || !all.length); S.tfull = S.tpan = false;
   S.anim = false; S.tanim = false;
   const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
   let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
