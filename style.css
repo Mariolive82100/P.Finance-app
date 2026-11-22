@@ -258,3 +258,6 @@ th.srt{cursor:pointer;user-select:none}th.srt:hover{color:#0f766e}th.srt.on{colo
 /* v1.13: linee a griglia stile Excel nelle tabelle di Liquidità e dei prodotti */
 table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{background:#eef4f3;color:#34504d}
 .ct tr.chd td{border:1px solid #c3d3d0}
+
+/* v1.14: la finestra di modifica sta sopra l'albero ingrandito */
+.ov.povl{z-index:50}.pop{z-index:52}

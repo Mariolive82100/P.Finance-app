@@ -64,12 +64,12 @@ async function act(el) {
     if (a === 'addc') { S.addAcc = false; return render(); }
     if (a === 'pop') { S.pop = { id: v, mode: 'menu' }; return render(); }
     if (a === 'popclose') { S.pop = null; render(); return keepTT(); }
-    if (a === 'tleaf') { const t = document.querySelector('.tt'); S.ttl = t ? t.scrollLeft : null; S.pop = { id: v, mode: 'upd', only: true }; render(); return keepTT(); }
+    if (a === 'tleaf') { const t = document.querySelector('.tt'); S.ttl = t ? t.scrollLeft : null; S.pop = { id: v, mode: 'menu' }; render(); return keepTT(); }
     if (a === 'popback') { if (S.pop.only) { S.pop = null; render(); return keepTT(); } S.pop.mode = 'menu'; return render(); }
     if (a === 'popupd') { S.pop.mode = 'upd'; return render(); }
     if (a === 'popdel') { S.pop.mode = 'del'; return render(); }
-    if (a === 'popedit' && innerWidth >= 1000 && (D.voci.find(z => z.id === S.pop.id) || {}).categoria === 'Investimenti') { const x = D.voci.find(z => z.id === S.pop.id); S.tab = 'por'; S.pe = isPort(x) ? x.id : null; S.pd = null; S.pop = null; return render(); }
-    if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; if (innerWidth >= 1000) S.tab = 'nv'; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
+    if (a === 'popedit' && innerWidth >= 1000 && (D.voci.find(z => z.id === S.pop.id) || {}).categoria === 'Investimenti') { const x = D.voci.find(z => z.id === S.pop.id); S.tab = 'por'; S.pe = isPort(x) ? x.id : null; S.pd = null; S.pop = null; S.tex = false; return render(); }
+    if (a === 'popedit') { S.edit = S.pop.id; S.fd = null; S.pop = null; if (innerWidth >= 1000) S.tab = 'nv'; S.tex = false; render(); const f = $('formvoce'); if (f) f.scrollIntoView({ behavior: 'smooth' }); return; }
     if (a === 'updsave') {
       const x = D.voci.find(z => z.id === S.pop.id), nv = pnum($('pv').value);
       if (!isFinite(nv) || nv < 0) { S.msg = 'Inserisci un valore valido (zero o più).'; return render(); }
