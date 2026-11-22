@@ -182,11 +182,9 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 .chsel .chcmp{margin-left:auto}.chsel .chcmp select{width:auto;margin:0}
 }
 
-@media(min-width:1000px){
 .eye{background:transparent;border:0;cursor:pointer;color:#5b7370;padding:2px 6px;margin-left:6px;vertical-align:middle;line-height:1;border-radius:8px}
 .eye:hover{color:#0f766e;background:#eef6f5}
 .eye svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block}
-}
 
 @media(min-width:1000px){
 .hubc{display:flex;flex-direction:column;height:var(--r1)}
@@ -261,3 +259,5 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 
 /* v1.14: la finestra di modifica sta sopra l'albero ingrandito */
 .ov.povl{z-index:50}.pop{z-index:52}
+
+@media(max-width:480px){.hw{gap:6px;padding:10px 10px}.hw h1{font-size:16px}.hw .ver{display:none}.hw button.b.sm{font-size:12px;padding:6px 9px}}
