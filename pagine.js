@@ -153,14 +153,11 @@ function pagePat() {
     <div class="acts"><button class="b" data-act="save">${ed ? 'Salva modifica' : 'Aggiungi'}</button>${ed || S.tab === 'nv' ? '<button class="b s" data-act="cancel">Annulla</button>' : ''}</div>` : ''}</div>`;
   if (S.tab === 'nv') return form;
   return `${filtro}<div class="card"><div class="lbl bd">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}${rfsBtn()}</div></div>${accChips()}
-    <div class="two"><div class="card at"><div class="lbl">Attivi</div><div class="big">${eur(t.attivi)}</div></div>
-    <div class="card pa"><div class="lbl">Passivi</div><div class="big neg">${eur(t.passivi)}</div></div></div>
     <div class="card" style="padding-top:4px;padding-bottom:14px">${zeroToggle()}</div>
     <div class="card at"><h2>Attivi</h2>${listAttivi()}</div>
     <div class="card pa"><h2>Passivi</h2>${listPassivi()}</div>
     ${archSec}
     ${form}
-    ${importCard()}
     <div class="card"><h2>Esporta</h2><button class="b" data-act="export">Scarica i dati (CSV per Excel)</button></div>`;
 }
 

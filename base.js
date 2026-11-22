@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.16';
+const VER = '1.17';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -236,6 +236,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.17','22 nov 2026',['Telefono, Patrimonio: tolti i due riquadri con il totale di Attivi e Passivi e il riquadro Importa titoli']],
   ['1.16','22 nov 2026',['Telefono: sistemato il simbolo di aggiornamento (appariva come un grande cerchio nero) e reso più compatto l\'intestazione']],
   ['1.15','22 nov 2026',['Torte: la fetta si deseleziona appena il mouse esce dalla fetta (o dalla voce in legenda)']],
   ['1.14','22 nov 2026',['Albero ingrandito: toccando una voce la finestra di modifica ora compare subito sopra l\'albero (prima restava nascosta) e offre tutte le azioni: Aggiorna, Modifica, Archivia, Elimina']],
