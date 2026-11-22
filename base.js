@@ -1,11 +1,25 @@
 'use strict';
-const VER = '1.06';
+const VER = '1.07';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
 const zeroToggle = () => `<label style="display:flex;gap:10px;align-items:center;margin:10px 0 0;font-size:14px"><input type="checkbox" id="zt" style="width:auto" ${showZero() ? 'checked' : ''}><span>Mostra conti a saldo zero</span></label>`;
 const ASSET = ['Azioni', 'Obbligazioni', 'Monetario', 'Oro e materie prime', 'Immobiliare', 'Criptovalute', 'Multi-asset', 'Altro'];
 const dn = v => v.assetClass || v.nome;
+/* Ordinamento colonne: S.sort[tabella] = { c: colonna, d: 'a' | 'd' } */
+const sortSt = t => (S.sort && S.sort[t]) || null;
+function sortArr(t, arr, G) {
+  const s = sortSt(t); if (!s || !G[s.c]) return arr; const f = G[s.c], m = s.d === 'd' ? -1 : 1;
+  return arr.map((x, i) => [x, i]).sort((p, q) => { const a = f(p[0]), b = f(q[0]);
+    const r = typeof a === 'string' || typeof b === 'string' ? String(a).localeCompare(String(b), 'it', { numeric: true, sensitivity: 'base' }) : a - b;
+    return r * m || p[1] - q[1]; }).map(p => p[0]);
+}
+const thS = (t, c, label, cls, off) => { if (off) return `<th class="${cls || ''}">${label}</th>`; const s = sortSt(t), on = s && s.c === c;
+  return `<th class="${cls || ''} srt${on ? ' on' : ''}" data-act="sort" data-v="${t}|${c}">${label}<i>${on ? (s.d === 'd' ? '▾' : '▴') : ''}</i></th>`; };
+/* Colore di sfondo leggero per ogni account (per posizione nell'elenco) */
+const ACC_TINTS = ['#eaf2fb', '#fdf0e1', '#eaf6e8', '#f5ebf8', '#fff6d6', '#e4f5f4'];
+const accTintIdx = k => { const D = S.data, i = k === 'main' ? 0 : D.accounts.findIndex(a => a.id === k) + 1; return Math.max(0, i) % ACC_TINTS.length; };
+const accTint = k => ACC_TINTS[accTintIdx(k)];
 const ADMIN_UID = '29kFEZwmKPZvHFjQ9M65ERhIbhG3';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
@@ -219,6 +233,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.07','22 nov 2026',['Tabelle: toccando il titolo di una colonna (Conti, Archiviati, prodotti dei Portafogli, Storico mese per mese) le righe si ordinano; un secondo tocco inverte l\'ordine','Conti e Portafogli: ogni account ha un leggero sfondo colorato, per distinguere le persone','Corretto il file sw.js (era vuoto dalla v1.04): torna la copia offline dell\'app']],
   ['1.06','21 nov 2026',['Prezzi: se una lettura del foglio arriva incompleta (alcuni prodotti vuoti), l\'app tiene l\'ultimo prezzo noto di quei prodotti invece di azzerarli']],
   ['1.05','21 nov 2026',['Prezzi: se la lettura non riesce, l\'app dice il motivo; mostra quanti prodotti ha letto dal foglio e, per ogni prodotto senza prezzo, "non nel foglio"']],
   ['1.04','21 nov 2026',['Portafogli: corretto il salvataggio dopo una modifica (non partiva mai)','Conti e Portafogli: account e singoli portafogli si possono comprimere con un tocco sul titolo; tasto Comprimi tutto / Espandi tutto']],

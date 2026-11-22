@@ -254,24 +254,25 @@ function pageCon() {
   const q = (S.cq || '').trim().toLowerCase(), fm = !!S.cfm, col = S.ccol || {}, isCol = k => col[k] !== undefined ? col[k] : !!S.ccAll;
   const flt = arr => arr.filter(v => (!single || accKey(v) === fa) && (!q || (dn(v) + ' ' + v.categoria + ' ' + (v.dove || '') + ' ' + accName(v)).toLowerCase().includes(q)))
     .sort((a, b) => dn(a).localeCompare(dn(b)));
+  const GC = { n: dn, v: v => v.valore }, srt = (t, arr) => sortArr(t, arr, GC);
   const act = v => `<button class="b s sm" data-act="cedit" data-v="${v.id}">Modifica</button> <button class="b s sm" data-act="carch" data-v="${v.id}">Archivia</button> <button class="b s sm r" data-act="cdel" data-v="${v.id}">Elimina</button>`;
   const actA = v => `<button class="b s sm" data-act="cres" data-v="${v.id}">Ripristina</button> <button class="b s sm r" data-act="cdel" data-v="${v.id}">Elimina</button>`;
   const row = (v, isA) => {
     const val = !isA && fm && !v.piano && !hasProd(v) ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}">` : `<span class="${v.tipo === 'passivo' ? 'neg' : ''}">${v.tipo === 'passivo' ? '−' : ''}${eur(v.valore)}</span>`;
     const nota = [v.piano ? 'si aggiorna da solo (piano rate)' : v.tipo === 'passivo' ? esc(v.categoria) : '', isA ? esc(accName(v)) : ''].filter(Boolean).join(' · ');
-    return `<tr class="cr"><td class="cn">${esc(dn(v))}${nota ? `<small class="lbl" style="display:block">${nota}</small>` : ''}</td><td class="cv">${val}</td><td class="ca">${fm && !isA ? '' : isA ? actA(v) : act(v)}</td></tr>`;
+    return `<tr class="cr"${isA ? ` style="background:${accTint(accKey(v))}"` : ''}><td class="cn">${esc(dn(v))}${nota ? `<small class="lbl" style="display:block">${nota}</small>` : ''}</td><td class="cv">${val}</td><td class="ca">${fm && !isA ? '' : isA ? actA(v) : act(v)}</td></tr>`;
   };
   const tot = arr => eur(arr.reduce((s, v) => s + v.valore, 0));
   const hd = (key, title, arr) => `<tr class="chd l0" data-act="ccol" data-v="${esc(key)}"><td colspan="3"><span class="chev ${isCol(key) ? '' : 'open'}">▸︎</span> ${esc(title)} <span class="lbl">${arr.length} · ${tot(arr)}</span></td></tr>`;
   const grp = (key, title, arr) => !arr.length ? '' : hd(key, title, arr) + (isCol(key) ? '' : arr.map(v => row(v, false)).join(''));
-  const att = flt(D.voci), arc = flt(D.arch || []);
+  const att = srt('con', flt(D.voci)), arc = srt('arc', flt(D.arch || []));
   const cOrd = ['Liquidità', 'Beni', ...CATS.attivo.filter(c => !['Liquidità', 'Investimenti', 'Beni'].includes(c))];
-  const head = '<tr><th class="cn">Nome</th><th class="cv">Valore</th><th></th></tr>';
+  const headT = (t, off) => `<tr>${thS(t, 'n', 'Nome', 'cn', off)}${thS(t, 'v', 'Valore', 'cv', off)}<th></th></tr>`;
   const cg = '<colgroup><col style="width:46%"><col style="width:22%"><col></colgroup>';
   /* una riga di riepilogo (sola lettura) per ogni portafoglio; le voci di investimento vecchio stile compaiono raggruppate per conto */
   const portRows = mine => {
     const m = new Map(); mine.filter(v => v.tipo === 'attivo' && v.categoria === 'Investimenti').forEach(v => { const d = (v.dove || v.nome || 'Senza conto').trim(), k = d.toLowerCase(); if (!m.has(k)) m.set(k, { d, arr: [] }); m.get(k).arr.push(v); });
-    const L = [...m.values()].sort((a, b) => a.d.localeCompare(b.d));
+    const L = sortArr('con', [...m.values()].sort((a, b) => a.d.localeCompare(b.d)), { n: x => x.d, v: x => x.arr.reduce((s, v) => s + v.valore, 0) });
     return L.map(({ d, arr }) => { const n = arr.reduce((s, v) => s + (hasProd(v) ? v.prodotti.length : 0), 0), old = arr.some(isInvLegacy);
       return `<tr class="cr"><td class="cn">Portafoglio ${esc(d)}<small class="lbl" style="display:block">${old ? 'da riunire nei portafogli' : n + (n === 1 ? ' prodotto' : ' prodotti')}</small></td><td class="cv">${tot(arr)}</td><td class="ca">${fm ? '' : '<button class="b s sm" data-act="tab" data-v="por">Apri</button>'}</td></tr>`; }).join('');
   };
@@ -279,12 +280,12 @@ function pageCon() {
     const mine = att.filter(v => accKey(v) === k);
     const t = totals(mine), body = cOrd.map(c => grp(k + '|' + c, c, mine.filter(v => v.tipo === 'attivo' && v.categoria === c))).join('') + portRows(mine) + grp(k + '|Passivi', 'Passivi', mine.filter(v => v.tipo === 'passivo'));
     const ac = !!(S.acol && S.acol[k]);
-    return `<div class="card"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">Patrimonio netto ${eur(t.netto)}</span></div>${ac ? '' : mine.length ? `<table class="ct">${cg}${head}${body}</table>` : '<div class="lbl" style="padding:6px 0">Nessuna voce.</div>'}</div>`;
+    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">Patrimonio netto ${eur(t.netto)}</span></div>${ac ? '' : mine.length ? `<table class="ct">${cg}${headT('con', fm)}${body}</table>` : '<div class="lbl" style="padding:6px 0">Nessuna voce.</div>'}</div>`;
   }).join('');
   const tbar = fm
     ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola. I portafogli si aggiornano dai prodotti.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
     : `<div class="tbar"><input id="cq" placeholder="Cerca un conto…" value="${esc(S.cq || '')}" style="max-width:260px;margin:0"><span style="flex:1"></span><button class="b s sm" data-act="ccolall" data-v="${S.ccAll ? 0 : 1}">${S.ccAll ? 'Espandi tutto' : 'Comprimi tutto'}</button><button class="b sm" data-act="cfm">Aggiorna fine mese</button></div>`;
-  const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table class="ct">${cg}${head}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
+  const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table class="ct">${cg}${headT('arc')}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
   return `<div class="con">${panTop(aname, 'Conti')}<div class="card">${tbar}</div>${secs}${archSec}</div>`;
 }
 
@@ -311,13 +312,14 @@ function pagePort() {
   const viewBlock = v => {
     const L = v.prodotti || [], m = new Map(); L.forEach(p => { const c = p.classe || 'Altro'; m.set(c, (m.get(c) || 0) + prodVal(p)); });
     const t = v.valore, cl = [...m].sort((a, b) => b[1] - a[1]).map(([c, x]) => `${esc(c)} ${t > 0 ? Math.round(x / t * 100) : 0}%`).join(' · ');
+    const GP = { n: p => p.nome || p.isin || 'Valore manuale', c: p => p.classe || '', q: p => p.isin ? Number(p.quote) || 0 : 0, p: p => (S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]) || 0, v: prodVal };
     return `${viewHead(v)}
-    ${L.length ? `<table class="ct"><colgroup><col style="width:38%"><col style="width:20%"><col style="width:12%"><col style="width:12%"><col></colgroup><tr><th class="cn">Prodotto</th><th>Classe</th><th class="cv">Quote</th><th class="cv">Prezzo</th><th class="cv">Valore</th></tr>${L.map(prodRow).join('')}</table>${cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : ''}` : '<div class="lbl">Nessun prodotto: premi Modifica per aggiungerli.</div>'}`;
+    ${L.length ? `<table class="ct"><colgroup><col style="width:38%"><col style="width:20%"><col style="width:12%"><col style="width:12%"><col></colgroup><tr>${thS('prod', 'n', 'Prodotto', 'cn')}${thS('prod', 'c', 'Classe')}${thS('prod', 'q', 'Quote', 'cv')}${thS('prod', 'p', 'Prezzo', 'cv')}${thS('prod', 'v', 'Valore', 'cv')}</tr>${sortArr('prod', L, GP).map(prodRow).join('')}</table>${cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : ''}` : '<div class="lbl">Nessun prodotto: premi Modifica per aggiungerli.</div>'}`;
   };
   const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
     const ports = D.voci.filter(v => isPort(v) && accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
     const ac = !!(S.acol && S.acol[k]) && !ports.some(v => S.pe === v.id);
-    return `<div class="card"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">${ports.length} ${ports.length === 1 ? 'portafoglio' : 'portafogli'} · ${eur(t)}</span></div>
+    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">${ports.length} ${ports.length === 1 ? 'portafoglio' : 'portafogli'} · ${eur(t)}</span></div>
       ${ac ? '' : ports.map(v => `<div class="pblk">${S.pe === v.id ? editBlock(v) : S.pcol && S.pcol[v.id] ? viewHead(v) : viewBlock(v)}</div>`).join('') || (ac ? '' : '<div class="lbl">Nessun portafoglio.</div>')}
       ${ac ? '' : `<div class="tbar" style="margin-top:10px"><input id="pnn_${esc(k)}" maxlength="40" placeholder="Nuovo portafoglio (es. Directa)" style="max-width:260px;margin:0"><button class="b s sm" data-act="pnew" data-v="${esc(k)}">＋ Aggiungi portafoglio</button></div>`}</div>`;
   }).join('');

@@ -383,8 +383,8 @@ function pageAnd() {
     ${ch ? ch.bar : ''}
     ${all.length > 1 ? cmpCards(all) : ''}
     <div class="card"><div class="row cl cat" data-act="exp" data-v="stab" style="border:0;padding:0"><div class="n">Storico mese per mese<small>${all.length} mesi · tocca una riga per modificarla o eliminarla</small></div><span class="chev ${topen ? 'open' : ''}">▸︎</span></div>
-    ${topen ? `<div class="tw" style="margin-top:8px"><table><tr><th>Mese</th><th>Attivi</th><th>Passivi</th><th>Netto</th><th>Var.</th></tr>
-    ${rows.map(({ s, d }) => `<tr${s.mese < monthKey() ? ` class="cl" data-act="rowm" data-v="${s.mese}"` : ''}><td>${esc(shortM(s.mese))}${s.manuale ? ' ✎' : ''}</td><td>${eur(s.attivi)}</td><td>${eur(s.passivi)}</td><td><b>${eur(s.netto)}</b></td><td class="${d === null ? '' : cls(d)}">${d === null ? '–' : (d >= 0 ? '+' : '') + eur(d)}</td></tr>`).join('')}</table></div>` : ''}</div>
+    ${topen ? `<div class="tw" style="margin-top:8px"><table><tr>${thS('sto', 'm', 'Mese')}${thS('sto', 'a', 'Attivi')}${thS('sto', 'p', 'Passivi')}${thS('sto', 'n', 'Netto')}${thS('sto', 'd', 'Var.')}</tr>
+    ${sortArr('sto', rows, { m: r => r.s.mese, a: r => r.s.attivi, p: r => r.s.passivi, n: r => r.s.netto, d: r => r.d === null ? -Infinity : r.d }).map(({ s, d }) => `<tr${s.mese < monthKey() ? ` class="cl" data-act="rowm" data-v="${s.mese}"` : ''}><td>${esc(shortM(s.mese))}${s.manuale ? ' ✎' : ''}</td><td>${eur(s.attivi)}</td><td>${eur(s.passivi)}</td><td><b>${eur(s.netto)}</b></td><td class="${d === null ? '' : cls(d)}">${d === null ? '–' : (d >= 0 ? '+' : '') + eur(d)}</td></tr>`).join('')}</table></div>` : ''}</div>
     ${formMese()}`;
 }
 

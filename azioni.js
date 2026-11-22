@@ -80,6 +80,7 @@ async function act(el) {
       if (x0 && x0.valore !== 0) { S.pop.mode = 'arch'; return render(); }
       a = 'poparchok';
     }
+    if (a === 'sort') { const [t, c] = v.split('|'), s = sortSt(t); S.sort = S.sort || {}; S.sort[t] = s && s.c === c ? { c, d: s.d === 'a' ? 'd' : 'a' } : { c, d: 'a' }; return render(); }
     if (a === 'ccol') { S.ccol = S.ccol || {}; S.ccol[v] = !(S.ccol[v] !== undefined ? S.ccol[v] : !!S.ccAll); return render(); }
     if (a === 'ccolall') { S.ccol = {}; S.ccAll = v === '1'; S.acol = {}; if (v === '1') accList(D).forEach(([k]) => { S.acol[k] = true; }); return render(); }
     if (a === 'acol') { S.acol = S.acol || {}; S.acol[v] = !S.acol[v]; return render(); }

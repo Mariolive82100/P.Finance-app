@@ -236,3 +236,7 @@ svg g{transition:opacity .2s}
 .ptop2{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px}.ptop2 h2{margin:0}
 .pblk{border:1px solid #dbe8e6;border-radius:10px;padding:10px 12px;margin:10px 0}.phd{display:flex;align-items:center;gap:10px;margin-bottom:8px}.phd .grow{flex:1}
 .ppr{display:grid;grid-template-columns:1.2fr 1.7fr 1.3fr .8fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px}.ppr input,.ppr select{margin:0;min-width:0}.ppr.lbl{margin-bottom:2px}
+
+/* v1.07: titoli ordinabili e sfondo per account */
+th.srt{cursor:pointer;user-select:none}th.srt:hover{color:#0f766e}th.srt.on{color:#0f766e;font-weight:600}th.srt i{font-style:normal;display:inline-block;min-width:12px;font-size:11px}
+.card.acc{background:var(--at,#fff)}.acc .ct tr.chd td,.acc .ct tr.chd.l1 td{background:rgba(255,255,255,.6)}.acc .pblk{background:rgba(255,255,255,.6)}
