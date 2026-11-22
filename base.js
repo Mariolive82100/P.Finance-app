@@ -1,11 +1,12 @@
 'use strict';
-const VER = '1.10';
+const VER = '1.11';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
 const zeroToggle = () => `<label style="display:flex;gap:10px;align-items:center;margin:10px 0 0;font-size:14px"><input type="checkbox" id="zt" style="width:auto" ${showZero() ? 'checked' : ''}><span>Mostra conti a saldo zero</span></label>`;
 const ASSET = ['Azioni', 'Obbligazioni', 'Monetario', 'Oro e materie prime', 'Immobiliare', 'Criptovalute', 'Multi-asset', 'Altro'];
 const dn = v => v.assetClass || v.nome;
+const T0 = Date.now();
 /* Ordinamento colonne: S.sort[tabella] = { c: colonna, d: 'a' | 'd' } */
 const sortSt = t => (S.sort && S.sort[t]) || null;
 function sortArr(t, arr, G) {
@@ -233,6 +234,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.11','22 nov 2026',['Computer: tolta la pagina Albero dal menu laterale (c\'è già in Panoramica); nel riquadro dell\'albero un selettore passa tra Aggregato e Per account','Data e ora dell\'ultimo aggiornamento accanto al simbolo di aggiornamento (tolta dalla pagina Portafogli)','Grassetto per "Patrimonio netto" e per i nomi degli account','Grafici a torta: la fetta si evidenzia al passaggio del mouse, senza clic']],
   ['1.10','22 nov 2026',['Home: Aggregato e gli account sono in caselle dedicate accanto a quella del patrimonio netto, ognuna con il proprio patrimonio netto; la casella scelta è evidenziata']],
   ['1.09','22 nov 2026',['Corretto: la sezione Account è tolta dal menu laterale (computer), non dal menu a panino, che torna com\'era; Bilanciamento resta nel menu laterale']],
   ['1.08','22 nov 2026',['Home: accanto al patrimonio netto c\'è il simbolo di aggiornamento (amministratore: rilegge i prezzi; gli altri: ricarica i dati) e i pulsanti Aggregato, account e + per aggiungerne uno','Menu laterale: tolta la sezione Account; al suo posto la nuova pagina Bilanciamento (per ora vuota). Rinomina ed elimina account sono accanto ai pulsanti quando un account è selezionato']],

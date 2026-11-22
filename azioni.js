@@ -140,7 +140,7 @@ async function act(el) {
       D.voci = D.voci.filter(z => z.id !== id); await syncStorico(); S.pop = null; return render();
     }
     if (a === 'tview') { S.thl = null; S.tanim = true; S.tview = v; S.tx = new Set(['r']); S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
-    if (a === 'qs') { const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
+    if (a === 'qs') { if (!isTouch()) return; const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
     if (a === 'copen') { S.cx = true; S.csel = null; return render(); }
     if (a === 'cclose') { S.cx = false; return render(); }
     if (a === 'topen') { S.tex = true; S.tcan = true; return render(); }
@@ -514,3 +514,14 @@ onAuthStateChanged(auth, async user => {
 
 /* Esc = indietro dai grafici ingranditi (computer) */
 document.addEventListener('keydown', e => { if (e.key !== 'Escape' || !S.data || S.tab !== 'pan' || innerWidth < 1000) return; if (S.cx) { S.cx = false; render(); } else if (S.tex) { S.tex = false; S.tcan = true; render(); } else if (S.hq) { S.hq = null; S.hanim = 'out'; render(); } else if (S.qd) { S.qd = null; S.panim = 'out'; render(); } });
+
+/* Torte: la fetta (o la voce in legenda) si evidenzia al passaggio del mouse; sul tocco resta il tocco */
+const isTouch = () => typeof PTYPE !== 'undefined' && PTYPE === 'touch';
+document.addEventListener('mouseover', e => {
+  if (isTouch()) return; const el = e.target.closest && e.target.closest('[data-act="qs"]'); if (!el) return;
+  const [k, i] = el.dataset.v.split(':'); S.qsel = S.qsel || {}; if (S.qsel[k] === +i) return; S.qsel[k] = +i; render();
+});
+document.addEventListener('mouseout', e => {
+  if (isTouch()) return; const c = e.target.closest && e.target.closest('#pie .pbody'); if (!c || (e.relatedTarget && c.contains(e.relatedTarget))) return;
+  if (S.qd && S.qsel && S.qsel[S.qd] != null) { S.qsel[S.qd] = null; render(); }
+});

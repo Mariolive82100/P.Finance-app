@@ -121,7 +121,7 @@ function treeCard(root, focus, single, full) {
   /* computer, Panoramica: riquadro con l'albero in miniatura che si adatta alla finestra; il tocco lo ingrandisce */
   if (wide && !full && !S.tfull) {
     TK.k = 1;
-    return `<div class="card tcard tcol${S.tcan ? ' anim-in' : ''}" data-act="topen" style="min-width:0"><h2>Albero del patrimonio</h2><div class="tt tmini">${alberoSvg(root, S.tx, focus)}</div></div>`;
+    return `<div class="card tcard tcol${S.tcan ? ' anim-in' : ''}" data-act="topen" style="min-width:0"><div class="chh"><h2>Albero del patrimonio</h2>${single ? '' : `<span class="chb"><button class="b sm ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b sm ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></span>`}</div><div class="tt tmini">${alberoSvg(root, S.tx, focus)}</div></div>`;
   }
   /* albero ingrandito a tutto schermo (computer) */
   if (wide && full) {

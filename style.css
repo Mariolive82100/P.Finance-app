@@ -250,3 +250,7 @@ th.srt{cursor:pointer;user-select:none}th.srt:hover{color:#0f766e}th.srt.on{colo
 .acard.add{cursor:default;min-width:200px;background:#fff}.acard.add input{margin:0 0 6px}
 .chpe{position:absolute;top:2px;right:2px;display:flex}.chpe .ic{padding:2px 5px;font-size:13px}
 @media(min-width:1000px){.pan .kpis{display:flex;gap:14px;align-items:stretch}.pan .kpis>.card{flex:0 0 25%;box-sizing:border-box}.pan .kpis .accs{flex:1;min-width:0;margin:0;align-items:stretch}.pan .kpis .acard{display:flex;flex-direction:column;justify-content:center}}
+
+/* v1.11 */
+.bd{font-weight:700}.upd{font-size:12px;color:#5b7370;margin-left:2px;vertical-align:middle;white-space:nowrap}
+.tcol>.chh{flex:0 0 auto;margin-bottom:6px}.tcol .chb .b{padding:3px 9px;font-size:12px}
