@@ -70,9 +70,10 @@ const AGGK = ['main', 'net', 'bar', 'pas'];
 const lcAgg = key => {
   if (!AGGK.includes(key)) return '';
   const ok = S.data && new Set(S.data.storico.map(x => x.mese.slice(0, 4))).size >= 2, cur = ok ? (S.agg || 'm') : 'm';
-  return `<div class="zc">${[['m', 'Mese'], ['yf', 'Anno (fine)'], ['ya', 'Anno (media)']].map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
+  const hb = hubOpen(), opts = hb ? [['m', 'Mese'], ['yf', 'Anno']] : [['m', 'Mese'], ['yf', 'Anno (fine)'], ['ya', 'Anno (media)']];
+  return `<div class="zc">${opts.map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
 };
-const lcZoomBar = key => lcAgg(key) + `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`;
+const lcZoomBar = key => lcAgg(key) + (hubOpen() ? '' : `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`);
 const hubOpen = () => innerWidth >= 1000 && S.tab === 'pan' && !!S.hq;
 function lcCard(key, title, pts, series, w, h) {
   CHS[key] = { title, pts, series };
@@ -80,7 +81,7 @@ function lcCard(key, title, pts, series, w, h) {
   lcInit(key, key, pts, series, ww, h || CHt(ww));
   const hb = hubOpen(), bk = hb ? '<button class="b s sm" data-act="hclose">← Indietro</button>' : '', cs = hb && key === 'cmp' ? cmpSel() : '';
   return `<div class="card"><div class="chh"><h2>${esc(title)}</h2><span class="chb">${cs}${bk}<button class="b s sm" data-act="fs" data-v="${key}" aria-label="Schermo intero">⛶</button></span></div>${lcLegend(series)}${lcBlock(key)}${lcZoomBar(key)}
-    <p class="note" style="margin:4px 0 0">${AGGK[0] === key ? 'Tocca i nomi in alto per mostrare o nascondere le linee. ' : ''}Tocca un punto per vedere il valore, tocca di nuovo per nasconderlo. Pizzica con due dita (o Ctrl + rotellina) per ingrandire, trascina per scorrere.</p></div>`;
+    <p class="note" style="margin:4px 0 0">${AGGK[0] === key ? 'Tocca i nomi in alto per mostrare o nascondere le linee. ' : ''}Tocca un punto per vedere il valore, tocca di nuovo per nasconderlo.${hb ? '' : ' Pizzica con due dita (o Ctrl + rotellina) per ingrandire, trascina per scorrere.'}</p></div>`;
 }
 function fsOverlay() {
   const s = CHS[S.fs]; if (!s) return '';
@@ -256,12 +257,12 @@ function mnBars(sers) {
   sers.forEach((x, k) => x.v.forEach((v, i) => { if (v == null) return; const yv = Y(v), c = x.c || (v >= 0 ? '#15803d' : '#b91c1c'); o += `<rect x="${(4 + slot * i + slot * 0.1 + bw * k).toFixed(1)}" y="${Math.min(y0, yv).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(yv - y0)).toFixed(1)}" fill="${c}"/>`; }));
   return o;
 }
-function hubGrid(all) {
+function hubGrid(all0, all) {
   const ok = all.length >= 2, A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
-  const ag = ok ? aggSeries(all, A) : null, d = ok ? cmpData(all, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
+  const ag = ok ? aggSeries(all, A) : null, d = all0.length >= 2 ? cmpData(all0, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
   const last = ok ? all[all.length - 1] : null, dl = ok ? last.netto - all[all.length - 2].netto : 0;
   const cell = (k, svg, val) => `<div class="qc" data-act="hopen" data-v="${k}"><div class="qh"><b>${HUB[k]}</b>${val || ''}</div><div class="qs">${svg ? mnSvg(svg) : `<p class="note" style="margin:8px 0 0">${ok ? 'Servono più mesi di storico.' : 'Servono almeno 2 mesi di dati.'}</p>`}</div></div>`;
-  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><h2>Andamento del patrimonio</h2><div class="qg">
+  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamento del patrimonio</h2><span class="chb">${[['6', 'Ultimi 6 mesi'], ['ytd', 'Anno in corso'], ['12', 'Ultimi 12 mesi'], ['all', 'Da sempre']].map(([v, l]) => `<button class="b sm ${(S.hper || 'all') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</span></div><div class="qg">
     ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
     ${cell('bar', ok && mnBars([{ v: ag.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
     ${cell('pas', ok && mnLines([{ v: ag.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}

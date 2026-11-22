@@ -353,7 +353,11 @@ function pagePan() {
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
   const pr = disParts(Dz, single, single || !all.length);
   S.anim = false; S.tanim = false;
-  const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, all, r1)}</div>` : hubGrid(all);
+  const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
+  let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
+  if (allF.length < 2) allF = all.slice(-2);
+  if (S.agg === 'ya') S.agg = 'yf';
+  const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
   S.hanim = false; S.panim = false; S.tcan = false;
   const row2 = single || !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(D, all)}</div><div class="s7">${pr.tree}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>

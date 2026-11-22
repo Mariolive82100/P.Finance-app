@@ -145,6 +145,7 @@ async function act(el) {
     if (a === 'cclose') { S.cx = false; return render(); }
     if (a === 'topen') { S.tex = true; S.tcan = true; return render(); }
     if (a === 'tclose') { S.tex = false; S.tcan = true; return render(); }
+    if (a === 'hper') { S.hper = v; return render(); }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
     if (a === 'hclose') { S.hq = null; S.hanim = 'out'; return render(); }
     if (a === 'qopen') { S.qd = v; S.panim = 'in'; return render(); }
