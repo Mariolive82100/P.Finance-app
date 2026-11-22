@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.20';
+const VER = '1.21';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -86,7 +86,7 @@ const hasProd = v => !!(v && v.prodotti && v.prodotti.length);
 const isPort = v => !!(v && v.portafoglio);
 const nfm = x => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 4 }).format(x);
 /* Prodotto con prezzo nel foglio: quote x prezzo. Senza prezzo: valore manuale */
-const prodVal = p => { const pr = S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]; return pr > 0 ? p.quote * pr * (p.nom ? .01 : 1) : (p.manuale || 0); };
+const prodVal = p => { const pr = S.prezzi && S.prezzi.map[String(p.isin || '').toUpperCase()]; const f = p.nom ? .01 : 1; return pr > 0 ? p.quote * pr * f : p.pmc > 0 && p.quote > 0 ? p.quote * p.pmc * f : (p.manuale || 0); };
 /* Compressi di default: account, categorie e portafogli (true = compresso) */
 const accCol = k => S.acol && S.acol[k] !== undefined ? S.acol[k] : true;
 const pCol = id => S.pcol && S.pcol[id] !== undefined ? S.pcol[id] : true;
@@ -243,6 +243,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.21','22 nov 2026',['Se il prezzo manca (es. mercato fermo, 0,00%) il valore usa il prezzo medio di carico']],
   ['1.20','22 nov 2026',['La casella «Obbligazione: nominale €» ora sta sotto il campo delle quote']],
   ['1.19','22 nov 2026',['Obbligazioni: nella scheda del portafoglio spunta «Obbligazione» e scrivi il nominale in € (es. 7000): il valore usa il prezzo in % del foglio','Capital gain e imposte latenti seguono lo stesso calcolo']],
   ['1.18','22 nov 2026',['Portafogli: nuove colonne prezzo medio di carico, capital gain netto (rosso se negativo), aliquota e imposte latenti; PMC e aliquota si inseriscono nel modulo del prodotto (aliquota predefinita: 12,5% obbligazioni, 26% il resto)','Liquidità e Portafogli: account, categorie e portafogli sono compressi di default','Portafogli: gli ISIN nuovi si aggiungono anche al foglio Google "Lista prodotti quotati" (serve collegare lo script, vedi Info) così il prezzo si recupera da Borsa Italiana']],
