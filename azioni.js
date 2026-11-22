@@ -50,6 +50,8 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
+    if (a === 'bil') { S.tab = 'bil'; S.menu = false; window.scrollTo(0, 0); return render(); }
+    if (a === 'rfs') { if (isAdmin()) return aggiornaPrezzi(true); return location.reload(); }
     if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
@@ -58,7 +60,7 @@ async function act(el) {
     if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'exp') { S.exp = S.exp || {}; S.exp[v] = !S.exp[v]; return render(); }
     if (a === 'menu') { S.menu = !S.menu; S.addAcc = false; return render(); }
-    if (a === 'addo') { S.addAcc = true; render(); const i = $('an'); if (i) i.focus(); return; }
+    if (a === 'addo') { S.addAcc = true; if (innerWidth >= 1000) S.accOpen = true; render(); const i = $('an'); if (i) i.focus(); return; }
     if (a === 'addc') { S.addAcc = false; return render(); }
     if (a === 'pop') { S.pop = { id: v, mode: 'menu' }; return render(); }
     if (a === 'popclose') { S.pop = null; render(); return keepTT(); }

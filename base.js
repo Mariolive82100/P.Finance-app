@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.07';
+const VER = '1.08';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -233,6 +233,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.08','22 nov 2026',['Home: accanto al patrimonio netto c\'è il simbolo di aggiornamento (amministratore: rilegge i prezzi; gli altri: ricarica i dati) e i pulsanti Aggregato, account e + per aggiungerne uno','Menu a panino: tolta la sezione Account; al suo posto la nuova pagina Bilanciamento (per ora vuota). Rinomina ed elimina account sono sotto i pulsanti quando un account è selezionato']],
   ['1.07','22 nov 2026',['Tabelle: toccando il titolo di una colonna (Conti, Archiviati, prodotti dei Portafogli, Storico mese per mese) le righe si ordinano; un secondo tocco inverte l\'ordine','Conti e Portafogli: ogni account ha un leggero sfondo colorato, per distinguere le persone','Corretto il file sw.js (era vuoto dalla v1.04): torna la copia offline dell\'app']],
   ['1.06','21 nov 2026',['Prezzi: se una lettura del foglio arriva incompleta (alcuni prodotti vuoti), l\'app tiene l\'ultimo prezzo noto di quei prodotti invece di azzerarli']],
   ['1.05','21 nov 2026',['Prezzi: se la lettura non riesce, l\'app dice il motivo; mostra quanti prodotti ha letto dal foglio e, per ogni prodotto senza prezzo, "non nel foglio"']],
