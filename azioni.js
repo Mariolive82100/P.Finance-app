@@ -182,7 +182,7 @@ async function act(el) {
       else { const n = new Set(cur); n.delete('var'); if (n.has(v)) n.delete(v); else n.add(v); S.sel = n.size ? n : new Set(def); }
       return render();
     }
-    if (a === 'agg') { S.agg = v; S.wsig = null; return render(); }
+    if (a === 'agg') { S.aggK = S.aggK || {}; S.aggK[el.dataset.k] = v; S.wsig = null; return render(); }
     if (a === 'pback') { if (S.pp && S.pp.length > 1) S.pp = S.pp.slice(0, -1); S.pieSel = null; S.anim = true; return render(); }
     if (a === 'phome') { S.pp = ['r']; S.pieSel = null; S.anim = true; return render(); }
     if (a === 'dmode') { S.dmode = el.value; return render(); }

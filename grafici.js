@@ -69,9 +69,9 @@ const lcLegend = ser => ser.every(x => x.nolg) ? '' : `<div class="legend">${ser
 const AGGK = ['main', 'net', 'bar', 'pas'];
 const lcAgg = key => {
   if (!AGGK.includes(key)) return '';
-  const ok = S.data && new Set(S.data.storico.map(x => x.mese.slice(0, 4))).size >= 2, cur = ok ? (S.agg || 'm') : 'm';
+  const ok = S.data && new Set(S.data.storico.map(x => x.mese.slice(0, 4))).size >= 2, cur = ok ? aggOf(key) : 'm';
   const hb = hubOpen(), opts = hb ? [['m', 'Mese'], ['yf', 'Anno']] : [['m', 'Mese'], ['yf', 'Anno (fine)'], ['ya', 'Anno (media)']];
-  return `<div class="zc">${opts.map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
+  return `<div class="zc">${opts.map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-k="${key}" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
 };
 const lcZoomBar = key => lcAgg(key) + (hubOpen() ? '' : `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`);
 const hubOpen = () => innerWidth >= 1000 && S.tab === 'pan' && !!S.hq;
@@ -258,14 +258,14 @@ function mnBars(sers) {
   return o;
 }
 function hubGrid(all0, all) {
-  const ok = all.length >= 2, A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
-  const ag = ok ? aggSeries(all, A) : null, d = all0.length >= 2 ? cmpData(all0, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
+  const ok = all.length >= 2, agK = k => ok ? aggSeries(all, aggOf(k, all)) : null;
+  const ag = agK('main'), agB = agK('bar'), agP = agK('pas'), d = all0.length >= 2 ? cmpData(all0, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
   const last = ok ? all[all.length - 1] : null, dl = ok ? last.netto - all[all.length - 2].netto : 0;
   const cell = (k, svg, val) => `<div class="qc" data-act="hopen" data-v="${k}"><div class="qh"><b>${HUB[k]}</b>${val || ''}</div><div class="qs">${svg ? mnSvg(svg) : `<p class="note" style="margin:8px 0 0">${ok ? 'Servono più mesi di storico.' : 'Servono almeno 2 mesi di dati.'}</p>`}</div></div>`;
   return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamento del patrimonio</h2><span class="chb">${[['6', 'Ultimi 6 mesi'], ['ytd', 'Anno in corso'], ['12', 'Ultimi 12 mesi'], ['all', 'Da sempre']].map(([v, l]) => `<button class="b sm ${(S.hper || 'all') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</span></div><div class="qg">
     ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
-    ${cell('bar', ok && mnBars([{ v: ag.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
-    ${cell('pas', ok && mnLines([{ v: ag.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
+    ${cell('bar', ok && mnBars([{ v: agB.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
+    ${cell('pas', ok && mnLines([{ v: agP.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
 /* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
@@ -339,7 +339,7 @@ document.addEventListener('mouseout', e => {
 });
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
-  const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm', W = Math.max(380, Math.round((innerWidth - 200 - 56 - 28) * 5 / 12 - 40));
+  const A = aggOf('main', all), W = Math.max(380, Math.round((innerWidth - 200 - 56 - 28) * 5 / 12 - 40));
   return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150));
 }
 function pageAnd() {
@@ -356,14 +356,14 @@ function pageAnd() {
   const rows = all.map((s, i) => ({ s, d: i ? s.netto - all[i - 1].netto : null })).reverse(), topen = S.exp && S.exp.stab;
   const cust = rg === 'custom' ? `<div class="grid" style="margin-top:8px"><div><label class="lbl">Dal mese</label><input type="month" data-act="rfrom" value="${esc(lo_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div><div><label class="lbl">Al mese</label><input type="month" data-act="rto" value="${esc(hi_)}" min="${all[0].mese}" max="${all[all.length - 1].mese}"></div></div>` : '';
   const dBar0 = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
-  const yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))], A = yrsAll.length >= 2 ? (S.agg || 'm') : 'm', curY = monthKey().slice(0, 4);
-  const ag = aggSeries(all, A), pts = ag.pts, dBar = ag.dBar;
-  const wsig = [rg, lo_, hi_, yr, all.length, A].join('|');
+  const yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))], A = aggOf('main', all), Ab = aggOf('bar', all), curY = monthKey().slice(0, 4);
+  const pts = aggSeries(all, A).pts, dBar = aggSeries(all, Ab).dBar;
+  const wsig = [rg, lo_, hi_, yr, all.length, A, Ab].join('|');
   if (all.length > 1 && S.wsig !== wsig) {
     S.wsig = wsig;
     [['main', pts0], ['bar', dBar0]].forEach(([k, d]) => {
       const n = d.length, m = d.map(q => q.mese);
-      if (A !== 'm' || !st.length || rg === '0') { delete ZM[k]; return; }
+      if ((k === 'main' ? A : Ab) !== 'm' || !st.length || rg === '0') { delete ZM[k]; return; }
       let ia = m.findIndex(x => x >= st[0].mese), ib = m.length - 1 - [...m].reverse().findIndex(x => x <= st[st.length - 1].mese);
       if (ia < 0) ia = 0; if (ib >= n || ib < 0) ib = n - 1;
       const mins = Math.min(n - 1, 3);
@@ -374,12 +374,12 @@ function pageAnd() {
       ZM[k] = { a: ia, b: ib, n, sig: d[0].lab + '|' + d[n - 1].lab };
     });
   }
-  const bT = A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', bL = A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile';
+  const bT = Ab === 'yf' ? 'Variazione annuale del patrimonio netto' : Ab === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', bL = Ab === 'yf' ? 'Variazione annuale' : Ab === 'ya' ? 'Variazione mensile media' : 'Variazione mensile';
   const ch = all.length > 1 ? {
     main: lcCard('main', 'Andamento del patrimonio', pts, L),
     bar: lcCard('bar', bT, dBar, [{ k: 'v', c: '#15803d', l: bL, bar: 1 }])
   } : null;
-  return `<div class="card"><div class="grid">${sel}${sel2}</div>${cust}${A !== 'm' ? '<p class="note">Vista annuale attiva: i grafici mostrano tutti gli anni e il periodo scelto qui sopra non si applica. Per tornare al dettaglio, usa il tasto "Mese" sotto i grafici.</p>' : ''}${all.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
+  return `<div class="card"><div class="grid">${sel}${sel2}</div>${cust}${A !== 'm' || Ab !== 'm' ? '<p class="note">Vista annuale attiva: i grafici mostrano tutti gli anni e il periodo scelto qui sopra non si applica. Per tornare al dettaglio, usa il tasto "Mese" sotto i grafici.</p>' : ''}${all.length < 2 ? '<p class="note">I grafici compariranno quando ci saranno almeno 2 mesi di dati. Ogni mese viene salvata una fotografia del tuo patrimonio quando apri l\'app.</p>' : ''}</div>
     ${ch ? ch.main : ''}
     ${ch ? ch.bar : ''}
     ${all.length > 1 ? cmpCards(all) : ''}

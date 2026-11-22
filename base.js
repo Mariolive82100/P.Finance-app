@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.12';
+const VER = '1.13';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -7,6 +7,8 @@ const zeroToggle = () => `<label style="display:flex;gap:10px;align-items:center
 const ASSET = ['Azioni', 'Obbligazioni', 'Monetario', 'Oro e materie prime', 'Immobiliare', 'Criptovalute', 'Multi-asset', 'Altro'];
 const dn = v => v.assetClass || v.nome;
 const T0 = Date.now();
+/* Mese/Anno per singolo grafico: S.aggK[chiave] */
+const aggOf = (key, all) => { const k = S.aggK && S.aggK[key]; return new Set((all || S.data.storico).map(s => s.mese.slice(0, 4))).size >= 2 && (k === 'yf' || k === 'ya') ? k : 'm'; };
 /* Ordinamento colonne: S.sort[tabella] = { c: colonna, d: 'a' | 'd' } */
 const sortSt = t => (S.sort && S.sort[t]) || null;
 function sortArr(t, arr, G) {
@@ -234,6 +236,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.13','22 nov 2026',['Grafici: Mese/Anno vale per il singolo grafico (prima cambiava in tutti)','Il menu Conti diventa Liquidità e non mostra più i portafogli; le tabelle hanno le linee a griglia come in Excel']],
   ['1.12','22 nov 2026',['Computer, Panoramica: accanto a "Andamento del patrimonio" il periodo dei grafici (ultimi 6 mesi, anno in corso, ultimi 12 mesi, da sempre; predefinito da sempre)','Grafico aperto: restano solo i pulsanti Mese e Anno; tolti frecce, più e meno, Tutto e Anno (media)']],
   ['1.11','22 nov 2026',['Computer: tolta la pagina Albero dal menu laterale (c\'è già in Panoramica); nel riquadro dell\'albero un selettore passa tra Aggregato e Per account','Data e ora dell\'ultimo aggiornamento accanto al simbolo di aggiornamento (tolta dalla pagina Portafogli)','Grassetto per "Patrimonio netto" e per i nomi degli account','Grafici a torta: la fetta si evidenzia al passaggio del mouse, senza clic']],
   ['1.10','22 nov 2026',['Home: Aggregato e gli account sono in caselle dedicate accanto a quella del patrimonio netto, ognuna con il proprio patrimonio netto; la casella scelta è evidenziata']],

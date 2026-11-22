@@ -49,7 +49,7 @@ function navWide(IC, pend, D) {
   const add = S.addAcc ? `<div class="nadd"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<button class="nplus" data-act="addo">＋ Aggiungi account</button>`;
   const sub = open ? `<div class="nsub">${row('all', 'Aggregato')}${row('main', D.nome)}${D.accounts.map(a => row(a.id, a.nome, true)).join('')}${add}</div>` : '';
   const it = (act, v, ic, l, on, extra) => `<button data-act="${act}"${v ? ` data-v="${v}"` : ''} class="${on ? 'on' : ''}">${sv(ic)}${l}${extra || ''}</button>`;
-  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Conti', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
+  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Liquidità', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
 }
 
 /* ---------- Gesto/tasto "indietro" ---------- */
@@ -237,12 +237,12 @@ function hubBody(key, all, r1) {
   if (key === 'main') return panMain(all, r1 + 70);
   if (key === 'bar') {
     if (!hist) return no('Variazione mensile del patrimonio netto');
-    const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
+    const A = aggOf('bar', all);
     return lcCard('bar', A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', aggSeries(all, A).dBar, [{ k: 'v', c: '#15803d', l: A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile', bar: 1 }], W, H);
   }
   if (key === 'pas') {
     if (!hist) return no('Andamento dei passivi');
-    const A = new Set(all.map(s => s.mese.slice(0, 4))).size >= 2 ? (S.agg || 'm') : 'm';
+    const A = aggOf('pas', all);
     return lcCard('pas', 'Andamento dei passivi', aggSeries(all, A).pts, [{ k: 'passivi', c: '#b91c1c', l: 'Passivi', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150 + 70));
   }
   if (!hist) return no('Confronto tra periodi');
@@ -278,28 +278,21 @@ function pageCon() {
   const tot = arr => eur(arr.reduce((s, v) => s + v.valore, 0));
   const hd = (key, title, arr) => `<tr class="chd l0" data-act="ccol" data-v="${esc(key)}"><td colspan="3"><span class="chev ${isCol(key) ? '' : 'open'}">▸︎</span> ${esc(title)} <span class="lbl">${arr.length} · ${tot(arr)}</span></td></tr>`;
   const grp = (key, title, arr) => !arr.length ? '' : hd(key, title, arr) + (isCol(key) ? '' : arr.map(v => row(v, false)).join(''));
-  const att = srt('con', flt(D.voci)), arc = srt('arc', flt(D.arch || []));
+  const noInv = arr => arr.filter(v => !(v.tipo === 'attivo' && v.categoria === 'Investimenti')), att = srt('con', noInv(flt(D.voci))), arc = srt('arc', noInv(flt(D.arch || [])));
   const cOrd = ['Liquidità', 'Beni', ...CATS.attivo.filter(c => !['Liquidità', 'Investimenti', 'Beni'].includes(c))];
   const headT = (t, off) => `<tr>${thS(t, 'n', 'Nome', 'cn', off)}${thS(t, 'v', 'Valore', 'cv', off)}<th></th></tr>`;
   const cg = '<colgroup><col style="width:46%"><col style="width:22%"><col></colgroup>';
-  /* una riga di riepilogo (sola lettura) per ogni portafoglio; le voci di investimento vecchio stile compaiono raggruppate per conto */
-  const portRows = mine => {
-    const m = new Map(); mine.filter(v => v.tipo === 'attivo' && v.categoria === 'Investimenti').forEach(v => { const d = (v.dove || v.nome || 'Senza conto').trim(), k = d.toLowerCase(); if (!m.has(k)) m.set(k, { d, arr: [] }); m.get(k).arr.push(v); });
-    const L = sortArr('con', [...m.values()].sort((a, b) => a.d.localeCompare(b.d)), { n: x => x.d, v: x => x.arr.reduce((s, v) => s + v.valore, 0) });
-    return L.map(({ d, arr }) => { const n = arr.reduce((s, v) => s + (hasProd(v) ? v.prodotti.length : 0), 0), old = arr.some(isInvLegacy);
-      return `<tr class="cr"><td class="cn">Portafoglio ${esc(d)}<small class="lbl" style="display:block">${old ? 'da riunire nei portafogli' : n + (n === 1 ? ' prodotto' : ' prodotti')}</small></td><td class="cv">${tot(arr)}</td><td class="ca">${fm ? '' : '<button class="b s sm" data-act="tab" data-v="por">Apri</button>'}</td></tr>`; }).join('');
-  };
   const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
     const mine = att.filter(v => accKey(v) === k);
-    const t = totals(mine), body = cOrd.map(c => grp(k + '|' + c, c, mine.filter(v => v.tipo === 'attivo' && v.categoria === c))).join('') + portRows(mine) + grp(k + '|Passivi', 'Passivi', mine.filter(v => v.tipo === 'passivo'));
+    const t = totals(mine), body = cOrd.map(c => grp(k + '|' + c, c, mine.filter(v => v.tipo === 'attivo' && v.categoria === c))).join('') + grp(k + '|Passivi', 'Passivi', mine.filter(v => v.tipo === 'passivo'));
     const ac = !!(S.acol && S.acol[k]);
-    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">Patrimonio netto ${eur(t.netto)}</span></div>${ac ? '' : mine.length ? `<table class="ct">${cg}${headT('con', fm)}${body}</table>` : '<div class="lbl" style="padding:6px 0">Nessuna voce.</div>'}</div>`;
+    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">Netto ${eur(t.netto)}</span></div>${ac ? '' : mine.length ? `<table class="ct">${cg}${headT('con', fm)}${body}</table>` : '<div class="lbl" style="padding:6px 0">Nessuna voce.</div>'}</div>`;
   }).join('');
   const tbar = fm
-    ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola. I portafogli si aggiornano dai prodotti.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
+    ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
     : `<div class="tbar"><input id="cq" placeholder="Cerca un conto…" value="${esc(S.cq || '')}" style="max-width:260px;margin:0"><span style="flex:1"></span><button class="b s sm" data-act="ccolall" data-v="${S.ccAll ? 0 : 1}">${S.ccAll ? 'Espandi tutto' : 'Comprimi tutto'}</button><button class="b sm" data-act="cfm">Aggiorna fine mese</button></div>`;
   const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table class="ct">${cg}${headT('arc')}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
-  return `<div class="con">${panTop(aname, 'Conti')}<div class="card">${tbar}</div>${secs}${archSec}</div>`;
+  return `<div class="con">${panTop(aname, 'Liquidità')}<div class="card">${tbar}</div>${secs}${archSec}</div>`;
 }
 
 function pagePort() {
@@ -356,7 +349,7 @@ function pagePan() {
   const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
   let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
   if (allF.length < 2) allF = all.slice(-2);
-  if (S.agg === 'ya') S.agg = 'yf';
+  if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
   S.hanim = false; S.panim = false; S.tcan = false;
   const row2 = single || !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(D, all)}</div><div class="s7">${pr.tree}</div></div>`;
