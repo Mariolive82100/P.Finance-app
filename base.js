@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.25';
+const VER = '1.26';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -245,6 +245,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.26','22 nov 2026',['Importazione storico: accetta anche le colonne liquidità, portafoglio e beni (servono ai riquadri di variazione della Panoramica)']],
   ['1.25','22 nov 2026',['Panoramica: albero in fondo più piccolo; torte piccole: la fetta sotto il mouse si rilascia quando il mouse esce']],
   ['1.24','22 nov 2026',['Panoramica: al posto dei grafici a torta ci sono 4 riquadri con la variazione su mese precedente (Liquidità, Portafoglio, Beni, Passivi); le torte passano in basso a destra e l\'albero, ingrandito, in fondo alla pagina. Le variazioni compaiono dal mese successivo al primo salvataggio']],
   ['1.23','22 nov 2026',['Se il nome non si trova, il campo spiega il motivo']],

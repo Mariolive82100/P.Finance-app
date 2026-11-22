@@ -217,7 +217,7 @@ function formMese(force) {
     <label class="lbl">Totale attivi (€)</label><input id="ma" inputmode="decimal" value="${esc(e ? f(e.attivi) : dr.ma || '')}">
     <label class="lbl">Totale passivi (€)</label><input id="mp" inputmode="decimal" value="${esc(e ? f(e.passivi) : dr.mp || '')}">
     <div class="acts"><button class="b" data-act="savem">Salva mese</button>${e ? '<button class="b s" data-act="cancelm">Annulla</button>' : ''}</div>
-    ${e ? '' : `<hr style="border:0;border-top:1px solid #e2eceb;margin:16px 0 10px"><label class="lbl">Oppure importa molti mesi insieme da un file (righe: mese;attivi;passivi, es. 2024-05;120000;8000)</label><input id="impf" type="file" accept=".csv,.txt"><div class="msg" id="impmsg"></div>`}</div>`;
+    ${e ? '' : `<hr style="border:0;border-top:1px solid #e2eceb;margin:16px 0 10px"><label class="lbl">Oppure importa molti mesi insieme da un file (righe: mese;attivi;passivi, facoltativi liquidità;portafoglio;beni, es. 2024-05;120000;8000)</label><input id="impf" type="file" accept=".csv,.txt"><div class="msg" id="impmsg"></div>`}</div>`;
 }
 
 function serMain() {

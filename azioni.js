@@ -473,6 +473,8 @@ document.addEventListener('change', async e => {
       const ex = D.storico.find(x => x.mese === p[0]);
       if (p[0] >= mk || (ex && !ex.manuale)) { skip++; continue; }
       const dati = { attivi: r2(at), passivi: r2(pa), netto: r2(at - pa) };
+      /* colonne facoltative 4-6: liquidità, portafoglio, beni */
+      [['liq', 3], ['port', 4], ['beni', 5]].forEach(([k, j]) => { const x = p[j] !== undefined && p[j] !== '' ? Number(p[j].replace(',', '.')) : NaN; if (isFinite(x) && x >= 0) dati[k] = r2(x); });
       await setDoc(doc(db, 'users', D.uid, 'storico', p[0]), { ...dati, manuale: true, aggiornato: serverTimestamp() });
       if (ex) Object.assign(ex, dati, { manuale: true }); else D.storico.push({ mese: p[0], ...dati, manuale: true });
       ok++;
