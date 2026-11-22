@@ -519,10 +519,11 @@ document.addEventListener('keydown', e => { if (e.key !== 'Escape' || !S.data ||
 /* Torte: la fetta (o la voce in legenda) si evidenzia al passaggio del mouse; sul tocco resta il tocco */
 const isTouch = () => typeof PTYPE !== 'undefined' && PTYPE === 'touch';
 document.addEventListener('mouseover', e => {
-  if (isTouch()) return; const el = e.target.closest && e.target.closest('[data-act="qs"]'); if (!el) return;
+  if (isTouch() || !e.target.closest) return; const el = e.target.closest('[data-act="qs"]');
+  if (!el) { if (S.qd && S.qsel && S.qsel[S.qd] != null && !e.target.closest('.pleg')) { S.qsel[S.qd] = null; render(); } return; }
   const [k, i] = el.dataset.v.split(':'); S.qsel = S.qsel || {}; if (S.qsel[k] === +i) return; S.qsel[k] = +i; render();
 });
 document.addEventListener('mouseout', e => {
-  if (isTouch()) return; const c = e.target.closest && e.target.closest('#pie .pbody'); if (!c || (e.relatedTarget && c.contains(e.relatedTarget))) return;
+  if (isTouch()) return; const c = e.target.closest && e.target.closest('#pie .pbody'); if (!c || (e.relatedTarget && c.contains(e.relatedTarget) && e.relatedTarget.closest && e.relatedTarget.closest('[data-act="qs"]'))) return;
   if (S.qd && S.qsel && S.qsel[S.qd] != null) { S.qsel[S.qd] = null; render(); }
 });

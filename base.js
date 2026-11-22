@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.14';
+const VER = '1.15';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -236,6 +236,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.15','22 nov 2026',['Torte: la fetta si deseleziona appena il mouse esce dalla fetta (o dalla voce in legenda)']],
   ['1.14','22 nov 2026',['Albero ingrandito: toccando una voce la finestra di modifica ora compare subito sopra l\'albero (prima restava nascosta) e offre tutte le azioni: Aggiorna, Modifica, Archivia, Elimina']],
   ['1.13','22 nov 2026',['Grafici: Mese/Anno vale per il singolo grafico (prima cambiava in tutti)','Il menu Conti diventa Liquidità e non mostra più i portafogli; le tabelle hanno le linee a griglia come in Excel']],
   ['1.12','22 nov 2026',['Computer, Panoramica: accanto a "Andamento del patrimonio" il periodo dei grafici (ultimi 6 mesi, anno in corso, ultimi 12 mesi, da sempre; predefinito da sempre)','Grafico aperto: restano solo i pulsanti Mese e Anno; tolti frecce, più e meno, Tutto e Anno (media)']],
