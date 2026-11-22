@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.27';
+const VER = '1.28';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -245,6 +245,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.28','22 nov 2026',['Panoramica: l\'albero torna riquadro piccolo (come gli indicatori) e si ingrandisce con un clic; accanto c\'è "Ricostruisci lo storico"']],
   ['1.27','22 nov 2026',['Computer: in fondo alla Panoramica c\'è "Ricostruisci lo storico" (mesi a mano o importazione da file)']],
   ['1.26','22 nov 2026',['Importazione storico: accetta anche le colonne liquidità, portafoglio e beni (servono ai riquadri di variazione della Panoramica)']],
   ['1.25','22 nov 2026',['Panoramica: albero in fondo più piccolo; torte piccole: la fetta sotto il mouse si rilascia quando il mouse esce']],

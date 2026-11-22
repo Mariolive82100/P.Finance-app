@@ -271,3 +271,8 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .dq{cursor:default;justify-content:center;gap:2px;padding:8px 12px}.dq:hover{border-color:#e2eceb;background:#fafdfc}
 .dq .dv{font-size:20px;font-weight:700;margin-top:6px}.dq .dp{font-size:13px;font-weight:600}.dq .dn{font-size:12px;color:#5b7370;margin-top:auto}
 .g12.r2 .s7>.qcard{height:100%;min-height:400px}
+
+/* Albero in miniatura (riquadro cliccabile) accanto a Ricostruisci lo storico */
+.g12.r3 .s5{position:relative;min-height:380px}
+.g12.r3 .s5>.tcol{position:absolute;inset:0;height:auto;display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;overflow:hidden}
+.g12.r3 .s5>.tcol h2{flex:0 0 auto}
