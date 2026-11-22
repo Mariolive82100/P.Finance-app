@@ -407,7 +407,8 @@ async function portSalva0() {
   const D = S.data, v = D.voci.find(z => z.id === S.pe); if (!v) { S.pe = null; return render(); }
   const prod = [], err = m => { S.pd = grabPort(); S.msg = m; render(); };
   for (const r of grabPort()) {
-    const isin = r.isin.trim().toUpperCase(), nome = r.nome.trim(), qs = r.quote.trim(), ms = r.manuale.trim();
+    const isin = r.isin.trim().toUpperCase(), qs = r.quote.trim(), ms = r.manuale.trim();
+    let nome = r.nome.trim(); if (isin && !nome && isAdmin()) nome = await nomeDaIsin(isin);
     if (!isin && !nome && !qs && !ms) continue;
     if (!r.classe) return err('Scegli la classe di investimento di ogni prodotto.');
     const m = ms ? pnum(ms) : 0; if (!isFinite(m) || m < 0) return err('Il valore manuale deve essere zero o più.');
@@ -533,4 +534,11 @@ document.addEventListener('mouseover', e => {
 document.addEventListener('mouseout', e => {
   if (isTouch()) return; const c = e.target.closest && e.target.closest('#pie .pbody'); if (!c || (e.relatedTarget && c.contains(e.relatedTarget) && e.relatedTarget.closest && e.relatedTarget.closest('[data-act="qs"]'))) return;
   if (S.qd && S.qsel && S.qsel[S.qd] != null) { S.qsel[S.qd] = null; render(); }
+});
+
+document.addEventListener('change', async e => {
+  if (!e.target.classList || !e.target.classList.contains('pi') || !isAdmin()) return;
+  const isin = e.target.value.trim().toUpperCase(), row = e.target.closest('.ppr'), n = row && row.querySelector('.pn');
+  if (!n || n.value.trim() || !/^[A-Z0-9]{12}$/.test(isin)) return;
+  n.placeholder = 'Cerco il nome…'; const nm = await nomeDaIsin(isin); n.placeholder = 'Nome'; if (nm && !n.value.trim()) n.value = nm;
 });

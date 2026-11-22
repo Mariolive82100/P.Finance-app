@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.21';
+const VER = '1.22';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -243,6 +243,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.22','22 nov 2026',['Il nome del prodotto si compila da solo partendo dall\'ISIN (da Borsa Italiana, tramite il foglio)']],
   ['1.21','22 nov 2026',['Se il prezzo manca (es. mercato fermo, 0,00%) il valore usa il prezzo medio di carico']],
   ['1.20','22 nov 2026',['La casella «Obbligazione: nominale €» ora sta sotto il campo delle quote']],
   ['1.19','22 nov 2026',['Obbligazioni: nella scheda del portafoglio spunta «Obbligazione» e scrivi il nominale in € (es. 7000): il valore usa il prezzo in % del foglio','Capital gain e imposte latenti seguono lo stesso calcolo']],
@@ -318,6 +319,10 @@ const sheetCard = () => { const c = sheetCfg() || {}; return `<div class="card">
   <label class="lbl">Chiave</label><input id="sht" placeholder="La chiave scelta nello script" value="${esc(c.token || '')}">
   <div class="acts"><button class="b sm" data-act="shsave">Salva</button>${c.url ? '<button class="b s sm" data-act="shtest">Prova collegamento</button><button class="b s sm r" data-act="shdel">Scollega</button>' : ''}</div></div>`; };
 /* Aggiunge al foglio gli ISIN senza prezzo (solo amministratore); restituisce un messaggio */
+async function nomeDaIsin(isin) {
+  const c = sheetCfg(); if (!c) return '';
+  try { const q = new URLSearchParams({ token: c.token, isin, solonome: '1' }), j = await (await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' })).json(); return j.ok && j.nome ? String(j.nome) : ''; } catch (e) { return ''; }
+}
 async function sheetAggiungi(prodotti) {
   const c = sheetCfg(), mancanti = prodotti.filter(p => p.isin && S.prezzi && !S.prezzi.map[p.isin]);
   if (!mancanti.length) return '';
