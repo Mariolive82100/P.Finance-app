@@ -540,5 +540,5 @@ document.addEventListener('change', async e => {
   if (!e.target.classList || !e.target.classList.contains('pi') || !isAdmin()) return;
   const isin = e.target.value.trim().toUpperCase(), row = e.target.closest('.ppr'), n = row && row.querySelector('.pn');
   if (!n || n.value.trim() || !/^[A-Z0-9]{12}$/.test(isin)) return;
-  n.placeholder = 'Cerco il nome…'; const nm = await nomeDaIsin(isin); n.placeholder = 'Nome'; if (nm && !n.value.trim()) n.value = nm;
+  n.placeholder = 'Cerco il nome…'; const nm = await nomeDaIsin(isin); n.placeholder = nm ? 'Nome' : 'Nome non trovato: ' + (window._nomeInfo || ''); if (nm && !n.value.trim()) n.value = nm;
 });
