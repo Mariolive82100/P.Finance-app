@@ -237,9 +237,9 @@ function portRoot(ports) {
   const kids = [...m].filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]).map(([c, x]) => ({ id: 'r/' + c, label: c, val: x, pct: null, tone: 'a', lv: 'm', kids: [] }));
   return { id: 'r', label: 'Classi', val: kids.reduce((s, k) => s + k.val, 0), pct: null, tone: 'a', lv: 'r', kids };
 }
-function contiRoot(conti) {
-  const kids = conti.filter(v => v.valore > 0).sort((a, b) => b.valore - a.valore).map(v => ({ id: 'r/' + v.id, label: dn(v), val: v.valore, pct: null, tone: 'a', lv: 'm', kids: [] }));
-  return { id: 'r', label: 'Conti', val: kids.reduce((s, k) => s + k.val, 0), pct: null, tone: 'a', lv: 'r', kids };
+function contiRoot(conti, tone = 'a') {
+  const kids = conti.filter(v => v.valore > 0).sort((a, b) => b.valore - a.valore).map(v => ({ id: 'r/' + v.id, label: dn(v), val: v.valore, pct: null, tone, lv: 'm', kids: [] }));
+  return { id: 'r', label: 'Conti', val: kids.reduce((s, k) => s + k.val, 0), pct: null, tone, lv: 'r', kids };
 }
 function portPieCard(key, title, root, sub = 'per classe') {
   const r = qSvg(key, null, true, root);

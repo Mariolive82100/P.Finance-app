@@ -85,7 +85,7 @@ async function act(el) {
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'bil') { S.tab = 'bil'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'rfs') return aggiornaPrezzi(true);
-    if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' || S.tab === 'pas' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
     if (a === 'nv') { S.tab = 'nv'; S.edit = null; S.fd = null; S.exp = { ...(S.exp || {}), form: true }; window.scrollTo(0, 0); return render(); }
@@ -301,6 +301,17 @@ async function act(el) {
     if (a === 'pmrm') { const L = grabPort(); L.splice(+v, 1); S.pd = L; S.pcur = null; return render(); }
     if (a === 'caddo') { S.addConto = true; S.msg = ''; return render(); }
     if (a === 'caddc') { S.addConto = false; return render(); }
+    if (a === 'xaddo') { S.addPas = true; S.msg = ''; return render(); }
+    if (a === 'xaddc') { S.addPas = false; return render(); }
+    if (a === 'xaddok') {
+      const nm = $('xnn').value.trim(), k = $('xnacc').value, account = k === 'main' ? '' : k, sv = $('xnv').value.trim(), val = sv ? pnum(sv) : 0;
+      if (!nm) { S.msg = 'Scrivi il nome del passivo.'; return render(); }
+      if (!isFinite(val) || val < 0) { S.msg = 'L\'importo deve essere zero o più.'; return render(); }
+      if (D.voci.some(x => x.tipo === 'passivo' && x.nome.toLowerCase() === nm.toLowerCase() && (x.account || '') === account)) { S.msg = 'Esiste già un passivo con questo nome in questo account.'; return render(); }
+      const nl = { tipo: 'passivo', categoria: $('xncat').value, nome: nm, account, valore: r2(val) };
+      const r = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r.id, ...nl });
+      await syncStorico(); S.addPas = false; S.msg = 'Passivo aggiunto.'; return render();
+    }
     if (a === 'caddok') {
       const nm = $('cnn').value.trim(), k = $('cnacc').value, account = k === 'main' ? '' : k, sv = $('cnv').value.trim(), val = sv ? pnum(sv) : 0;
       if (!nm) { S.msg = 'Scrivi il nome del conto.'; return render(); }

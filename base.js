@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.51';
+const VER = '1.52';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -257,6 +257,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
   ['1.50','23 nov 2026',['Variazioni assolute: ogni riquadro mostra il valore, la variazione sul mese precedente e quella totale dall\'inizio delle registrazioni']],
   ['1.49','23 nov 2026',['Modalità demo: nella schermata di accesso "Prova la demo" apre l\'app con dati inventati (10 anni, da 50.000 a 500.000 euro); nulla viene salvato e non si vedono dati reali']],
