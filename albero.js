@@ -237,11 +237,15 @@ function portRoot(ports) {
   const kids = [...m].filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]).map(([c, x]) => ({ id: 'r/' + c, label: c, val: x, pct: null, tone: 'a', lv: 'm', kids: [] }));
   return { id: 'r', label: 'Classi', val: kids.reduce((s, k) => s + k.val, 0), pct: null, tone: 'a', lv: 'r', kids };
 }
-function portPieCard(key, title, root) {
+function contiRoot(conti) {
+  const kids = conti.filter(v => v.valore > 0).sort((a, b) => b.valore - a.valore).map(v => ({ id: 'r/' + v.id, label: dn(v), val: v.valore, pct: null, tone: 'a', lv: 'm', kids: [] }));
+  return { id: 'r', label: 'Conti', val: kids.reduce((s, k) => s + k.val, 0), pct: null, tone: 'a', lv: 'r', kids };
+}
+function portPieCard(key, title, root, sub = 'per classe') {
   const r = qSvg(key, null, true, root);
-  if (!r.pb.groups.length) return `<div class="card ppie"><h2>${esc(title)}</h2><p class="note">Nessun prodotto da mostrare.</p></div>`;
+  if (!r.pb.groups.length) return `<div class="card ppie"><h2>${esc(title)}</h2><p class="note">Niente da mostrare.</p></div>`;
   const leg = r.pb.groups.map((g, i) => `<div class="pl ${i === r.sel ? 'on' : ''}" data-act="qs" data-v="${key}:${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
-  return `<div class="card ppie"><h2>${esc(title)} <span class="lbl">per classe</span></h2><div class="pbody"><div class="psvg"><svg class="pie" viewBox="0 0 400 400"><g>${r.svg}</g></svg></div><div class="pleg">${leg}</div></div></div>`;
+  return `<div class="card ppie"><h2>${esc(title)} <span class="lbl">${sub}</span></h2><div class="pbody"><div class="psvg"><svg class="pie" viewBox="0 0 400 400"><g>${r.svg}</g></svg></div><div class="pleg">${leg}</div></div></div>`;
 }
 function quadCard(Dz, single) {
   const keys = single ? ['l', 'a', 'i', 'p'] : ['c', 'a', 'i', 'p'];
