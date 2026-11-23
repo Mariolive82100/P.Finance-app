@@ -74,7 +74,7 @@ const lcAgg = key => {
   return `<div class="zc">${opts.map(([v, l]) => `<button class="b ${cur === v ? '' : 's'} sm" data-act="agg" data-k="${key}" data-v="${v}" ${ok ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
 };
 const lcZoomBar = key => lcAgg(key) + (hubOpen() ? '' : `<div class="zc"><button class="b s sm" data-act="zm" data-k="${key}" data-v="out" aria-label="Riduci">−</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="in" aria-label="Ingrandisci">＋</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="l" aria-label="Indietro">◀</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="r" aria-label="Avanti">▶</button><button class="b s sm" data-act="zm" data-k="${key}" data-v="0">Tutto</button></div>`);
-const hubOpen = () => innerWidth >= 1000 && S.tab === 'pan' && !!S.hq;
+const hubOpen = () => (innerWidth >= 1000 ? S.tab === 'pan' : S.tab === 'pat') && !!S.hq;
 function lcCard(key, title, pts, series, w, h) {
   CHS[key] = { title, pts, series };
   const ww = w || CW();
@@ -350,7 +350,7 @@ document.addEventListener('mouseout', e => {
 });
 function panMain(all, r1) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
-  const A = aggOf('main', all), W = Math.max(380, Math.round((innerWidth - 200 - 56 - 28) * 5 / 12 - 40));
+  const A = aggOf('main', all), W = innerWidth < 1000 ? Math.max(300, innerWidth - 62) : Math.max(380, Math.round((innerWidth - 200 - 56 - 28) * 5 / 12 - 40));
   return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150));
 }
 function pageAnd() {
