@@ -285,6 +285,7 @@ function portEditMob(v) {
   }).join('');
   const lista = cur !== null ? '' : `${L.length > 8 ? '<input id="pmq" class="pmq" placeholder="Cerca un prodotto…" autocomplete="off">' : ''}<div class="pml">${L.map((p, i) => `<div class="row pmrow" data-act="pmopen" data-v="${i}" style="cursor:pointer"><div class="n">${esc(p.nome || p.isin || 'Valore a mano')}<small>${esc([p.isin, p.classe].filter(Boolean).join(' · '))}</small></div><div class="v">${eur(portTot([p]))}<span class="chev" style="margin-left:6px">›</span></div></div>`).join('') || '<div class="lbl">Nessun prodotto. Aggiungine uno.</div>'}</div>`;
   return `<div class="phd"><input id="pnome" class="grow" maxlength="40" value="${esc(v.nome)}" title="Nome del portafoglio" style="margin:0;font-weight:700"></div>
+    <label class="lbl" style="display:block;margin-bottom:8px">Account del portafoglio<select id="pacc" style="margin-top:3px">${accList(S.data).map(([k, n]) => `<option value="${esc(k)}" ${k === accKey(v) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
     ${S.msg ? `<div class="msg" id="pmsg">${esc(S.msg)}</div>` : ''}
     ${cur === null ? '<div class="lbl" style="margin-bottom:6px">Tocca un prodotto per modificarlo.</div>' : ''}${lista}${rows}
     ${cur === null ? '<button class="b s sm" type="button" data-act="pmadd">＋ Aggiungi prodotto</button>' : ''}

@@ -465,13 +465,14 @@ async function portSalva0() {
   }
   const nn = $('pnome') ? $('pnome').value.trim() : v.nome, vecchio = v.nome;
   if (!nn) return err('Il nome del portafoglio non può essere vuoto.');
-  if (nn !== vecchio) {
-    if (D.voci.some(x => x.id !== v.id && isPort(x) && (x.account || '') === (v.account || '') && (x.dove || x.nome).trim().toLowerCase() === nn.toLowerCase())) return err('Esiste già un portafoglio con questo nome in questo account.');
+  const na = $('pacc') ? ($('pacc').value === 'main' ? '' : $('pacc').value) : (v.account || ''), cambiato = na !== (v.account || '');
+  if (nn !== vecchio || cambiato) {
+    if (D.voci.some(x => x.id !== v.id && isPort(x) && (x.account || '') === na && (x.dove || x.nome).trim().toLowerCase() === nn.toLowerCase())) return err('Esiste già un portafoglio con questo nome in questo account.');
     /* rinomina anche il conto di liquidità collegato (stesso nome e account) */
     const lq = D.voci.find(y => y.categoria === 'Liquidità' && y.nome === vecchio && (y.account || '') === (v.account || ''));
-    if (lq) { const { id: lid, ...lr } = lq; await setDoc(doc(db, 'users', D.uid, 'voci', lid), { ...lr, nome: nn }); lq.nome = nn; }
+    if (lq) { const { id: lid, ...lr } = lq; await setDoc(doc(db, 'users', D.uid, 'voci', lid), { ...lr, nome: nn, account: na }); lq.nome = nn; lq.account = na; }
   }
-  const { id, assetClass, ...rest } = v, dati = { ...rest, nome: nn, ...(rest.dove === vecchio || !rest.dove ? { dove: nn } : {}), portafoglio: true, prodotti: prod };
+  const { id, assetClass, ...rest } = v, dati = { ...rest, nome: nn, account: na, ...(rest.dove === vecchio || !rest.dove ? { dove: nn } : {}), portafoglio: true, prodotti: prod };
   dati.valore = prod.length ? valoreProd(dati) : 0;
   await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
   await syncStorico(); S.pe = null; S.pd = null; S.msg = 'Portafoglio salvato.'; render();
