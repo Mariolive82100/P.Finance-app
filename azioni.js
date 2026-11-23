@@ -146,7 +146,13 @@ async function act(el) {
     if (a === 'qs') { if (!isTouch()) return; const [k, i] = v.split(':'); S.qsel = S.qsel || {}; S.qsel[k] = S.qsel[k] === +i ? null : +i; return render(); }
     if (a === 'copen') { S.cx = true; S.csel = null; return render(); }
     if (a === 'cclose') { S.cx = false; return render(); }
-    if (a === 'topen') { S.tex = true; S.tcan = true; return render(); }
+    if (a === 'topen') { S.tex = true; S.tcan = true; S.tz = 1; return render(); }
+    if (a === 'tzin' || a === 'tzout' || a === 'tzfit') {
+      const c = $('tfsc'), fx = c ? (c.scrollLeft + c.clientWidth / 2) / c.scrollWidth : 0, fy = c ? (c.scrollTop + c.clientHeight / 2) / c.scrollHeight : 0;
+      S.tz = a === 'tzfit' ? 1 : Math.max(0.3, Math.min(6, (S.tz || 1) * (a === 'tzin' ? 1.25 : 0.8))); S.tcan = false; render();
+      const n = $('tfsc'); if (n) { n.scrollLeft = fx * n.scrollWidth - n.clientWidth / 2; n.scrollTop = fy * n.scrollHeight - n.clientHeight / 2; }
+      return;
+    }
     if (a === 'tclose') { S.tex = false; S.tcan = true; return render(); }
     if (a === 'hper') { S.hper = v; return render(); }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
@@ -504,6 +510,11 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('mousemove', e => { const t = e.target.closest ? e.target.closest('[data-tip]') : null; tipAt(e, PTYPE === 'touch' && t && t.closest('.pie') ? null : t); });
 document.addEventListener('mouseleave', () => tipAt(null, null));
+/* Albero ingrandito: si trascina con il mouse per spostarsi */
+let TDRAG = null;
+document.addEventListener('mousedown', e => { const c = e.target.closest && e.target.closest('#tfsc'); if (!c || e.button !== 0 || e.target.closest('[data-act]')) return; TDRAG = { c, x: e.clientX, y: e.clientY, l: c.scrollLeft, t: c.scrollTop }; c.classList.add('drag'); e.preventDefault(); });
+document.addEventListener('mousemove', e => { if (!TDRAG) return; TDRAG.c.scrollLeft = TDRAG.l - (e.clientX - TDRAG.x); TDRAG.c.scrollTop = TDRAG.t - (e.clientY - TDRAG.y); });
+document.addEventListener('mouseup', () => { if (TDRAG) { TDRAG.c.classList.remove('drag'); TDRAG = null; } });
 document.addEventListener('change', async e => {
   if (e.target.id !== 'impf' || !e.target.files[0]) return;
   const D = S.data, box = $('impmsg'); if (!D) return;

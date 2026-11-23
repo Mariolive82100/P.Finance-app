@@ -308,3 +308,5 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 }
 
 @media(max-width:999px){.pmq{display:block;width:100%;box-sizing:border-box;font-size:16px;margin:0 0 8px}.pml{margin-bottom:10px}.pml .row .n small{display:block}}
+
+#tfsc{cursor:grab}#tfsc.drag{cursor:grabbing;user-select:none}#tfsc>svg{margin:auto}

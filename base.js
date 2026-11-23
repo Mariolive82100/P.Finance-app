@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.39';
+const VER = '1.40';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -255,6 +255,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.40','23 nov 2026',['Albero ingrandito: all\'apertura si adatta per intero alla pagina; tasti − Adatta ＋ per lo zoom e trascinamento con il mouse per spostarsi']],
   ['1.39','23 nov 2026',['Computer: Liquidità diventa Saldi e Portafogli prende la grafica del telefono, con totale in alto e tasti per aggiornare, modificare e aggiungere']],
   ['1.38','23 nov 2026',['Computer, Panoramica: tolta la cella "Aggregato"; albero ingrandito adattato alla larghezza della pagina (caratteri più grandi, si scorre in verticale)']],
   ['1.37','23 nov 2026',['Telefono, Saldi: in Aggiorna saldi ogni conto ha la ✕ per eliminarlo (con Annulla subito dopo)']],

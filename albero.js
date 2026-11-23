@@ -125,10 +125,10 @@ function treeCard(root, focus, single, full) {
   }
   /* albero ingrandito a tutto schermo (computer) */
   if (wide && full) {
-    TK.k = Math.max(0.5, Math.min((innerWidth - 56) / fu.w, 2.4));
-    return `<div class="fs tfs"><div class="chh"><h2>Albero del patrimonio</h2><button class="b sm" data-act="tclose">✕ Chiudi</button></div>
+    TK.k = Math.max(0.15, Math.min((innerWidth - 40) / fu.w, (innerHeight - 150) / fu.h, 2.4) * (S.tz || 1));
+    return `<div class="fs tfs"><div class="chh"><h2>Albero del patrimonio</h2><span class="chb"><button class="b s sm" data-act="tzout" title="Riduci">−</button><button class="b s sm" data-act="tzfit" title="Adatta alla pagina">Adatta</button><button class="b s sm" data-act="tzin" title="Ingrandisci">＋</button><button class="b sm" data-act="tclose">✕ Chiudi</button></span></div>
       ${single ? '' : `<div class="tabs" style="margin:0"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>`}
-      <div class="tt" style="flex:1;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start">${alberoSvg(root, S.tx, focus)}</div></div>`;
+      <div class="tt" id="tfsc" style="flex:1;min-height:0;overflow:auto;display:flex">${alberoSvg(root, S.tx, focus)}</div></div>`;
   }
   /* scala l'albero aperto del tutto in modo che stia nella larghezza disponibile */
   const avail = wide ? innerWidth - 200 - 56 - 40 : innerWidth - 40;
