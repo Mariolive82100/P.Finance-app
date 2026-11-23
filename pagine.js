@@ -30,7 +30,7 @@ function render() {
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   if (S.tab === 'adm' && !isAdmin()) S.tab = 'pat';
   let body = '';
-  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'con') body = pageCon(); else if (S.tab === 'por') body = wide ? pagePort() : pagePortMob(); else if (S.tab === 'dis') body = wide ? pageDis() : pageSaldi(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'bil') body = pageBil(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
+  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'con') body = pageSaldi(); else if (S.tab === 'por') body = pagePortMob(); else if (S.tab === 'dis') body = wide ? pageDis() : pageSaldi(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'bil') body = pageBil(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
     ${wide ? '' : `<button class="b s sm" data-act="hide">${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}</button>`}<button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     </header>
@@ -49,7 +49,7 @@ function navWide(IC, pend, D) {
   const add = S.addAcc ? `<div class="nadd"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<button class="nplus" data-act="addo">＋ Aggiungi account</button>`;
   const sub = open ? `<div class="nsub">${row('all', 'Aggregato')}${row('main', D.nome)}${D.accounts.map(a => row(a.id, a.nome, true)).join('')}${add}</div>` : '';
   const it = (act, v, ic, l, on, extra) => `<button data-act="${act}"${v ? ` data-v="${v}"` : ''} class="${on ? 'on' : ''}">${sv(ic)}${l}${extra || ''}</button>`;
-  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Liquidità', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
+  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Saldi', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
 }
 
 /* ---------- Gesto/tasto "indietro" ---------- */
@@ -213,18 +213,21 @@ function pageMob() {
 }
 /* Saldi: i conti di liquidità di ogni account */
 function pageSaldi() {
-  const D = S.data;
-  const fm = !!S.cfm, liq = D.voci.filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità');
+  const D = S.data, wide = innerWidth >= 1000;
+  let fa = wide ? (S.fAcc || 'all') : 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
+  const single = fa !== 'all', aname = !single ? '' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
+  const fm = !!S.cfm, liq = D.voci.filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità' && (!single || accKey(v) === fa));
   const tot = a => a.reduce((s, v) => s + v.valore, 0);
-  const secs = accList(D).map(([k, n]) => {
+  const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
     const mine = liq.filter(v => accKey(v) === k).sort((a, b) => dn(a).localeCompare(dn(b)));
     if (!mine.length) return '';
     return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(tot(mine))}</span></div>${mine.map(v => `<div class="row"><div class="n">${esc(dn(v))}</div><div class="v">${fm && !v.piano && !hasProd(v) ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}">` : eur(v.valore)}${fm ? `<button class="b s sm r" type="button" data-act="cdel" data-v="${v.id}" aria-label="Elimina conto" style="margin-left:6px">✕</button>` : ''}</div></div>`).join('')}</div>`;
   }).join('');
   const bar = fm ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfmsave">Salva valori</button><button class="b s" data-act="cfmno">Annulla</button></div><p class="note">Con ✕ elimini un conto: per qualche secondo compare "Annulla" per tornare indietro.</p>` : `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfm">Aggiorna saldi</button><button class="b s" data-act="caddo">Aggiungi conto</button></div>`;
-  const opt = accList(D).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addConto && !fm ? `<div class="card"><h2>Nuovo conto di liquidità</h2><label class="lbl">Account<select id="cnacc">${opt}</select></label><label class="lbl">Nome del conto<input id="cnn" maxlength="40" placeholder="es. Conto Fineco"></label><label class="lbl">Saldo attuale €<input id="cnv" inputmode="decimal" placeholder="0"></label><div class="acts"><button class="b" data-act="caddok">Salva conto</button><button class="b s" data-act="caddc">Annulla</button></div></div>` : '';
-  return `<div class="card"><div class="lbl bd">Liquidità totale</div><div class="big">${eur(tot(liq))}</div>${bar}</div>${form}${secs || (S.addConto ? '' : '<div class="card">Nessun conto di liquidità. Aggiungine uno.</div>')}`;
+  const out = `<div class="card"><div class="lbl bd">Liquidità totale${aname ? ' · ' + esc(aname) : ''}</div><div class="big">${eur(tot(liq))}</div>${bar}</div>${form}${secs || (S.addConto ? '' : '<div class="card">Nessun conto di liquidità. Aggiungine uno.</div>')}`;
+  return wide ? `<div class="con">${out}</div>` : out;
 }
 /* Portafogli: solo lettura (si modificano dalla versione per computer) */
 function pagePortMob() {
@@ -251,8 +254,8 @@ function pagePortMob() {
   }).join('');
   const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addPort && S.pe == null ? `<div class="card"><h2>Nuovo portafoglio</h2><label class="lbl">Account<select id="pnacc">${opt}</select></label><label class="lbl">Nome (es. Directa)<input id="pnnm" maxlength="40" placeholder="Nome del portafoglio"></label><div class="acts"><button class="b" data-act="pmnew">Crea portafoglio</button><button class="b s" data-act="paddc">Annulla</button></div></div>` : '';
-  const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? '<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button></div>' : ''}</div>`;
-  return `<div class="con">${head}${form}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}</div>`;
+  const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button>${innerWidth >= 1000 ? `<button class="b s" data-act="rfs">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : ''}</div>` : ''}</div>`;
+  return `<div class="con">${head}${form}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && S.pe == null ? importCard() : ''}</div>`;
 }
 
 /* ---------- Telefono: modifica dei prodotti di un portafoglio ---------- */
@@ -279,7 +282,7 @@ function portEditMob(v) {
       <div class="acts"><button class="b" type="button" data-act="pmdone">Fatto, torna all'elenco</button></div></div>`;
   }).join('');
   const lista = cur !== null ? '' : `${L.length > 8 ? '<input id="pmq" class="pmq" placeholder="Cerca un prodotto…" autocomplete="off">' : ''}<div class="pml">${L.map((p, i) => `<div class="row pmrow" data-act="pmopen" data-v="${i}" style="cursor:pointer"><div class="n">${esc(p.nome || p.isin || 'Valore a mano')}<small>${esc([p.isin, p.classe].filter(Boolean).join(' · '))}</small></div><div class="v">${eur(portTot([p]))}<span class="chev" style="margin-left:6px">›</span></div></div>`).join('') || '<div class="lbl">Nessun prodotto. Aggiungine uno.</div>'}</div>`;
-  return `<div class="phd"><b class="grow">${esc(v.nome)}</b></div>
+  return `<div class="phd"><input id="pnome" class="grow" maxlength="40" value="${esc(v.nome)}" title="Nome del portafoglio" style="margin:0;font-weight:700"></div>
     ${S.msg ? `<div class="msg" id="pmsg">${esc(S.msg)}</div>` : ''}
     ${cur === null ? '<div class="lbl" style="margin-bottom:6px">Tocca un prodotto per modificarlo.</div>' : ''}${lista}${rows}
     ${cur === null ? '<button class="b s sm" type="button" data-act="pmadd">＋ Aggiungi prodotto</button>' : ''}
