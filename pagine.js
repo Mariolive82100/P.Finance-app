@@ -30,12 +30,12 @@ function render() {
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   if (S.tab === 'adm' && !isAdmin()) S.tab = 'pat';
   let body = '';
-  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'con') body = pageSaldi(); else if (S.tab === 'por') body = pagePortMob(); else if (S.tab === 'dis') body = wide ? pageDis() : pageSaldi(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'bil') body = pageBil(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
+  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'con') body = pageSaldi(); else if (S.tab === 'por') body = pagePortMob(); else if (S.tab === 'dis') body = wide ? pageDis() : pageSaldi(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'bil') body = pageBil(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'imp') body = pageImp(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
     ${wide ? '' : `<button class="b s sm" data-act="hide">${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}</button>`}<button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     </header>
     <main>
-    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|aggiornati\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${S.toast ? `<div class="toast"><span>${esc(S.toast)}</span><button class="b sm" data-act="undo">Annulla</button></div>` : ''}${arrows()}${wide ? navWide(IC, pend, D) : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`}`;
+    <div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|aggiornati\.$|importato\.$|^Link copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${S.toast ? `<div class="toast"><span>${esc(S.toast)}</span><button class="b sm" data-act="undo">Annulla</button></div>` : ''}${arrows()}${wide ? navWide(IC, pend, D) : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`}`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
   navSync();
 }
@@ -49,7 +49,7 @@ function navWide(IC, pend, D) {
   const add = S.addAcc ? `<div class="nadd"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<button class="nplus" data-act="addo">＋ Aggiungi account</button>`;
   const sub = open ? `<div class="nsub">${row('all', 'Aggregato')}${row('main', D.nome)}${D.accounts.map(a => row(a.id, a.nome, true)).join('')}${add}</div>` : '';
   const it = (act, v, ic, l, on, extra) => `<button data-act="${act}"${v ? ` data-v="${v}"` : ''} class="${on ? 'on' : ''}">${sv(ic)}${l}${extra || ''}</button>`;
-  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Saldi', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
+  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Saldi', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${it('imp', '', '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>', 'Importazioni', S.tab === 'imp')}${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
 }
 
 /* ---------- Gesto/tasto "indietro" ---------- */
@@ -168,6 +168,29 @@ function importCard() {
   return `<div class="card"><h2>Importa titoli</h2><div class="lbl">Carica il CSV della scheda "Elenco titoli": crea o aggiorna un portafoglio per ogni conto, con un prodotto per riga (ISIN, quote, classe).</div><input id="titf" type="file" accept=".csv,.txt">${S.timpErr ? `<div class="msg">${esc(S.timpErr)}</div>` : ''}</div>`;
 }
 
+/* ---------- Importazioni (storico e portafoglio da file CSV) ---------- */
+function pageImp() {
+  const D = S.data, I = S.imp, CSVACC = '.csv,.txt,text/csv,text/plain,application/csv,application/vnd.ms-excel';
+  const accs = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
+  /* storico */
+  let st = `<div class="lbl">Carica il file CSV dello storico: servono le colonne Data (es. dic 23), Liquidità, Investimenti, Beni e Passivi. Le righe vuote in cima non danno problemi.</div><input id="imps" type="file" accept="${CSVACC}">`;
+  if (I && I.kind === 'sto') st = `<div class="lbl" style="margin-bottom:6px">Anteprima: ${I.mesi.length} mesi da ${meseIt(I.mesi[0].mese)} a ${meseIt(I.mesi[I.mesi.length - 1].mese)}</div>
+    <div class="row"><div class="n">Nuovi mesi</div><div class="v">${I.nuovi}</div></div><div class="row"><div class="n">Mesi già inseriti a mano (verranno aggiornati)</div><div class="v">${I.agg}</div></div>${I.skip ? `<div class="row"><div class="n">Saltati<small>mese in corso o già registrato dall'app</small></div><div class="v">${I.skip}</div></div>` : ''}
+    <div class="acts"><button class="b" data-act="impsok">Conferma</button><button class="b s" data-act="impno">Annulla</button></div>`;
+  /* portafoglio */
+  let po;
+  if (I && I.kind === 'port') {
+    const ex = I.exN != null ? `<small>${I.exN ? 'esiste già: sostituisce ' + I.exN + ' prodotti' : 'nuovo portafoglio'}</small>` : '';
+    po = `<div class="lbl" style="margin-bottom:6px">Anteprima: ${I.righe.length} prodotti${I.bad ? ` (righe non valide saltate: ${I.bad})` : ''}. Controlla la classe di ogni prodotto.</div>
+      <label class="lbl">Nome del conto (es. Directa)</label><input id="impn" maxlength="40" value="${esc(S.impNome || '')}" placeholder="Nome del conto">
+      ${accs.length > 1 ? `<label class="lbl">Account</label><select id="impa">${accs.map(([k, n]) => `<option value="${esc(k)}" ${(S.impAcc || 'main') === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : ''}
+      ${I.righe.map((r, i) => `<div class="row"><div class="n">${esc(r.ticker || r.isin)}<small>${esc(r.isin)} · ${nfm(r.quote)} quote${r.pmc > 0 ? ' · carico ' + nfm(r.pmc) : ''}</small></div><select data-act="impcl" data-v="${i}" style="width:auto;margin:0">${ASSET.map(o => `<option ${r.classe === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`).join('')}
+      <div class="acts"><button class="b" data-act="impPok">Conferma</button><button class="b s" data-act="impno">Annulla</button></div>`;
+  } else po = `<div class="lbl">Carica il file CSV del portafoglio: servono le colonne ISIN, TICKER, QUOTE e PMC (prezzo medio di carico). Se il conto esiste già, i suoi prodotti vengono sostituiti.</div><label class="lbl">Nome del conto (es. Directa)</label><input id="impn" maxlength="40" value="${esc(S.impNome || '')}" placeholder="Nome del conto">${accs.length > 1 ? `<label class="lbl">Account</label><select id="impa">${accs.map(([k, n]) => `<option value="${esc(k)}" ${(S.impAcc || 'main') === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : ''}<input id="impp" type="file" accept="${CSVACC}">`;
+  return `<div class="card"><h2>Importa lo storico</h2>${I && I.kind === 'port' ? '<div class="lbl">Prima concludi o annulla l\'importazione del portafoglio.</div>' : st}${S.impErr && S.impErr[0] === 'sto' ? `<div class="msg">${esc(S.impErr[1])}</div>` : ''}</div>
+    <div class="card"><h2>Importa il portafoglio</h2>${I && I.kind === 'sto' ? '<div class="lbl">Prima concludi o annulla l\'importazione dello storico.</div>' : po}${S.impErr && S.impErr[0] === 'port' ? `<div class="msg">${esc(S.impErr[1])}</div>` : ''}</div>`;
+}
+
 function drawer() {
   const D = S.data, fa = S.fAcc || 'all';
   const item = (k, n, sub, extra) => `<div class="it ${fa === k ? 'on' : ''}" data-act="facc" data-v="${esc(k)}"><span class="t">${esc(n)}${sub ? `<small class="lbl" style="display:block;font-weight:400">${sub}</small>` : ''}</span>${extra || ''}</div>`;
@@ -177,7 +200,7 @@ function drawer() {
     : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   const adm = isAdmin() ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
-  return `<div class="ov" data-act="menu"></div><div class="drawer"><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
+  return `<div class="ov" data-act="menu"></div><div class="drawer"><div class="it ${S.tab === 'imp' ? 'on' : ''}" data-act="imp"><span class="t">Importazioni</span></div><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
 }
 
 /* Simbolo di aggiornamento e pulsanti account (Aggregato, account, +) accanto al patrimonio netto */

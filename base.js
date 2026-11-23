@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.45';
+const VER = '1.46';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -255,6 +255,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.46','23 nov 2026',['Nuova pagina Importazioni (menu laterale e menu a panino, computer e telefono): importa lo storico e il portafoglio da file CSV, con anteprima prima di confermare']],
   ['1.45','23 nov 2026',['Portafogli: in modifica si può cambiare l\'account del portafoglio (si sposta anche il conto di liquidità collegato)']],
   ['1.44','23 nov 2026',['Saldi: ogni conto è un riquadro come i portafogli, con nome, saldo e tasto Modifica (che apre Aggiorna, Modifica, Archivia, Elimina)']],
   ['1.43','23 nov 2026',['Computer, Saldi: pagina in due colonne, a destra la torta per conto di ogni account e in fondo quella della liquidità aggregata']],

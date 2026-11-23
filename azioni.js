@@ -37,6 +37,11 @@ async function act(el) {
     if (a === 'shtest') { const c = sheetCfg(); if (!c) return; try { const j = await chiamaFoglio(c, { prova: '1' }); S.msg = j.ok ? 'Collegamento riuscito.' : 'Lo script risponde ma: ' + (j.errore || 'errore') + '.'; } catch (e) { S.msg = 'Lo script non risponde: controlla indirizzo e pubblicazione.'; } return render(); }
     if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
+    if (a === 'imp') { S.tab = 'imp'; S.menu = false; S.imp = null; S.impErr = null; window.scrollTo(0, 0); return render(); }
+    if (a === 'impcl') { if (S.imp && S.imp.righe[+v]) S.imp.righe[+v].classe = el.value; return; }
+    if (a === 'impno') { S.imp = null; S.impErr = null; return render(); }
+    if (a === 'impsok') return impStoricoApplica();
+    if (a === 'impPok') return impPortApplica();
     if (a === 'accept') {
       if (!$('tc') || !$('tc').checked) { S.msg = 'Per continuare devi spuntare la casella di accettazione.'; return render(); }
       await updateDoc(doc(db, 'users', S.user.uid), { termini: TERMS_V, terminiAt: serverTimestamp() });
@@ -507,6 +512,117 @@ async function portConverti() {
 document.addEventListener('change', async e => {
   if (e.target.id !== 'titf' || !e.target.files[0] || !S.data || !isAdmin()) return;
   try { S.timp = titoliProposta(await e.target.files[0].text()); S.timpErr = ''; } catch (x) { S.timp = null; S.timpErr = x.message || 'File non valido.'; }
+  render();
+});
+/* ---------- Pagina Importazioni: storico e portafoglio da CSV ---------- */
+const MESI_IT = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+const meseIt = k => MESI_IT[+k.slice(5) - 1] + ' ' + k.slice(0, 4);
+/* numero all'italiana: 15.050 = 15050, 1.234,5 = 1234.5, 12,5 = 12.5, 1.5 = 1.5 */
+function numIt(s) {
+  s = String(s == null ? '' : s).replace(/[\s€%]/g, ''); if (!s) return NaN;
+  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(',', '.');
+  return /^-?\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
+}
+/* legge il file anche se salvato da Excel in codifica Windows */
+async function leggiFile(f) {
+  const b = await f.arrayBuffer();
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return new TextDecoder('windows-1252').decode(b); }
+}
+const sanif = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+function meseDaTesto(t) {
+  t = sanif(t); let m = t.match(/^([a-z]{3})[a-z]*\.?[\s\-\/]+(\d{2}|\d{4})$/);
+  if (m) { const i = MESI_IT.indexOf(m[1]); if (i >= 0) return (m[2].length === 2 ? '20' + m[2] : m[2]) + '-' + String(i + 1).padStart(2, '0'); }
+  m = t.match(/^(\d{4})-(\d{1,2})$/); if (m && +m[2] >= 1 && +m[2] <= 12) return m[1] + '-' + m[2].padStart(2, '0');
+  m = t.match(/^(\d{1,2})\/(\d{4})$/); if (m && +m[1] >= 1 && +m[1] <= 12) return m[2] + '-' + m[1].padStart(2, '0');
+  return null;
+}
+function storicoProposta(txt) {
+  const D = S.data, R = csvRighe(txt), mk = monthKey();
+  const hi = R.findIndex(r => r.some(c => /^data$/.test(sanif(c))) && r.some(c => /^liquid/.test(sanif(c))));
+  if (hi < 0) throw new Error('Non trovo le colonne Data, Liquidità, Investimenti, Beni, Passivi. Hai scelto il file giusto?');
+  const H = R[hi].map(sanif), iD = H.indexOf('data'), iL = H.findIndex(h => /^liquid/.test(h)), iI = H.findIndex(h => /^(investiment|portafogli)/.test(h)), iB = H.findIndex(h => /^beni/.test(h)), iP = H.findIndex(h => /^passiv/.test(h));
+  if (iL < 0 || iI < 0 || iB < 0 || iP < 0) throw new Error('Mancano alcune colonne: servono Data, Liquidità, Investimenti, Beni e Passivi.');
+  const mesi = []; let nuovi = 0, agg = 0, skip = 0;
+  for (const r of R.slice(hi + 1)) {
+    const mese = meseDaTesto(r[iD]); if (!mese) continue;
+    const liq = numIt(r[iL]), port = numIt(r[iI]), beni = numIt(r[iB]), pas = numIt(r[iP]);
+    if (![liq, port, beni, pas].every(isFinite)) continue;
+    const attivi = liq + port + beni, passivi = Math.abs(pas);
+    if (attivi === 0 && passivi === 0) continue;
+    const ex = D.storico.find(x => x.mese === mese);
+    if (mese >= mk || (ex && !ex.manuale)) { skip++; continue; }
+    if (mesi.some(x => x.mese === mese)) continue;
+    mesi.push({ mese, attivi: r2(attivi), passivi: r2(passivi), netto: r2(attivi - passivi), liq: r2(Math.max(liq, 0)), port: r2(Math.max(port, 0)), beni: r2(Math.max(beni, 0)) });
+    if (ex) agg++; else nuovi++;
+  }
+  if (!mesi.length) throw new Error('Nessun mese da importare' + (skip ? ' (quelli nel file sono il mese in corso o già registrati dall\'app).' : ': non trovo righe con data e importi.'));
+  mesi.sort((x, y) => x.mese.localeCompare(y.mese));
+  return { kind: 'sto', mesi, nuovi, agg, skip };
+}
+async function impStoricoApplica() {
+  const D = S.data, P = S.imp; if (!P || P.kind !== 'sto') return;
+  try {
+    for (const m of P.mesi) {
+      const { mese, ...dati } = m;
+      await setDoc(doc(db, 'users', D.uid, 'storico', mese), { ...dati, manuale: true, aggiornato: serverTimestamp() });
+      const ex = D.storico.find(x => x.mese === mese); if (ex) Object.assign(ex, dati, { manuale: true }); else D.storico.push({ mese, ...dati, manuale: true });
+    }
+    D.storico.sort((x, y) => x.mese.localeCompare(y.mese));
+    S.msg = `Storico importato: ${P.mesi.length} mesi.`; S.imp = null; S.impErr = null; render();
+  } catch (e) { S.msg = 'Importazione non riuscita' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + errText(e)); render(); }
+}
+const CLASSE_NOTA = { SGLD: 'Oro e materie prime', BITC: 'Criptovalute', BTCE: 'Criptovalute', ZBTC: 'Criptovalute' };
+function portafoglioProposta(txt) {
+  const R = csvRighe(txt), hi = R.findIndex(r => r.some(c => sanif(c) === 'isin'));
+  if (hi < 0) throw new Error('Non trovo le colonne ISIN, TICKER, QUOTE, PMC. Hai scelto il file giusto?');
+  const H = R[hi].map(sanif), iI = H.indexOf('isin'), iT = H.indexOf('ticker'), iQ = H.findIndex(h => /^quot|^quant/.test(h)), iP = H.findIndex(h => /^pmc|^prezzo medio|^carico/.test(h));
+  if (iQ < 0) throw new Error('Non trovo la colonna QUOTE.');
+  const g = new Map(); let bad = 0;
+  for (const r of R.slice(hi + 1)) {
+    const isin = String(r[iI] || '').trim().toUpperCase(); if (!isin) continue;
+    const q = numIt(r[iQ]), pmc = iP >= 0 && String(r[iP] || '').trim() ? numIt(r[iP]) : 0;
+    if (!/^[A-Z0-9]{12}$/.test(isin) || !(q > 0) || !isFinite(pmc) || pmc < 0) { bad++; continue; }
+    const tk = iT >= 0 ? String(r[iT] || '').trim().toUpperCase() : '', o = g.get(isin);
+    if (o) { o.pmc = (o.quote * o.pmc + q * pmc) / (o.quote + q); o.quote += q; } else g.set(isin, { isin, ticker: tk, quote: q, pmc, classe: CLASSE_NOTA[tk] || 'Azioni' });
+  }
+  const righe = [...g.values()].map(x => ({ ...x, quote: Math.round(x.quote * 1e6) / 1e6, pmc: Math.round(x.pmc * 1e6) / 1e6 }));
+  if (!righe.length) throw new Error('Nessun prodotto valido nel file.');
+  return { kind: 'port', righe, bad };
+}
+async function impPortApplica() {
+  const D = S.data, P = S.imp; if (!P || P.kind !== 'port') return;
+  const nm = ($('impn') ? $('impn').value : '').trim(), sel = $('impa') ? $('impa').value : 'main', account = sel === 'main' ? '' : sel;
+  S.impNome = nm; S.impAcc = sel;
+  if (!nm) { S.msg = 'Scrivi il nome del conto (es. Directa).'; return render(); }
+  if (D.voci.some(v => isInvLegacy(v) && (v.account || '') === account)) { S.msg = 'Prima riunisci le voci di investimento esistenti nei portafogli (pagina Portafogli).'; return render(); }
+  try {
+    const ex = D.voci.find(v => isPort(v) && (v.dove || v.nome || '').trim().toLowerCase() === nm.toLowerCase() && (v.account || '') === account);
+    const keep = p => { const o = ex && (ex.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; };
+    const prod = P.righe.map(r => keep({ isin: r.isin, nome: r.ticker, classe: r.classe, quote: r.quote, manuale: r2(r.quote * r.pmc), ...(r.pmc > 0 ? { pmc: r.pmc } : {}) }));
+    if (ex) {
+      const { id, assetClass, ...rest } = ex, dati = { ...rest, portafoglio: true, prodotti: prod }; dati.valore = valoreProd(dati);
+      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete ex.assetClass; Object.assign(ex, dati);
+    } else {
+      if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === nm.toLowerCase() && (y.account || '') === account)) {
+        const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: nm, account, valore: 0 };
+        const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
+      }
+      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: nm, dove: nm, account, valore: 0, portafoglio: true, prodotti: prod }; dati.valore = valoreProd(dati);
+      const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
+    }
+    D.voci.forEach(applyPiano); await syncStorico();
+    S.imp = null; S.impErr = null; S.impNome = ''; S.msg = `Portafoglio importato: ${prod.length} prodotti.`; render();
+    if (!isAdmin()) segnalaIsin(prod);
+    else { const extra = await sheetAggiungi(prod); if (extra) { S.msg += extra; render(); } }
+  } catch (e) { S.msg = 'Importazione non riuscita' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + errText(e)); render(); }
+}
+document.addEventListener('change', async e => {
+  const id = e.target.id; if ((id !== 'imps' && id !== 'impp') || !e.target.files[0] || !S.data) return;
+  if ($('impn')) S.impNome = $('impn').value; if ($('impa')) S.impAcc = $('impa').value;
+  const k = id === 'imps' ? 'sto' : 'port';
+  try { const txt = await leggiFile(e.target.files[0]); S.imp = k === 'sto' ? storicoProposta(txt) : portafoglioProposta(txt); S.impErr = null; }
+  catch (x) { S.imp = null; S.impErr = [k, x.message || 'File non valido.']; }
+  if (S.imp && S.imp.kind === 'port') { const nm = (S.impNome || '').trim().toLowerCase(), acc = (S.impAcc || 'main') === 'main' ? '' : S.impAcc, ex = nm && S.data.voci.find(v => isPort(v) && (v.dove || v.nome || '').trim().toLowerCase() === nm && (v.account || '') === acc); S.imp.exN = nm ? (ex ? (ex.prodotti || []).length : 0) : null; }
   render();
 });
 document.addEventListener('mousemove', e => { const t = e.target.closest ? e.target.closest('[data-tip]') : null; tipAt(e, PTYPE === 'touch' && t && t.closest('.pie') ? null : t); });
