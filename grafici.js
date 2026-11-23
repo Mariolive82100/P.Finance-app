@@ -269,15 +269,16 @@ function hubGrid(all0, all) {
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
 /* Quattro riquadri: variazione rispetto al mese precedente (Liquidità, Portafoglio, Beni, Passivi) */
-function deltaCard(vis, cur, prev) {
-  const c = { ...totals(vis), ...catTot(vis) };
-  const items = [['Liquidità', c.liq, prev && prev.liq, 0], ['Portafoglio', c.port, prev && prev.port, 0], ['Beni', c.beni, prev && prev.beni, 0], ['Passivi', c.passivi, prev && prev.passivi, 1]];
-  const tile = ([l, now, old, inv]) => {
-    const ok = typeof old === 'number', d = ok ? now - old : 0, good = inv ? -d : d;
-    const k = good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : '';
-    return `<div class="qc dq"><b>${l}</b><div class="dv">${eur(now)}</div>${ok ? `<div class="dp ${k}">${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${old ? ' · ' + pct(d / Math.abs(old)) : ''}</div>` : '<div class="dp lbl">variazione dal prossimo mese</div>'}</div>`;
+function deltaCard(vis, cur, prev, first) {
+  const c = { ...totals(vis), ...catTot(vis) }, f = first && cur && first.mese !== cur.mese ? first : null;
+  const items = [['Liquidità', 'liq', c.liq, 0], ['Portafoglio', 'port', c.port, 0], ['Beni', 'beni', c.beni, 0], ['Passivi', 'passivi', c.passivi, 1]];
+  const line = (lab, now, old, inv) => {
+    if (typeof old !== 'number') return `<div class="dp lbl">${lab}: —</div>`;
+    const d = now - old, good = inv ? -d : d, k = good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : '';
+    return `<div class="dp ${k}"><span class="lbl">${lab}</span> ${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${old ? ' · ' + pct(d / Math.abs(old)) : ''}</div>`;
   };
-  return `<div class="card pcard qcard"><h2>Variazione su ${prev ? esc(monthName(prev.mese)) : 'mese precedente'}</h2><div class="qg">${items.map(tile).join('')}</div></div>`;
+  const tile = ([l, key, now, inv]) => `<div class="qc dq"><b>${l}</b><div class="dv">${eur(now)}</div>${prev ? line('Mese', now, prev[key], inv) : ''}${f ? line('Totale', now, f[key], inv) : ''}</div>`;
+  return `<div class="card pcard qcard"><h2>Variazioni assolute</h2><div class="lbl" style="margin:-4px 0 6px">${prev ? 'Mese: su ' + esc(monthName(prev.mese)) : ''}${prev && f ? ' · ' : ''}${f ? 'Totale: da ' + esc(monthName(f.mese)) : ''}</div><div class="qg">${items.map(tile).join('')}</div></div>`;
 }
 /* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
 function colCard(t, vis) {

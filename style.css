@@ -327,3 +327,5 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .prow.one{grid-template-columns:1fr}
 .prow .ppie .pbody{flex-direction:column;align-items:stretch}.prow .ppie .psvg{max-width:230px;width:100%;margin:0 auto;flex:none}.prow .ppie .pleg{max-height:none}
 .prow.one .ppie .pbody{flex-direction:row;align-items:center}.prow.one .ppie .psvg{flex:0 0 280px;max-width:280px;margin:0}
+
+.dq .dp{font-size:13px;line-height:1.35}.dq .dp .lbl{font-weight:500;margin-right:2px}
