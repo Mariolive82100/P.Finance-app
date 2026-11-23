@@ -281,8 +281,8 @@ async function act(el) {
     if (a === 'pnew') return portNuovo(v);
     if (a === 'pdel') {
       const x = D.voci.find(z => z.id === v); if (!x || !confirm('Eliminare il portafoglio ' + x.nome + ' con tutti i suoi prodotti?')) return;
-      await deleteDoc(doc(db, 'users', D.uid, 'voci', v)); D.voci = D.voci.filter(z => z.id !== v); if (S.pe === v) { S.pe = null; S.pd = null; }
-      await syncStorico(); return render();
+      await deleteDoc(doc(db, 'users', D.uid, 'voci', v)); D.voci = D.voci.filter(z => z.id !== v); if (S.pe === v) { S.pe = null; S.pd = null; S.pcur = null; }
+      await syncStorico(); S.msg = 'Portafoglio eliminato.'; return render();
     }
     if (a === 'pconv') return portConverti();
     if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }

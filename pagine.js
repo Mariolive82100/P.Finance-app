@@ -285,6 +285,7 @@ function portEditMob(v) {
     ${cur === null ? '<button class="b s sm" type="button" data-act="pmadd">＋ Aggiungi prodotto</button>' : ''}
     <div class="pcm-tot"><span class="lbl">Totale del portafoglio dopo il salvataggio</span><b id="pprev">${eur(portTot(L))}</b></div>
     <div class="acts"><button class="b" data-act="psave">Salva</button><button class="b s" data-act="pcancel">Annulla</button></div>
+    ${cur === null ? `<div class="acts" style="margin-top:14px"><button class="b s r" data-act="pdel" data-v="${v.id}">Elimina portafoglio</button></div>` : ''}
     <p class="note">Le modifiche valgono solo dopo "Salva"; con "Annulla" non cambia nulla. Se l'ISIN non ha il prezzo nel foglio, viene segnalato all'amministratore.</p>`;
 }
 
