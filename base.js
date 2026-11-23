@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.31';
+const VER = '1.32';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -342,9 +342,21 @@ const sheetCard = () => { const c = sheetCfg() || {}; return `<div class="card">
   <label class="lbl">Chiave</label><input id="sht" placeholder="La chiave scelta nello script" value="${esc(c.token || '')}">
   <div class="acts"><button class="b sm" data-act="shsave">Salva</button>${c.url ? '<button class="b s sm" data-act="shtest">Prova collegamento</button><button class="b s sm r" data-act="shdel">Scollega</button>' : ''}</div></div>`; };
 /* Aggiunge al foglio gli ISIN senza prezzo (solo amministratore); restituisce un messaggio */
+/* Chiamata allo script del foglio: la chiave viaggia nel corpo della richiesta (non nell'indirizzo); se lo script e' ancora la versione vecchia, ripiega sul metodo precedente */
+const pulisciTesto = (s, n) => String(s || '').replace(/^[\s=+\-@]+/, '').slice(0, n);
+async function chiamaFoglio(c, par) {
+  const corpo = JSON.stringify({ token: c.token, ...par });
+  try {
+    const r = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: corpo, cache: 'no-store' });
+    return await r.json();
+  } catch (e) {
+    const q = new URLSearchParams({ token: c.token, ...par });
+    return await (await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' })).json();
+  }
+}
 async function nomeDaIsin(isin) {
   const c = sheetCfg(); if (!c) return '';
-  try { const q = new URLSearchParams({ token: c.token, isin, solonome: '1' }), j = await (await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' })).json(); window._nomeInfo = j.ok ? (j.info || 'nome non trovato') : (j.errore || 'errore'); return j.ok && j.nome ? String(j.nome) : ''; } catch (e) { window._nomeInfo = 'foglio non raggiungibile'; return ''; }
+  try { const j = await chiamaFoglio(c, { isin, solonome: '1' }); window._nomeInfo = j.ok ? (j.info || 'nome non trovato') : (j.errore || 'errore'); return j.ok && j.nome ? String(j.nome) : ''; } catch (e) { window._nomeInfo = 'foglio non raggiungibile'; return ''; }
 }
 async function sheetAggiungi(prodotti) {
   const c = sheetCfg(), mancanti = prodotti.filter(p => p.isin && S.prezzi && !S.prezzi.map[p.isin]);
@@ -353,8 +365,7 @@ async function sheetAggiungi(prodotti) {
   const out = [];
   for (const p of mancanti) {
     try {
-      const q = new URLSearchParams({ token: c.token, isin: p.isin, nome: p.nome || '', classe: p.classe || '' });
-      const r = await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' }), j = await r.json();
+      const j = await chiamaFoglio(c, { isin: p.isin, nome: pulisciTesto(p.nome, 60), classe: pulisciTesto(p.classe, 40) });
       out.push(j.ok ? (j.esito === 'presente' ? p.isin + ' è già nel foglio' : p.isin + ' aggiunto al foglio' + (j.prezzo ? ' (prezzo ' + nfm(j.prezzo) + ')' : '')) : p.isin + ': ' + (j.errore || 'errore'));
     } catch (e) { out.push(p.isin + ': foglio non raggiungibile'); }
   }

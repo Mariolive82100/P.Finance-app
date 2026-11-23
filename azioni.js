@@ -34,7 +34,7 @@ async function act(el) {
   try {
     if (a === 'shsave') { const u = $('shu').value.trim(), t = $('sht').value.trim(); if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u) || !t) { S.msg = 'Servono l\'indirizzo dello script (finisce con /exec) e la chiave.'; return render(); } try { localStorage.setItem('pf_sheet', JSON.stringify({ url: u, token: t })); } catch (e) {} S.msg = 'Collegamento salvato.'; return render(); }
     if (a === 'shdel') { try { localStorage.removeItem('pf_sheet'); } catch (e) {} S.msg = 'Foglio scollegato.'; return render(); }
-    if (a === 'shtest') { const c = sheetCfg(); if (!c) return; try { const j = await (await fetch(c.url + '?token=' + encodeURIComponent(c.token) + '&prova=1', { cache: 'no-store' })).json(); S.msg = j.ok ? 'Collegamento riuscito.' : 'Lo script risponde ma: ' + (j.errore || 'errore') + '.'; } catch (e) { S.msg = 'Lo script non risponde: controlla indirizzo e pubblicazione.'; } return render(); }
+    if (a === 'shtest') { const c = sheetCfg(); if (!c) return; try { const j = await chiamaFoglio(c, { prova: '1' }); S.msg = j.ok ? 'Collegamento riuscito.' : 'Lo script risponde ma: ' + (j.errore || 'errore') + '.'; } catch (e) { S.msg = 'Lo script non risponde: controlla indirizzo e pubblicazione.'; } return render(); }
     if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
     if (a === 'accept') {
@@ -334,8 +334,7 @@ async function act(el) {
       for (let i = 0; i < lista.length; i++) {
         const x = lista[i]; S.msg = 'Aggiungo al foglio ' + (i + 1) + ' di ' + lista.length + ': ' + x.isin + '…'; render();
         try {
-          const q = new URLSearchParams({ token: c.token, isin: x.isin, nome: x.nome || '', classe: x.classe || '' });
-          const j = await (await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' })).json();
+          const j = await chiamaFoglio(c, { isin: x.isin, nome: pulisciTesto(x.nome, 60), classe: pulisciTesto(x.classe, 40) });
           if (j.ok) { out.push(x.isin + (j.esito === 'presente' ? ' già nel foglio' : ' aggiunto')); try { await deleteDoc(doc(db, 'richiesteIsin', x.isin)); } catch (e) {} S.rich = S.rich.filter(z => z.isin !== x.isin); }
           else out.push(x.isin + ': ' + (j.errore || 'errore'));
         } catch (e) { out.push(x.isin + ': foglio non raggiungibile'); }
