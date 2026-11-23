@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.36';
+const VER = '1.37';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -255,6 +255,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.37','23 nov 2026',['Telefono, Saldi: in Aggiorna saldi ogni conto ha la ✕ per eliminarlo (con Annulla subito dopo)']],
   ['1.36','23 nov 2026',['Telefono, Portafogli: tasto Elimina portafoglio nella schermata di modifica']],
   ['1.35','23 nov 2026',['Telefono: tolto \'Aggregato\' dai riquadri degli account (toccando di nuovo l\'account scelto si torna al totale) e la sezione Account dal menu; Saldi: nuovo tasto Aggiungi conto; Portafogli: totale in testa e nuovo tasto Aggiungi portafoglio']],
   ['1.34','23 nov 2026',['Telefono, Portafogli: in modifica si vede prima l\'elenco dei prodotti (con ricerca se sono tanti) e si apre solo quello da modificare']],
