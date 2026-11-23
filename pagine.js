@@ -181,7 +181,7 @@ function pageImp() {
   let po;
   if (I && I.kind === 'port') {
     const ex = I.exN != null ? `<small>${I.exN ? 'esiste già: sostituisce ' + I.exN + ' prodotti' : 'nuovo portafoglio'}</small>` : '';
-    po = `<div class="lbl" style="margin-bottom:6px">Anteprima: ${I.righe.length} prodotti${I.bad ? ` (righe non valide saltate: ${I.bad})` : ''}. Controlla la classe di ogni prodotto.</div>
+    po = `<div class="lbl" style="margin-bottom:6px">Anteprima: ${I.righe.length} prodotti${I.bad ? ` (righe non valide saltate: ${I.bad})` : ''}. Controlla la classe di ogni prodotto. Se esiste un investimento inserito a solo valore con lo stesso nome del conto, viene sostituito dal portafoglio.</div>
       <label class="lbl">Nome del conto (es. Directa)</label><input id="impn" maxlength="40" value="${esc(S.impNome || '')}" placeholder="Nome del conto">
       ${accs.length > 1 ? `<label class="lbl">Account</label><select id="impa">${accs.map(([k, n]) => `<option value="${esc(k)}" ${(S.impAcc || 'main') === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : ''}
       ${I.righe.map((r, i) => `<div class="row"><div class="n">${esc(r.ticker || r.isin)}<small>${esc(r.isin)} · ${nfm(r.quote)} quote${r.pmc > 0 ? ' · carico ' + nfm(r.pmc) : ''}</small></div><select data-act="impcl" data-v="${i}" style="width:auto;margin:0">${ASSET.map(o => `<option ${r.classe === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`).join('')}

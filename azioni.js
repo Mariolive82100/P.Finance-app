@@ -594,8 +594,10 @@ async function impPortApplica() {
   const nm = ($('impn') ? $('impn').value : '').trim(), sel = $('impa') ? $('impa').value : 'main', account = sel === 'main' ? '' : sel;
   S.impNome = nm; S.impAcc = sel;
   if (!nm) { S.msg = 'Scrivi il nome del conto (es. Directa).'; return render(); }
-  if (D.voci.some(v => isInvLegacy(v) && (v.account || '') === account)) { S.msg = 'Prima riunisci le voci di investimento esistenti nei portafogli (pagina Portafogli).'; return render(); }
   try {
+    /* investimenti inseriti a solo valore con lo stesso nome del conto: li sostituisce il portafoglio importato (gli altri restano) */
+    const vecchi = D.voci.filter(v => isInvLegacy(v) && (v.account || '') === account && (v.dove || v.nome || '').trim().toLowerCase() === nm.toLowerCase());
+    for (const o of vecchi) { await deleteDoc(doc(db, 'users', D.uid, 'voci', o.id)); D.voci = D.voci.filter(z => z !== o); }
     const ex = D.voci.find(v => isPort(v) && (v.dove || v.nome || '').trim().toLowerCase() === nm.toLowerCase() && (v.account || '') === account);
     const keep = p => { const o = ex && (ex.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; };
     const prod = P.righe.map(r => keep({ isin: r.isin, nome: r.ticker, classe: r.classe, quote: r.quote, manuale: r2(r.quote * r.pmc), ...(r.pmc > 0 ? { pmc: r.pmc } : {}) }));
@@ -611,7 +613,7 @@ async function impPortApplica() {
       const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
     }
     D.voci.forEach(applyPiano); await syncStorico();
-    S.imp = null; S.impErr = null; S.impNome = ''; S.msg = `Portafoglio importato: ${prod.length} prodotti.`; render();
+    S.imp = null; S.impErr = null; S.impNome = ''; S.msg = `Portafoglio importato: ${prod.length} prodotti.` + (vecchi.length ? ` Sostituito l'investimento inserito a valore (${vecchi.length}).` : ''); render();
     if (!isAdmin()) segnalaIsin(prod);
     else { const extra = await sheetAggiungi(prod); if (extra) { S.msg += extra; render(); } }
   } catch (e) { S.msg = 'Importazione non riuscita' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + errText(e)); render(); }
