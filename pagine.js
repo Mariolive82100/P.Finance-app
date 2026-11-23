@@ -261,22 +261,25 @@ function portTot(rows) {
   return valoreProd({ prodotti: rows.filter(r => String(r.isin || '').trim() || n(r.manuale)).map(r => ({ isin: String(r.isin || '').trim().toUpperCase(), quote: n(r.quote), manuale: n(r.manuale), pmc: n(r.pmc), nom: !!r.nom })) });
 }
 function portEditMob(v) {
-  const L = portDraft(v), opts = sel => `<option value="">Scegli…</option>${ASSET.map(o => `<option ${sel === o ? 'selected' : ''}>${o}</option>`).join('')}`;
+  const L = portDraft(v), cur = S.pcur != null && S.pcur < L.length ? S.pcur : null, opts = sel => `<option value="">Scegli…</option>${ASSET.map(o => `<option ${sel === o ? 'selected' : ''}>${o}</option>`).join('')}`;
+  /* tutti i prodotti restano nella pagina (i non scelti sono nascosti): così il salvataggio li legge tutti */
   const rows = L.map((p, i) => {
     const k = String(p.isin || '').trim().toUpperCase(), pr = S.prezzi && S.prezzi.map[k];
-    return `<div class="ppr pcm"><div class="pcm-h"><b>Prodotto ${i + 1}</b><button class="b s sm r" type="button" data-act="prrm" data-v="${i}">Togli</button></div>
+    return `<div class="ppr pcm" style="${i === cur ? '' : 'display:none'}"><div class="pcm-h"><b>${p.isin || p.nome ? esc(p.nome || p.isin) : 'Nuovo prodotto'}</b><button class="b s sm r" type="button" data-act="pmrm" data-v="${i}">Togli</button></div>
       <label>ISIN<input class="pi" maxlength="12" autocapitalize="characters" placeholder="Vuoto se è un valore a mano" value="${esc(p.isin)}"></label>
       <label>Nome<input class="pn" placeholder="Nome" value="${esc(p.nome)}"></label>
       <label>Classe di investimento<select class="pc">${opts(p.classe)}</select></label>
       <div class="pcm-2"><label>Quote o nominale €<input class="pq" inputmode="decimal" placeholder="Quote" value="${esc(p.quote)}"></label><label>Prezzo medio di carico<input class="pp" inputmode="decimal" placeholder="Facoltativo" value="${esc(p.pmc || '')}"></label></div>
       <label class="nl"><input type="checkbox" class="pnom" ${p.nom ? 'checked' : ''}>Obbligazione: scrivo il nominale in euro (es. 7000)</label>
       <div class="pcm-2"><label>Aliquota %<input class="pa" inputmode="decimal" placeholder="${p.classe === 'Obbligazioni' ? '12,5' : '26'}" value="${esc(p.aliq || '')}"></label><label>Valore a mano €<input class="pm" inputmode="decimal" placeholder="Solo senza prezzo" value="${esc(p.manuale)}"></label></div>
-      ${k ? `<div class="lbl">${pr ? 'Prezzo ' + nfm(pr) + (p.nom ? ' %' : '') + ' nel foglio' : 'Nessun prezzo nel foglio: vale ' + (p.pmc ? 'il prezzo di acquisto' : 'il valore a mano')}</div>` : ''}</div>`;
+      ${k ? `<div class="lbl">${pr ? 'Prezzo ' + nfm(pr) + (p.nom ? ' %' : '') + ' nel foglio' : 'Nessun prezzo nel foglio: vale ' + (p.pmc ? 'il prezzo di acquisto' : 'il valore a mano')}</div>` : ''}
+      <div class="acts"><button class="b" type="button" data-act="pmdone">Fatto, torna all'elenco</button></div></div>`;
   }).join('');
+  const lista = cur !== null ? '' : `${L.length > 8 ? '<input id="pmq" class="pmq" placeholder="Cerca un prodotto…" autocomplete="off">' : ''}<div class="pml">${L.map((p, i) => `<div class="row pmrow" data-act="pmopen" data-v="${i}" style="cursor:pointer"><div class="n">${esc(p.nome || p.isin || 'Valore a mano')}<small>${esc([p.isin, p.classe].filter(Boolean).join(' · '))}</small></div><div class="v">${eur(portTot([p]))}<span class="chev" style="margin-left:6px">›</span></div></div>`).join('') || '<div class="lbl">Nessun prodotto. Aggiungine uno.</div>'}</div>`;
   return `<div class="phd"><b class="grow">${esc(v.nome)}</b></div>
     ${S.msg ? `<div class="msg" id="pmsg">${esc(S.msg)}</div>` : ''}
-    ${rows || '<div class="lbl">Nessun prodotto. Aggiungine uno.</div>'}
-    <button class="b s sm" type="button" data-act="pradd">＋ Aggiungi prodotto</button>
+    ${cur === null ? '<div class="lbl" style="margin-bottom:6px">Tocca un prodotto per modificarlo.</div>' : ''}${lista}${rows}
+    ${cur === null ? '<button class="b s sm" type="button" data-act="pmadd">＋ Aggiungi prodotto</button>' : ''}
     <div class="pcm-tot"><span class="lbl">Totale del portafoglio dopo il salvataggio</span><b id="pprev">${eur(portTot(L))}</b></div>
     <div class="acts"><button class="b" data-act="psave">Salva</button><button class="b s" data-act="pcancel">Annulla</button></div>
     <p class="note">Le modifiche valgono solo dopo "Salva"; con "Annulla" non cambia nulla. Se l'ISIN non ha il prezzo nel foglio, viene segnalato all'amministratore.</p>`;

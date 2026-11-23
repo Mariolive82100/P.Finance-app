@@ -256,9 +256,13 @@ async function act(el) {
     if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } return render(); }
     if (a === 'export') return exportCsv();
     if (a === 'prezzi') return aggiornaPrezzi(true);
-    if (a === 'pedit') { S.pe = v; S.pd = null; S.msg = ''; return render(); }
-    if (a === 'pcancel') { S.pe = null; S.pd = null; return render(); }
+    if (a === 'pedit') { S.pe = v; S.pd = null; S.pcur = null; S.msg = ''; return render(); }
+    if (a === 'pcancel') { S.pe = null; S.pd = null; S.pcur = null; return render(); }
     if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', nom: false, pmc: '', aliq: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
+    if (a === 'pmopen') { S.pd = grabPort(); S.pcur = +v; render(); return window.scrollTo(0, 0); }
+    if (a === 'pmdone') { S.pd = grabPort(); S.pcur = null; return render(); }
+    if (a === 'pmadd') { const L = grabPort(); L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', nom: false, pmc: '', aliq: '' }); S.pd = L; S.pcur = L.length - 1; render(); return window.scrollTo(0, 0); }
+    if (a === 'pmrm') { const L = grabPort(); L.splice(+v, 1); S.pd = L; S.pcur = null; return render(); }
     if (a === 'psave') return portSalva();
     if (a === 'pnew') return portNuovo(v);
     if (a === 'pdel') {
@@ -524,7 +528,10 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { up
 /* ---------- Accesso ---------- */
 /* anteprima del totale mentre si modifica un portafoglio (telefono) */
 function portAnteprima() { const el = $('pprev'); if (el) el.textContent = eur(portTot(grabPort())); }
-document.addEventListener('input', e => { if (e.target.closest && e.target.closest('.pcm')) portAnteprima(); });
+document.addEventListener('input', e => {
+  if (e.target.closest && e.target.closest('.pcm')) portAnteprima();
+  if (e.target.id === 'pmq') { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.pmrow').forEach(r => { r.style.display = !q || r.textContent.toLowerCase().includes(q) ? '' : 'none'; }); }
+});
 document.addEventListener('change', e => { if (e.target.closest && e.target.closest('.pcm')) portAnteprima(); });
 
 onAuthStateChanged(auth, async user => {

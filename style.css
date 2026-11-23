@@ -306,3 +306,5 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .pcm-tot{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:12px 0 4px}.pcm-tot b{font-size:18px}
 .phd .b.sm{margin-left:6px}
 }
+
+@media(max-width:999px){.pmq{display:block;width:100%;box-sizing:border-box;font-size:16px;margin:0 0 8px}.pml{margin-bottom:10px}.pml .row .n small{display:block}}
