@@ -310,3 +310,14 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 @media(max-width:999px){.pmq{display:block;width:100%;box-sizing:border-box;font-size:16px;margin:0 0 8px}.pml{margin-bottom:10px}.pml .row .n small{display:block}}
 
 #tfsc{cursor:grab}#tfsc.drag{cursor:grabbing;user-select:none}#tfsc>svg{margin:auto}
+
+/* Computer: modifica prodotto in colonna unica, come sul telefono (le regole della vecchia tabella non si applicano) */
+@media(min-width:1000px){
+.pblk .ppr.pcm{display:block;grid-template-columns:none;max-width:760px;padding:14px 16px;margin:0 0 12px}
+.pblk .ppr.pcm label{display:block;font-size:13px;color:#4a5f5d;margin-bottom:10px}
+.pblk .ppr.pcm label.nl{display:flex;align-items:center;gap:8px;font-size:13px}
+.pblk .ppr.pcm input:not([type=checkbox]),.pblk .ppr.pcm select{width:100%;box-sizing:border-box;margin:4px 0 0;font-size:15px}
+.pblk .ppr.pcm .pcm-2{grid-template-columns:1fr 1fr;gap:14px}
+.pblk .pcm-tot{max-width:760px;justify-content:flex-start;gap:14px}
+.pblk .pml,.pblk .pcm-h{max-width:760px}
+}
