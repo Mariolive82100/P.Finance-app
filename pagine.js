@@ -214,15 +214,16 @@ function pageMob() {
 /* Saldi: i conti di liquidità di ogni account */
 function pageSaldi() {
   const D = S.data;
-  const liq = vz(D.voci).filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità');
+  const fm = !!S.cfm, liq = (fm ? D.voci : vz(D.voci)).filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità');
   if (!liq.length) return '<div class="card">Nessun conto di liquidità da mostrare.</div>';
   const tot = a => a.reduce((s, v) => s + v.valore, 0);
   const secs = accList(D).map(([k, n]) => {
     const mine = liq.filter(v => accKey(v) === k).sort((a, b) => dn(a).localeCompare(dn(b)));
     if (!mine.length) return '';
-    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(tot(mine))}</span></div>${mine.map(v => `<div class="row"><div class="n">${esc(dn(v))}</div><div class="v">${eur(v.valore)}</div></div>`).join('')}</div>`;
+    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(tot(mine))}</span></div>${mine.map(v => `<div class="row"><div class="n">${esc(dn(v))}</div><div class="v">${fm && !v.piano && !hasProd(v) ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}">` : eur(v.valore)}</div></div>`).join('')}</div>`;
   }).join('');
-  return `<div class="card"><div class="lbl bd">Liquidità totale</div><div class="big">${eur(tot(liq))}</div></div>${secs}`;
+  const bar = fm ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfmsave">Salva valori</button><button class="b s" data-act="cfmno">Annulla</button></div>` : `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfm">Aggiorna saldi</button></div>`;
+  return `<div class="card"><div class="lbl bd">Liquidità totale</div><div class="big">${eur(tot(liq))}</div>${bar}</div>${secs}`;
 }
 /* Portafogli: solo lettura (si modificano dalla versione per computer) */
 function pagePortMob() {
