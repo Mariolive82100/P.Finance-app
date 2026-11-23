@@ -125,7 +125,7 @@ function treeCard(root, focus, single, full) {
   }
   /* albero ingrandito a tutto schermo (computer) */
   if (wide && full) {
-    TK.k = Math.max(0.5, Math.min((innerWidth - 40) / fu.w, (innerHeight - 140) / fu.h, 1.8));
+    TK.k = Math.max(0.5, Math.min((innerWidth - 56) / fu.w, 2.4));
     return `<div class="fs tfs"><div class="chh"><h2>Albero del patrimonio</h2><button class="b sm" data-act="tclose">✕ Chiudi</button></div>
       ${single ? '' : `<div class="tabs" style="margin:0"><button class="b ${mode === 'agg' ? '' : 's'}" data-act="tview" data-v="agg">Aggregato</button><button class="b ${mode === 'acc' ? '' : 's'}" data-act="tview" data-v="acc">Per account</button></div>`}
       <div class="tt" style="flex:1;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start">${alberoSvg(root, S.tx, focus)}</div></div>`;

@@ -188,7 +188,7 @@ function accChips() {
   const net = k => totals(V.filter(v => k === 'all' || accKey(v) === k)).netto;
   const box = (k, n, ed) => `<div class="acard${fa === k ? ' on' : ''}" data-act="${ac}" data-v="${esc(k)}"${k !== 'all' ? ` style="--at:${accTint(k)}"` : ''}><div class="lbl bd">${esc(n)}</div><div class="av ${cls(net(k))}">${eur(net(k))}</div>${ed && fa === k ? `<span class="chpe"><button class="ic" data-act="rena" data-v="${k}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${k}" aria-label="Elimina account">✕</button></span>` : ''}</div>`;
   const add = S.addAcc ? `<div class="acard add"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<div class="acard plus" data-act="addo" role="button" aria-label="Aggiungi account" title="Aggiungi account">+</div>`;
-  return `<div class="accs">${wide ? box('all', 'Aggregato') : ''}${box('main', D.nome)}${D.accounts.map(a => box(a.id, a.nome, true)).join('')}${add}</div>`;
+  return `<div class="accs">${box('main', D.nome)}${D.accounts.map(a => box(a.id, a.nome, true)).join('')}${add}</div>`;
 }
 /* ---------- Telefono (sola consultazione) ---------- */
 /* Patrimonio: patrimonio netto + gli stessi riquadri della Panoramica del computer */
