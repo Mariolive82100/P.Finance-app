@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.53';
+const VER = '1.54';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -257,6 +257,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.54','23 nov 2026',['Icone di Beni (casa) e Passivi (freccia a zigzag verso il basso), anche sul telefono; in Passivi, Aggiungi passivo offre il piano di rimborso (importo, data di inizio e di fine) con calcolo automatico del capitale residuo']],
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],

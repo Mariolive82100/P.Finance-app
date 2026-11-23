@@ -301,12 +301,23 @@ async function act(el) {
     if (a === 'pmrm') { const L = grabPort(); L.splice(+v, 1); S.pd = L; S.pcur = null; return render(); }
     if (a === 'caddo') { S.addConto = true; S.msg = ''; return render(); }
     if (a === 'caddc') { S.addConto = false; return render(); }
-    if (a === 'xaddo') { S.addX = v; S.msg = ''; return render(); }
+    if (a === 'xaddo') { S.addX = v; S.msg = ''; S.xmod = 'piano'; S.xnn = ''; return render(); }
+    if (a === 'xmod') { S.xnn = $('xnn') ? $('xnn').value : ''; S.xmod = $('xmod').value; return render(); }
     if (a === 'xaddc') { S.addX = null; return render(); }
     if (a === 'xaddok') {
       const kind = S.addX || 'pas', C = VOCI_CFG[kind], tipo = kind === 'pas' ? 'passivo' : 'attivo';
-      const nm = $('xnn').value.trim(), k = $('xnacc').value, account = k === 'main' ? '' : k, sv = $('xnv').value.trim(), val = sv ? pnum(sv) : 0;
+      const nm = $('xnn').value.trim(), k = $('xnacc').value, account = k === 'main' ? '' : k;
       if (!nm) { S.msg = 'Scrivi il nome.'; return render(); }
+      if (D.voci.some(x => C.ev(x) && x.nome.toLowerCase() === nm.toLowerCase() && (x.account || '') === account)) { S.msg = 'Esiste già una voce con questo nome in questo account.'; return render(); }
+      if (kind === 'pas' && $('xk')) {
+        const cap = pnum($('xk').value), ini = $('xi').value, fin = $('xf').value;
+        if (!isFinite(cap) || cap <= 0) { S.msg = 'Inserisci l\'importo preso a prestito.'; return render(); }
+        if (!ini || !fin || fin <= ini) { S.msg = 'Inserisci le date: la fine deve essere dopo l\'inizio.'; return render(); }
+        const dp = applyPiano({ tipo: 'passivo', categoria: $('xncat').value, nome: nm, account, piano: true, capitale: r2(cap), inizio: ini, fine: fin, valore: 0 });
+        const rp = await addDoc(collection(db, 'users', D.uid, 'voci'), dp); D.voci.push({ id: rp.id, ...dp });
+        await syncStorico(); S.addX = null; S.msg = 'Passivo aggiunto con piano di rimborso.'; return render();
+      }
+      const sv = $('xnv').value.trim(), val = sv ? pnum(sv) : 0;
       if (!isFinite(val) || val < 0) { S.msg = 'L\'importo deve essere zero o più.'; return render(); }
       if (D.voci.some(x => C.ev(x) && x.nome.toLowerCase() === nm.toLowerCase() && (x.account || '') === account)) { S.msg = 'Esiste già una voce con questo nome in questo account.'; return render(); }
       const nl = { tipo, categoria: $('xncat').value, nome: nm, account, valore: r2(val) };
