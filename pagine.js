@@ -177,7 +177,7 @@ function drawer() {
     : `<div class="plus"><button class="b" data-act="addo" aria-label="Aggiungi account">+</button></div>`);
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   const adm = isAdmin() ? `<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'adm' ? 'on' : ''}" data-act="admin"><span class="t">Amministrazione</span>${pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0">${pend}</span>` : ''}</div>` : '';
-  return `<div class="ov" data-act="menu"></div><div class="drawer"><h2>Account</h2>${item('all', 'Tutti gli account')}${item('main', D.nome, 'Principale')}${rows}<div class="msg">${esc(S.msg)}</div>${add}<hr style="border:0;border-top:1px solid #e2eceb;margin:18px 0 6px"><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
+  return `<div class="ov" data-act="menu"></div><div class="drawer"><div class="it ${S.tab === 'info' ? 'on' : ''}" data-act="info"><span class="t">Info e novità</span></div><div class="it ${S.tab === 'terms' ? 'on' : ''}" data-act="terms"><span class="t">Termini e condizioni</span></div>${adm}</div>`;
 }
 
 /* Simbolo di aggiornamento e pulsanti account (Aggregato, account, +) accanto al patrimonio netto */
@@ -188,7 +188,7 @@ function accChips() {
   const net = k => totals(V.filter(v => k === 'all' || accKey(v) === k)).netto;
   const box = (k, n, ed) => `<div class="acard${fa === k ? ' on' : ''}" data-act="${ac}" data-v="${esc(k)}"${k !== 'all' ? ` style="--at:${accTint(k)}"` : ''}><div class="lbl bd">${esc(n)}</div><div class="av ${cls(net(k))}">${eur(net(k))}</div>${ed && fa === k ? `<span class="chpe"><button class="ic" data-act="rena" data-v="${k}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${k}" aria-label="Elimina account">✕</button></span>` : ''}</div>`;
   const add = S.addAcc ? `<div class="acard add"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<div class="acard plus" data-act="addo" role="button" aria-label="Aggiungi account" title="Aggiungi account">+</div>`;
-  return `<div class="accs">${box('all', 'Aggregato')}${box('main', D.nome)}${D.accounts.map(a => box(a.id, a.nome, true)).join('')}${add}</div>`;
+  return `<div class="accs">${wide ? box('all', 'Aggregato') : ''}${box('main', D.nome)}${D.accounts.map(a => box(a.id, a.nome, true)).join('')}${add}</div>`;
 }
 /* ---------- Telefono (sola consultazione) ---------- */
 /* Patrimonio: patrimonio netto + gli stessi riquadri della Panoramica del computer */
@@ -214,16 +214,17 @@ function pageMob() {
 /* Saldi: i conti di liquidità di ogni account */
 function pageSaldi() {
   const D = S.data;
-  const fm = !!S.cfm, liq = (fm ? D.voci : vz(D.voci)).filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità');
-  if (!liq.length) return '<div class="card">Nessun conto di liquidità da mostrare.</div>';
+  const fm = !!S.cfm, liq = D.voci.filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità');
   const tot = a => a.reduce((s, v) => s + v.valore, 0);
   const secs = accList(D).map(([k, n]) => {
     const mine = liq.filter(v => accKey(v) === k).sort((a, b) => dn(a).localeCompare(dn(b)));
     if (!mine.length) return '';
     return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(tot(mine))}</span></div>${mine.map(v => `<div class="row"><div class="n">${esc(dn(v))}</div><div class="v">${fm && !v.piano && !hasProd(v) ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}">` : eur(v.valore)}</div></div>`).join('')}</div>`;
   }).join('');
-  const bar = fm ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfmsave">Salva valori</button><button class="b s" data-act="cfmno">Annulla</button></div>` : `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfm">Aggiorna saldi</button></div>`;
-  return `<div class="card"><div class="lbl bd">Liquidità totale</div><div class="big">${eur(tot(liq))}</div>${bar}</div>${secs}`;
+  const bar = fm ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfmsave">Salva valori</button><button class="b s" data-act="cfmno">Annulla</button></div>` : `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfm">Aggiorna saldi</button><button class="b s" data-act="caddo">Aggiungi conto</button></div>`;
+  const opt = accList(D).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  const form = S.addConto && !fm ? `<div class="card"><h2>Nuovo conto di liquidità</h2><label class="lbl">Account<select id="cnacc">${opt}</select></label><label class="lbl">Nome del conto<input id="cnn" maxlength="40" placeholder="es. Conto Fineco"></label><label class="lbl">Saldo attuale €<input id="cnv" inputmode="decimal" placeholder="0"></label><div class="acts"><button class="b" data-act="caddok">Salva conto</button><button class="b s" data-act="caddc">Annulla</button></div></div>` : '';
+  return `<div class="card"><div class="lbl bd">Liquidità totale</div><div class="big">${eur(tot(liq))}</div>${bar}</div>${form}${secs || (S.addConto ? '' : '<div class="card">Nessun conto di liquidità. Aggiungine uno.</div>')}`;
 }
 /* Portafogli: solo lettura (si modificano dalla versione per computer) */
 function pagePortMob() {
@@ -242,14 +243,16 @@ function pagePortMob() {
     const op = !pCol(v.id);
     return `<div class="pblk"><div class="phd"><b class="grow" data-act="pcol" data-v="${v.id}" style="cursor:pointer"><span class="chev ${op ? 'open' : ''}">▸︎</span> ${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span><button class="b s sm" data-act="pedit" data-v="${v.id}">Modifica</button></div>${op ? (L.length ? L.map(prodMob).join('') + (cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : '') : '<div class="lbl">Nessun prodotto.</div>') : ''}</div>`;
   };
+  const allPorts = D.voci.filter(v => isPort(v) && (!single || accKey(v) === fa));
   const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
-    const ports = D.voci.filter(v => isPort(v) && accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
+    const ports = allPorts.filter(v => accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
     if (!ports.length) return '';
-    const open = !accCol(k) || ports.some(v => S.pe === v.id);
-    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${open ? 'open' : ''}">▸︎</span> ${esc(n)}</h2><span class="lbl">${ports.length} ${ports.length === 1 ? 'portafoglio' : 'portafogli'} · ${eur(t)}</span></div>${open ? ports.map(block).join('') : ''}</div>`;
+    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(t)}</span></div>${ports.map(block).join('')}</div>`;
   }).join('');
-  const allC = accList(D).every(([k]) => accCol(k));
-  return `<div class="con"><div class="ptop"><h2>Portafogli</h2><div class="pbtn"><button class="b s sm" data-act="pcolall" data-v="${allC ? 0 : 1}">${allC ? 'Espandi tutto' : 'Comprimi tutto'}</button></div></div>${secs || '<div class="card">Nessun portafoglio. Si creano dalla versione per computer.</div>'}</div>`;
+  const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  const form = S.addPort && S.pe == null ? `<div class="card"><h2>Nuovo portafoglio</h2><label class="lbl">Account<select id="pnacc">${opt}</select></label><label class="lbl">Nome (es. Directa)<input id="pnnm" maxlength="40" placeholder="Nome del portafoglio"></label><div class="acts"><button class="b" data-act="pmnew">Crea portafoglio</button><button class="b s" data-act="paddc">Annulla</button></div></div>` : '';
+  const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? '<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button></div>' : ''}</div>`;
+  return `<div class="con">${head}${form}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}</div>`;
 }
 
 /* ---------- Telefono: modifica dei prodotti di un portafoglio ---------- */

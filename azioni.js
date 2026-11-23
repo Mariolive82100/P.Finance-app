@@ -59,7 +59,7 @@ async function act(el) {
     if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
     if (a === 'nv') { S.tab = 'nv'; S.edit = null; S.fd = null; S.exp = { ...(S.exp || {}), form: true }; window.scrollTo(0, 0); return render(); }
-    if (a === 'facc') { S.fAcc = v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
+    if (a === 'facc') { S.fAcc = S.fAcc === v && v !== 'all' ? 'all' : v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'exp') { S.exp = S.exp || {}; S.exp[v] = !S.exp[v]; return render(); }
     if (a === 'menu') { S.menu = !S.menu; S.addAcc = false; return render(); }
@@ -263,6 +263,20 @@ async function act(el) {
     if (a === 'pmdone') { S.pd = grabPort(); S.pcur = null; return render(); }
     if (a === 'pmadd') { const L = grabPort(); L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', nom: false, pmc: '', aliq: '' }); S.pd = L; S.pcur = L.length - 1; render(); return window.scrollTo(0, 0); }
     if (a === 'pmrm') { const L = grabPort(); L.splice(+v, 1); S.pd = L; S.pcur = null; return render(); }
+    if (a === 'caddo') { S.addConto = true; S.msg = ''; return render(); }
+    if (a === 'caddc') { S.addConto = false; return render(); }
+    if (a === 'caddok') {
+      const nm = $('cnn').value.trim(), k = $('cnacc').value, account = k === 'main' ? '' : k, sv = $('cnv').value.trim(), val = sv ? pnum(sv) : 0;
+      if (!nm) { S.msg = 'Scrivi il nome del conto.'; return render(); }
+      if (!isFinite(val) || val < 0) { S.msg = 'Il saldo deve essere zero o più.'; return render(); }
+      if (D.voci.some(x => x.categoria === 'Liquidità' && x.nome.toLowerCase() === nm.toLowerCase() && (x.account || '') === account)) { S.msg = 'Esiste già un conto con questo nome in questo account.'; return render(); }
+      const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: nm, account, valore: r2(val) };
+      const r = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r.id, ...nl });
+      await syncStorico(); S.addConto = false; S.msg = 'Conto aggiunto.'; return render();
+    }
+    if (a === 'paddo') { S.addPort = true; S.msg = ''; return render(); }
+    if (a === 'paddc') { S.addPort = false; return render(); }
+    if (a === 'pmnew') { S.addPort = false; S.pcur = null; return portNuovo($('pnacc').value, $('pnnm').value); }
     if (a === 'psave') return portSalva();
     if (a === 'pnew') return portNuovo(v);
     if (a === 'pdel') {
@@ -458,8 +472,8 @@ async function portSalva0() {
   if (!isAdmin()) segnalaIsin(prod);
   if (isAdmin()) { const extra = await sheetAggiungi(prod); if (extra) { S.msg = 'Portafoglio salvato.' + extra; render(); } }
 }
-async function portNuovo(acc) {
-  const D = S.data, inp = $('pnn_' + acc), nm = inp ? inp.value.trim() : '', account = acc === 'main' ? '' : acc;
+async function portNuovo(acc, nome) {
+  const D = S.data, inp = $('pnn_' + acc), nm = nome != null ? String(nome).trim() : inp ? inp.value.trim() : '', account = acc === 'main' ? '' : acc;
   if (!nm) { S.msg = 'Scrivi il nome del conto (es. Directa).'; return render(); }
   if (D.voci.some(x => isPort(x) && (x.account || '') === account && (x.dove || '').trim().toLowerCase() === nm.toLowerCase())) { S.msg = 'Esiste già un portafoglio con questo nome in questo account.'; return render(); }
   if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === nm.toLowerCase() && (y.account || '') === account)) {
