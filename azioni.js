@@ -522,6 +522,11 @@ document.addEventListener('keydown', e => {
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
 /* ---------- Accesso ---------- */
+/* anteprima del totale mentre si modifica un portafoglio (telefono) */
+function portAnteprima() { const el = $('pprev'); if (el) el.textContent = eur(portTot(grabPort())); }
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('.pcm')) portAnteprima(); });
+document.addEventListener('change', e => { if (e.target.closest && e.target.closest('.pcm')) portAnteprima(); });
+
 onAuthStateChanged(auth, async user => {
   S.user = user; S.msg = '';
   if (!user) { S.profile = null; S.data = null; S.loading = false; return render(); }
@@ -570,3 +575,4 @@ document.addEventListener('change', async e => {
   if (!n || n.value.trim() || !/^[A-Z0-9]{12}$/.test(isin)) return;
   n.placeholder = 'Cerco il nome…'; const nm = await nomeDaIsin(isin); n.placeholder = nm ? 'Nome' : 'Nome non trovato: ' + (window._nomeInfo || ''); if (nm && !n.value.trim()) n.value = nm;
 });
+

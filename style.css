@@ -296,3 +296,13 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .mob .dsub{margin-top:2px;font-size:13px;font-weight:600}.mob .dsub .pos{color:#15803d}.mob .dsub .neg{color:#b91c1c}
 .mob .hubc .chsel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 }
+
+@media(max-width:999px){
+.ppr.pcm{display:block;border:1px solid #e2eceb;border-radius:12px;padding:10px;margin-bottom:10px;background:#fafdfc}
+.pcm label{display:block;font-size:12px;color:#5b6b6a;margin-bottom:8px}.pcm label.nl{display:flex;font-size:12px}
+.pcm input:not([type=checkbox]),.pcm select{display:block;width:100%;margin:3px 0 0;font-size:16px;box-sizing:border-box}
+.pcm-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.pcm-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pcm-tot{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:12px 0 4px}.pcm-tot b{font-size:18px}
+.phd .b.sm{margin-left:6px}
+}

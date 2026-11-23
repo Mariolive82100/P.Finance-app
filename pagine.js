@@ -236,19 +236,50 @@ function pagePortMob() {
     return `<div class="row"><div class="n">${esc(p.nome || p.isin || 'Valore manuale')}<small>${esc([p.isin, p.classe].filter(Boolean).join(' · '))}${det ? '<br>' + esc(det) : ''}</small></div><div class="v">${eur(prodVal(p))}</div></div>`;
   };
   const block = v => {
+    if (S.pe === v.id) return `<div class="pblk">${portEditMob(v)}</div>`;
     const L = v.prodotti || [], m = new Map(); L.forEach(p => { const c = p.classe || 'Altro'; m.set(c, (m.get(c) || 0) + prodVal(p)); });
     const cl = [...m].sort((a, b) => b[1] - a[1]).map(([c, x]) => `${esc(c)} ${v.valore > 0 ? Math.round(x / v.valore * 100) : 0}%`).join(' · ');
     const op = !pCol(v.id);
-    return `<div class="pblk"><div class="phd"><b class="grow" data-act="pcol" data-v="${v.id}" style="cursor:pointer"><span class="chev ${op ? 'open' : ''}">▸︎</span> ${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span></div>${op ? (L.length ? L.map(prodMob).join('') + (cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : '') : '<div class="lbl">Nessun prodotto.</div>') : ''}</div>`;
+    return `<div class="pblk"><div class="phd"><b class="grow" data-act="pcol" data-v="${v.id}" style="cursor:pointer"><span class="chev ${op ? 'open' : ''}">▸︎</span> ${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span><button class="b s sm" data-act="pedit" data-v="${v.id}">Modifica</button></div>${op ? (L.length ? L.map(prodMob).join('') + (cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : '') : '<div class="lbl">Nessun prodotto.</div>') : ''}</div>`;
   };
   const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
     const ports = D.voci.filter(v => isPort(v) && accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
     if (!ports.length) return '';
-    const open = !accCol(k);
+    const open = !accCol(k) || ports.some(v => S.pe === v.id);
     return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${open ? 'open' : ''}">▸︎</span> ${esc(n)}</h2><span class="lbl">${ports.length} ${ports.length === 1 ? 'portafoglio' : 'portafogli'} · ${eur(t)}</span></div>${open ? ports.map(block).join('') : ''}</div>`;
   }).join('');
   const allC = accList(D).every(([k]) => accCol(k));
   return `<div class="con"><div class="ptop"><h2>Portafogli</h2><div class="pbtn"><button class="b s sm" data-act="pcolall" data-v="${allC ? 0 : 1}">${allC ? 'Espandi tutto' : 'Comprimi tutto'}</button></div></div>${secs || '<div class="card">Nessun portafoglio. Si creano dalla versione per computer.</div>'}</div>`;
+}
+
+/* ---------- Telefono: modifica dei prodotti di un portafoglio ---------- */
+function portDraft(v) {
+  return S.pd || (v.prodotti || []).map(p => ({ isin: p.isin, nome: p.nome || '', classe: p.classe || v.assetClass || '', quote: p.isin ? String(p.quote).replace('.', ',') : '', manuale: p.manuale ? String(p.manuale).replace('.', ',') : '', nom: !!p.nom, pmc: p.pmc > 0 ? String(p.pmc).replace('.', ',') : '', aliq: p.aliq != null && p.aliq !== '' ? String(p.aliq).replace('.', ',') : '' }));
+}
+function portTot(rows) {
+  const n = x => { const y = pnum(String(x || '').trim()); return isFinite(y) && y > 0 ? y : 0; };
+  return valoreProd({ prodotti: rows.filter(r => String(r.isin || '').trim() || n(r.manuale)).map(r => ({ isin: String(r.isin || '').trim().toUpperCase(), quote: n(r.quote), manuale: n(r.manuale), pmc: n(r.pmc), nom: !!r.nom })) });
+}
+function portEditMob(v) {
+  const L = portDraft(v), opts = sel => `<option value="">Scegli…</option>${ASSET.map(o => `<option ${sel === o ? 'selected' : ''}>${o}</option>`).join('')}`;
+  const rows = L.map((p, i) => {
+    const k = String(p.isin || '').trim().toUpperCase(), pr = S.prezzi && S.prezzi.map[k];
+    return `<div class="ppr pcm"><div class="pcm-h"><b>Prodotto ${i + 1}</b><button class="b s sm r" type="button" data-act="prrm" data-v="${i}">Togli</button></div>
+      <label>ISIN<input class="pi" maxlength="12" autocapitalize="characters" placeholder="Vuoto se è un valore a mano" value="${esc(p.isin)}"></label>
+      <label>Nome<input class="pn" placeholder="Nome" value="${esc(p.nome)}"></label>
+      <label>Classe di investimento<select class="pc">${opts(p.classe)}</select></label>
+      <div class="pcm-2"><label>Quote o nominale €<input class="pq" inputmode="decimal" placeholder="Quote" value="${esc(p.quote)}"></label><label>Prezzo medio di carico<input class="pp" inputmode="decimal" placeholder="Facoltativo" value="${esc(p.pmc || '')}"></label></div>
+      <label class="nl"><input type="checkbox" class="pnom" ${p.nom ? 'checked' : ''}>Obbligazione: scrivo il nominale in euro (es. 7000)</label>
+      <div class="pcm-2"><label>Aliquota %<input class="pa" inputmode="decimal" placeholder="${p.classe === 'Obbligazioni' ? '12,5' : '26'}" value="${esc(p.aliq || '')}"></label><label>Valore a mano €<input class="pm" inputmode="decimal" placeholder="Solo senza prezzo" value="${esc(p.manuale)}"></label></div>
+      ${k ? `<div class="lbl">${pr ? 'Prezzo ' + nfm(pr) + (p.nom ? ' %' : '') + ' nel foglio' : 'Nessun prezzo nel foglio: vale ' + (p.pmc ? 'il prezzo di acquisto' : 'il valore a mano')}</div>` : ''}</div>`;
+  }).join('');
+  return `<div class="phd"><b class="grow">${esc(v.nome)}</b></div>
+    ${S.msg ? `<div class="msg" id="pmsg">${esc(S.msg)}</div>` : ''}
+    ${rows || '<div class="lbl">Nessun prodotto. Aggiungine uno.</div>'}
+    <button class="b s sm" type="button" data-act="pradd">＋ Aggiungi prodotto</button>
+    <div class="pcm-tot"><span class="lbl">Totale del portafoglio dopo il salvataggio</span><b id="pprev">${eur(portTot(L))}</b></div>
+    <div class="acts"><button class="b" data-act="psave">Salva</button><button class="b s" data-act="pcancel">Annulla</button></div>
+    <p class="note">Le modifiche valgono solo dopo "Salva"; con "Annulla" non cambia nulla. Se l'ISIN non ha il prezzo nel foglio, viene segnalato all'amministratore.</p>`;
 }
 
 function pageBil() { return `<div class="card"><h2>Bilanciamento</h2><p class="note">Pagina in preparazione.</p></div>`; }
