@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.29';
+const VER = '1.30';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -245,6 +245,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.30','23 nov 2026',['Panoramica: i riquadri di variazione mostrano anche il valore attuale in grande']],
   ['1.29','23 nov 2026',['Portafogli: il nome del portafoglio si cambia dal modulo di modifica (si rinomina anche il conto di liquidità collegato)']],
   ['1.28','22 nov 2026',['Panoramica: l\'albero torna riquadro piccolo (come gli indicatori) e si ingrandisce con un clic; accanto c\'è "Ricostruisci lo storico"']],
   ['1.27','22 nov 2026',['Computer: in fondo alla Panoramica c\'è "Ricostruisci lo storico" (mesi a mano o importazione da file)']],

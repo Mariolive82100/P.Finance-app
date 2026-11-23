@@ -274,7 +274,8 @@ function deltaCard(vis, cur, prev) {
   const items = [['Liquidità', c.liq, prev && prev.liq, 0], ['Portafoglio', c.port, prev && prev.port, 0], ['Beni', c.beni, prev && prev.beni, 0], ['Passivi', c.passivi, prev && prev.passivi, 1]];
   const tile = ([l, now, old, inv]) => {
     const ok = typeof old === 'number', d = ok ? now - old : 0, good = inv ? -d : d;
-    return `<div class="qc dq"><b>${l}</b>${ok ? `<div class="dv ${good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : ''}">${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}</div><div class="dp ${good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : ''}">${old ? pct(d / Math.abs(old)) : ''}</div>` : '<div class="dv">—</div><div class="dp lbl">dal prossimo mese</div>'}<div class="dn">Ora ${eur(now)}</div></div>`;
+    const k = good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : '';
+    return `<div class="qc dq"><b>${l}</b><div class="dv">${eur(now)}</div>${ok ? `<div class="dp ${k}">${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${old ? ' · ' + pct(d / Math.abs(old)) : ''}</div>` : '<div class="dp lbl">variazione dal prossimo mese</div>'}</div>`;
   };
   return `<div class="card pcard qcard"><h2>Variazione su ${prev ? esc(monthName(prev.mese)) : 'mese precedente'}</h2><div class="qg">${items.map(tile).join('')}</div></div>`;
 }
