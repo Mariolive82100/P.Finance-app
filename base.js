@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.30';
+const VER = '1.31';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -129,7 +129,7 @@ const prezziStato = () => {
 };
 /* Legge i prezzi (all'apertura e con il tasto) e ricalcola le voci con prodotti. Nulla viene salvato per i prezzi; lo storico del mese segue i totali. */
 async function aggiornaPrezzi(manuale) {
-  const D = S.data; if (!D || !isAdmin() || S.prezziBusy) return;
+  const D = S.data; if (!D || S.prezziBusy) return;
   const tutte = () => [...D.voci, ...(D.arch || [])];
   if (!manuale && !tutte().some(hasProd)) return;
   S.prezziBusy = true; if (manuale) render();
@@ -222,6 +222,16 @@ async function loadUsers() {
   const q = await getDocs(collection(db, 'users'));
   S.users = q.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== S.user.uid)
     .sort((a, b) => (a.approved === b.approved ? (a.nome || '').localeCompare(b.nome || '') : a.approved ? 1 : -1));
+  try { S.rich = (await getDocs(collection(db, 'richiesteIsin'))).docs.map(d => ({ isin: d.id, ...d.data() })).sort((a, b) => a.isin.localeCompare(b.isin)); } catch (e) { S.rich = []; S.richErr = true; }
+}
+/* Segnala all'amministratore gli ISIN senza prezzo nel foglio (solo ISIN, nome e classe: niente quote) */
+async function segnalaIsin(prodotti) {
+  if (!S.prezzi || !S.prezzi.map) return;
+  for (const p of prodotti) {
+    const isin = String(p.isin || '').toUpperCase();
+    if (!/^[A-Z0-9]{12}$/.test(isin) || S.prezzi.map[isin] > 0) continue;
+    try { await setDoc(doc(db, 'richiesteIsin', isin), { isin, nome: String(p.nome || '').slice(0, 80), classe: String(p.classe || '').slice(0, 40), creato: serverTimestamp() }); } catch (e) {}
+  }
 }
 
 const isAdmin = () => !!S.user && S.user.uid === ADMIN_UID;
@@ -245,6 +255,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.31','23 nov 2026',['Prezzi del foglio visibili anche agli altri utenti (prima solo all\'amministratore)','Quando un utente salva un prodotto senza prezzo nel foglio, l\'ISIN (solo ISIN, nome e classe) viene segnalato all\'amministratore, che li aggiunge al foglio dalla pagina Amministrazione']],
   ['1.30','23 nov 2026',['Panoramica: i riquadri di variazione mostrano anche il valore attuale in grande']],
   ['1.29','23 nov 2026',['Portafogli: il nome del portafoglio si cambia dal modulo di modifica (si rinomina anche il conto di liquidità collegato)']],
   ['1.28','22 nov 2026',['Panoramica: l\'albero torna riquadro piccolo (come gli indicatori) e si ingrandisce con un clic; accanto c\'è "Ricostruisci lo storico"']],

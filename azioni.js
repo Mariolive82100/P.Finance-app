@@ -54,7 +54,7 @@ async function act(el) {
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'bil') { S.tab = 'bil'; S.menu = false; window.scrollTo(0, 0); return render(); }
-    if (a === 'rfs') { if (isAdmin()) return aggiornaPrezzi(true); return location.reload(); }
+    if (a === 'rfs') return aggiornaPrezzi(true);
     if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' ? S.tab : 'pan'; S.cfm = false; S.fAcc = v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
@@ -325,6 +325,23 @@ async function act(el) {
     if (a === 'appr' || a === 'rev') { await updateDoc(doc(db, 'users', v), { approved: a === 'appr' }); await loadUsers(); return render(); }
     if (a === 'rej') { if (!confirm('Rifiutare questa richiesta?')) return; await deleteDoc(doc(db, 'users', v)); await loadUsers(); return render(); }
     if (a === 'reload-users') { await loadUsers(); return render(); }
+    if (a === 'richno') { try { await deleteDoc(doc(db, 'richiesteIsin', v)); S.rich = (S.rich || []).filter(x => x.isin !== v); } catch (e) { S.msg = errText(e); } return render(); }
+    if (a === 'richok') {
+      const c = sheetCfg(), lista = (S.rich || []).filter(x => !(S.prezzi && S.prezzi.map[x.isin] > 0));
+      if (!c) { S.msg = 'Collega prima il foglio dalla pagina Info.'; return render(); }
+      if (S.richBusy) return;
+      S.richBusy = true; const out = [];
+      for (let i = 0; i < lista.length; i++) {
+        const x = lista[i]; S.msg = 'Aggiungo al foglio ' + (i + 1) + ' di ' + lista.length + ': ' + x.isin + '…'; render();
+        try {
+          const q = new URLSearchParams({ token: c.token, isin: x.isin, nome: x.nome || '', classe: x.classe || '' });
+          const j = await (await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' })).json();
+          if (j.ok) { out.push(x.isin + (j.esito === 'presente' ? ' già nel foglio' : ' aggiunto')); try { await deleteDoc(doc(db, 'richiesteIsin', x.isin)); } catch (e) {} S.rich = S.rich.filter(z => z.isin !== x.isin); }
+          else out.push(x.isin + ': ' + (j.errore || 'errore'));
+        } catch (e) { out.push(x.isin + ': foglio non raggiungibile'); }
+      }
+      S.richBusy = false; S.msg = out.length ? out.join('; ') + '. I prezzi arrivano quando il foglio pubblicato si aggiorna.' : 'Nessun ISIN da aggiungere.'; return render();
+    }
   } catch (e) { S.msg = errText(e); render(); }
 }
 
@@ -435,6 +452,7 @@ async function portSalva0() {
   dati.valore = prod.length ? valoreProd(dati) : 0;
   await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
   await syncStorico(); S.pe = null; S.pd = null; S.msg = 'Portafoglio salvato.'; render();
+  if (!isAdmin()) segnalaIsin(prod);
   if (isAdmin()) { const extra = await sheetAggiungi(prod); if (extra) { S.msg = 'Portafoglio salvato.' + extra; render(); } }
 }
 async function portNuovo(acc) {

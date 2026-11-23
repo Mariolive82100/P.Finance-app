@@ -181,8 +181,8 @@ function drawer() {
 }
 
 /* Simbolo di aggiornamento e pulsanti account (Aggregato, account, +) accanto al patrimonio netto */
-const updTxt = () => { const q = isAdmin() && S.prezzi && S.prezzi.quando ? S.prezzi.quando : T0, d = new Date(q); return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
-const rfsBtn = () => `<button class="eye${S.prezziBusy ? ' spin' : ''}" data-act="rfs" aria-label="Aggiorna" title="${isAdmin() ? 'Aggiorna prezzi e dati' : 'Ricarica i dati'}"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v4.5h-4.5"/></svg></button><span class="upd" title="${esc(isAdmin() ? prezziStato() : 'Ultimo aggiornamento dei dati')}">${S.prezziBusy ? 'Aggiorno…' : updTxt()}</span>`;
+const updTxt = () => { const q = S.prezzi && S.prezzi.quando ? S.prezzi.quando : T0, d = new Date(q); return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
+const rfsBtn = () => `<button class="eye${S.prezziBusy ? ' spin' : ''}" data-act="rfs" aria-label="Aggiorna" title="Aggiorna prezzi e dati"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v4.5h-4.5"/></svg></button><span class="upd" title="${esc(prezziStato())}">${S.prezziBusy ? 'Aggiorno…' : updTxt()}</span>`;
 function accChips() {
   const D = S.data, fa = S.fAcc || 'all', wide = innerWidth >= 1000, ac = wide ? 'accsel' : 'facc', V = vz(D.voci);
   const net = k => totals(V.filter(v => k === 'all' || accKey(v) === k)).netto;
