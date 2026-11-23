@@ -37,6 +37,8 @@ async function act(el) {
     if (a === 'shtest') { const c = sheetCfg(); if (!c) return; try { const j = await chiamaFoglio(c, { prova: '1' }); S.msg = j.ok ? 'Collegamento riuscito.' : 'Lo script risponde ma: ' + (j.errore || 'errore') + '.'; } catch (e) { S.msg = 'Lo script non risponde: controlla indirizzo e pubblicazione.'; } return render(); }
     if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
+    if (a === 'demo') return avviaDemo();
+    if (a === 'demoexit') return location.reload();
     if (a === 'cnd') { S.tab = 'cnd'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'cndcopy') { try { await navigator.clipboard.writeText(S.user.uid); S.msg = 'Codice copiato.'; } catch (e) { S.msg = 'Copia non riuscita: tieni premuto sul codice e copialo.'; } return render(); }
     if (a === 'cndadd' || a === 'cnddel') {
@@ -720,7 +722,54 @@ function tornaMio() {
   S.fAcc = 'all'; S.edit = null; S.fd = null; S.pop = null; S.popm = null; S.tab = 'cnd'; S.msg = ''; window.scrollTo(0, 0); render();
 }
 
+/* ---------- Demo: dati inventati (10 anni, da 50.000 a 500.000 euro), nulla viene salvato ---------- */
+function generaDemo() {
+  const oggi = new Date(), N = 120, ACQ = 40, YM = (y, m) => y + '-' + String(m + 1).padStart(2, '0');
+  const dAcq = new Date(oggi.getFullYear(), oggi.getMonth() - (N - ACQ), 1), inizio = YM(dAcq.getFullYear(), dAcq.getMonth()) + '-01', fine = YM(dAcq.getFullYear() + 25, dAcq.getMonth()) + '-01';
+  const prezzi = { IE00DEMO0001: 128.6, IE00DEMO0002: 34.2, IE00DEMO0003: 47.8, IE00DEMO0004: 232, IE00DEMO0005: 171, IE00DEMO0006: 74 };
+  S.prezzi = { map: prezzi, quando: Date.now() };
+  const P = (n, isin, nome, classe, quote, pmc) => ({ isin, nome, classe, quote, pmc, manuale: 0 });
+  const casaVal = i => i < ACQ ? 0 : Math.round(260000 * Math.pow(1.014, (i - ACQ) / 12));
+  const voci = [
+    { id: 'demo1', tipo: 'attivo', categoria: 'Liquidità', nome: 'Conto corrente', account: '', valore: 0 },
+    { id: 'demo2', tipo: 'attivo', categoria: 'Liquidità', nome: 'Conto deposito', account: '', valore: 35000 },
+    { id: 'demo3', tipo: 'attivo', categoria: 'Liquidità', nome: 'Directa', account: '', valore: 2800 },
+    { id: 'demo4', tipo: 'attivo', categoria: 'Investimenti', nome: 'Directa', dove: 'Directa', account: '', valore: 0, portafoglio: true, prodotti: [
+      P(1, 'IE00DEMO0001', 'ETF Azionario Mondo', 'Azioni', 850, 98.4), P(2, 'IE00DEMO0002', 'ETF Mercati Emergenti', 'Azioni', 600, 29.1),
+      P(3, 'IE00DEMO0003', 'ETF Obbligazionario Euro', 'Obbligazioni', 1000, 49.5), P(4, 'IE00DEMO0004', 'ETC Oro fisico', 'Oro e materie prime', 100, 195)] },
+    { id: 'demo5', tipo: 'attivo', categoria: 'Immobili', nome: 'Casa', account: '', valore: casaVal(N) },
+    { id: 'demo6', tipo: 'passivo', categoria: 'Mutuo', nome: 'Mutuo casa', account: '', valore: 0, piano: true, capitale: 200000, inizio, fine },
+    { id: 'demo7', tipo: 'attivo', categoria: 'Liquidità', nome: 'Conto Marco', account: 'demo-marco', valore: 9000 },
+    { id: 'demo8', tipo: 'attivo', categoria: 'Investimenti', nome: 'Fineco', dove: 'Fineco', account: 'demo-marco', valore: 0, portafoglio: true, prodotti: [
+      P(5, 'IE00DEMO0005', 'ETF Azionario USA', 'Azioni', 280, 140), P(6, 'IE00DEMO0006', 'ETF Tecnologia', 'Azioni', 180, 60)] }
+  ];
+  voci.forEach(applyPiano);
+  voci[0].valore = Math.round(500000 - totals(voci).netto);
+  const C = catTot(voci), T = totals(voci);
+  /* storico: mese per mese, con le stesse cifre di oggi all'ultimo mese */
+  let seed = 20260607; const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }, noise = () => (rnd() + rnd() + rnd() - 1.5) / 1.5;
+  const ov = { 39: -.09, 40: -.12, 41: .06, 42: .05, 43: .04, 62: -.05, 63: -.03, 64: .02, 65: -.06, 66: 0, 67: -.08, 68: .07, 69: -.03, 70: -.08, 71: .05, 72: .04, 73: .03 };
+  const rets = [0]; for (let i = 1; i <= N; i++) rets.push(ov[i] !== undefined ? ov[i] : .0055 + .016 * noise());
+  const pathP = c => { const p = [20000]; for (let i = 1; i <= N; i++) p.push(p[i - 1] * (1 + rets[i]) + c); return p; };
+  let lo = 0, hi = 30000; for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (pathP(m)[N] < C.port) lo = m; else hi = m; }
+  const port = pathP((lo + hi) / 2), s = (C.liq - 30000 + 60000) / N, storico = [];
+  for (let i = 0; i <= N; i++) {
+    const d = new Date(oggi.getFullYear(), oggi.getMonth() - (N - i), 1), mese = monthKey(d);
+    if (i === N) { storico.push({ mese, attivi: r2(T.attivi), passivi: r2(T.passivi), netto: r2(T.netto), liq: r2(C.liq), port: r2(C.port), beni: r2(C.beni) }); break; }
+    const liq = Math.round(30000 + s * i - (i >= ACQ ? 60000 : 0) + (i > 0 ? 1300 * noise() : 0)), pt = Math.round(port[i]), beni = casaVal(i);
+    const pas = i < ACQ ? 0 : Math.round(piano({ capitale: 200000, inizio, fine }, new Date(d.getFullYear(), d.getMonth() + 1, 0)).residuo);
+    storico.push({ mese, attivi: liq + pt + beni, passivi: pas, netto: liq + pt + beni - pas, liq, port: pt, beni, manuale: true });
+  }
+  return { uid: 'demo', nome: 'Giulia', voci, arch: [], storico, accounts: [{ id: 'demo-marco', nome: 'Marco' }] };
+}
+function avviaDemo() {
+  const D = generaDemo();
+  S.demo = true; S.user = { uid: 'demo', displayName: 'Demo', email: '' }; S.profile = { nome: D.nome, approved: true, termini: TERMS_V, viewers: [] }; S.users = [];
+  S.data = D; bloccaScritture(true); S.tab = innerWidth >= 1000 ? 'pan' : 'pat'; S.fAcc = 'all'; S.loading = false; S.msg = ''; window.scrollTo(0, 0); render();
+}
+
 onAuthStateChanged(auth, async user => {
+  if (S.demo) return;
   S.user = user; S.msg = '';
   if (!user) { S.profile = null; S.data = null; S.loading = false; return render(); }
   S.loading = true; render();

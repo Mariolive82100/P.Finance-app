@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.48';
+const VER = '1.49';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -129,6 +129,7 @@ const prezziStato = () => {
 };
 /* Legge i prezzi (all'apertura e con il tasto) e ricalcola le voci con prodotti. Nulla viene salvato per i prezzi; lo storico del mese segue i totali. */
 async function aggiornaPrezzi(manuale) {
+  if (S.demo) { if (manuale) { S.msg = 'Nella demo i prezzi sono fissi.'; render(); } return; }
   const D = S.data; if (!D || S.prezziBusy) return;
   const tutte = () => [...D.voci, ...(D.arch || [])];
   if (!manuale && !tutte().some(hasProd)) return;
@@ -184,7 +185,7 @@ function errText(e) {
   if (c.includes('operation-not-allowed')) return 'Accesso con Google non ancora attivato.';
   if (c.includes('network')) return 'Connessione assente. Riprova.';
   if (c.includes('too-many-requests')) return 'Troppi tentativi. Riprova tra qualche minuto.';
-  if (c.includes('read-only')) return 'Sei in sola visualizzazione: non puoi modificare.';
+  if (c.includes('read-only')) return S.demo ? 'Nella demo non si può modificare.' : 'Sei in sola visualizzazione: non puoi modificare.';
   if (c.includes('permission-denied')) return 'Permesso negato. Chiedi all\'amministratore.';
   return 'Errore: ' + (c || (e && e.message) || 'sconosciuto');
 }
@@ -209,7 +210,7 @@ async function loadData(uid, nome) {
 
 async function syncStorico() {
   const D = S.data;
-  if (!D || S.ro) return;
+  if (!D || S.ro || S.demo) return;
   const t = { ...totals(D.voci), ...catTot(D.voci) };
   const mk = monthKey();
   const cur = D.storico.find(x => x.mese === mk);
@@ -256,6 +257,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.49','23 nov 2026',['Modalità demo: nella schermata di accesso "Prova la demo" apre l\'app con dati inventati (10 anni, da 50.000 a 500.000 euro); nulla viene salvato e non si vedono dati reali']],
   ['1.48','23 nov 2026',['Nuova pagina Condivisione (menu laterale e menu a panino): ognuno ha un codice personale e può dare ad altri la sola visualizzazione dei propri dati, togliendola quando vuole; chi la riceve apre i dati dell\'altro in sola lettura con un tasto per tornare ai propri']],
   ['1.47','23 nov 2026',['Importazioni: l\'importazione del portafoglio non si blocca più se esistono investimenti inseriti a valore; quello con lo stesso nome del conto viene sostituito, gli altri restano']],
   ['1.46','23 nov 2026',['Nuova pagina Importazioni (menu laterale e menu a panino, computer e telefono): importa lo storico e il portafoglio da file CSV, con anteprima prima di confermare']],
