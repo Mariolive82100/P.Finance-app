@@ -294,6 +294,24 @@ function pageVoci(kind) {
 }
 const pagePassivi = () => pageVoci('pas'), pageBeni = () => pageVoci('ben');
 /* Portafogli: solo lettura (si modificano dalla versione per computer) */
+/* Compra / Vendi: registra un'operazione su un prodotto di un portafoglio */
+function tradeForm(ports) {
+  if (!S.trade) return '';
+  const buy = S.trade === 'buy', D = S.data;
+  const pl = [...ports].sort((a, b) => accName(a).localeCompare(accName(b)) || a.nome.localeCompare(b.nome));
+  const seen = new Map(); pl.forEach(v => (v.prodotti || []).forEach(p => { if (p.isin && !seen.has(p.isin)) seen.set(p.isin, p.nome || ''); }));
+  if (!pl.length) return `<div class="card"><h2>${buy ? 'Compra' : 'Vendi'}</h2><p class="note">Crea prima un portafoglio.</p><div class="acts"><button class="b s" data-act="tradec">Chiudi</button></div></div>`;
+  return `<div class="card"><h2>${buy ? 'Compra' : 'Vendi'}</h2>${S.msg ? `<div class="msg" id="pmsg">${esc(S.msg)}</div>` : ''}
+    <label class="lbl">Portafoglio<select id="tpf">${pl.map(v => `<option value="${v.id}">${esc(accName(v))} · ${esc(v.nome)}</option>`).join('')}</select></label>
+    <label class="lbl">ISIN<input id="tis" maxlength="12" autocapitalize="characters" list="tisl" placeholder="es. IE00BK5BQT80"></label><datalist id="tisl">${[...seen].map(([i, n]) => `<option value="${esc(i)}">${esc(n)}</option>`).join('')}</datalist>
+    <div class="pcm-2"><label class="lbl">Quote (o nominale € se obbligazione)<input id="tq" inputmode="decimal" placeholder="0"></label><label class="lbl">Prezzo (€ per quota, oppure % se obbligazione)<input id="tp" inputmode="decimal" placeholder="0"></label></div>
+    <label class="lbl">Commissioni € (facoltative)<input id="tf" inputmode="decimal" placeholder="0"></label>
+    ${buy ? `<div class="lbl" style="margin-top:4px">Solo se il prodotto è nuovo nel portafoglio:</div><div class="pcm-2"><label class="lbl">Nome<input id="tn" placeholder="Nome (facoltativo)"></label><label class="lbl">Classe<select id="tc"><option value="">Scegli…</option>${ASSET.map(o => `<option>${o}</option>`).join('')}</select></label></div>` : ''}
+    <label class="nl" style="margin-top:6px"><input type="checkbox" id="tno">Obbligazione: scrivo il nominale in euro e il prezzo in %</label>
+    <label class="nl" style="margin:6px 0"><input type="checkbox" id="tli" checked>${buy ? 'Scala' : 'Aggiungi'} l'importo dal conto di liquidità con lo stesso nome del portafoglio (se esiste)</label>
+    <div class="acts"><button class="b" data-act="tradeok">Registra ${buy ? 'acquisto' : 'vendita'}</button><button class="b s" data-act="tradec">Annulla</button></div>
+    <p class="note">${buy ? 'Le quote si sommano e il prezzo medio di carico si ricalcola (commissioni comprese).' : 'Le quote scendono; il prezzo medio di carico resta invariato. Se vendi tutto, il prodotto esce dal portafoglio.'}</p></div>`;
+}
 function pagePortMob() {
   const D = S.data;
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
@@ -319,8 +337,8 @@ function pagePortMob() {
   }).join('');
   const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addPort && S.pe == null ? `<div class="card"><h2>Nuovo portafoglio</h2><label class="lbl">Account<select id="pnacc">${opt}</select></label><label class="lbl">Nome (es. Directa)<input id="pnnm" maxlength="40" placeholder="Nome del portafoglio"></label><div class="acts"><button class="b" data-act="pmnew">Crea portafoglio</button><button class="b s" data-act="paddc">Annulla</button></div></div>` : '';
-  const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button>${innerWidth >= 1000 ? `<button class="b s" data-act="rfs">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : ''}</div>` : ''}</div>`;
-  return `<div class="con">${head}${form}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && allPorts.length ? `<div class="prow one">${portPieCard('pp_all', 'Portafoglio aggregato', portRoot(allPorts))}</div>` : ''}</div>`;
+  const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button><button class="b s" data-act="tradeo" data-v="buy">Compra</button><button class="b s" data-act="tradeo" data-v="sell">Vendi</button>${innerWidth >= 1000 ? `<button class="b s" data-act="rfs">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : ''}</div>` : ''}</div>`;
+  return `<div class="con">${head}${form}${S.pe == null ? tradeForm(allPorts) : ''}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && allPorts.length ? `<div class="prow one">${portPieCard('pp_all', 'Portafoglio aggregato', portRoot(allPorts))}</div>` : ''}</div>`;
 }
 
 /* ---------- Telefono: modifica dei prodotti di un portafoglio ---------- */

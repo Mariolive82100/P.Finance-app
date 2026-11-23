@@ -341,6 +341,47 @@ async function act(el) {
       const r = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r.id, ...nl });
       await syncStorico(); S.addConto = false; S.msg = 'Conto aggiunto.'; return render();
     }
+    if (a === 'tradeo') { S.trade = v; S.addPort = false; S.msg = ''; return render(); }
+    if (a === 'tradec') { S.trade = null; S.msg = ''; return render(); }
+    if (a === 'tradeok') {
+      const buy = S.trade === 'buy', err = m => { S.msg = m; render(); };
+      const v = D.voci.find(x => x.id === $('tpf').value), isin = $('tis').value.trim().toUpperCase(), q = pnum($('tq').value), pr = pnum($('tp').value), fee = $('tf').value.trim() ? pnum($('tf').value) : 0;
+      if (!v) return err('Scegli il portafoglio.');
+      if (!/^[A-Z0-9]{12}$/.test(isin)) return err('L\'ISIN deve avere 12 caratteri.');
+      if (!isFinite(q) || q <= 0) return err('Scrivi quante quote (o il nominale).');
+      if (!isFinite(pr) || pr <= 0) return err('Scrivi il prezzo.');
+      if (!isFinite(fee) || fee < 0) return err('Le commissioni devono essere zero o più.');
+      const prod = (v.prodotti || []).map(p => ({ ...p })), i = prod.findIndex(p => String(p.isin || '').toUpperCase() === isin), p = i >= 0 ? prod[i] : null;
+      const nom = p ? !!p.nom : $('tno').checked, f = nom ? 0.01 : 1, costo = r2(q * pr * f), pe = (q * pr * f + fee) / (q * f);
+      let nuovo = null;
+      if (buy) {
+        if (p) { const q0 = Number(p.quote) || 0; if (p.pmc > 0) p.pmc = Math.round((q0 * p.pmc + q * pe) / (q0 + q) * 1e6) / 1e6; p.quote = Math.round((q0 + q) * 1e6) / 1e6; }
+        else {
+          const cl = $('tc') ? $('tc').value : '';
+          if (!cl) return err('Il prodotto è nuovo nel portafoglio: scegli la classe.');
+          nuovo = { isin, nome: ($('tn') ? $('tn').value.trim() : '').slice(0, 60), classe: cl, quote: Math.round(q * 1e6) / 1e6, manuale: 0, pmc: Math.round(pe * 1e6) / 1e6, ...(nom ? { nom: true } : {}) };
+          prod.push(nuovo);
+        }
+      } else {
+        if (!p) return err('Questo ISIN non è nel portafoglio scelto.');
+        const q0 = Number(p.quote) || 0;
+        if (q > q0 + 1e-9) return err('Stai vendendo più di quanto hai: nel portafoglio ci sono ' + nfm(q0) + '.');
+        const r = Math.round((q0 - q) * 1e6) / 1e6;
+        if (r <= 1e-9) prod.splice(i, 1); else p.quote = r;
+      }
+      const { id, assetClass, ...rest } = v, dati = { ...rest, prodotti: prod };
+      dati.valore = prod.length ? valoreProd(dati) : 0;
+      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
+      let liq = '';
+      if ($('tli').checked) {
+        const lq = D.voci.find(y => y.categoria === 'Liquidità' && y.nome === v.nome && (y.account || '') === (v.account || ''));
+        if (lq) { const d = buy ? -(costo + fee) : (costo - fee), nv = r2(lq.valore + d); await updateDoc(doc(db, 'users', D.uid, 'voci', lq.id), { valore: nv }); lq.valore = nv; liq = ' Liquidità ' + (d >= 0 ? '+' : '−') + eur(Math.abs(d)) + '.'; }
+        else liq = ' Nessun conto di liquidità con lo stesso nome: la liquidità non è cambiata.';
+      }
+      await syncStorico(); S.trade = null; S.msg = (buy ? 'Acquisto' : 'Vendita') + ' registrato: ' + eur(costo) + '.' + liq; render();
+      if (nuovo) { if (!isAdmin()) segnalaIsin([nuovo]); else { const extra = await sheetAggiungi([nuovo]); if (extra) { S.msg += extra; render(); } } }
+      return;
+    }
     if (a === 'paddo') { S.addPort = true; S.msg = ''; return render(); }
     if (a === 'paddc') { S.addPort = false; return render(); }
     if (a === 'pmnew') { S.addPort = false; S.pcur = null; return portNuovo($('pnacc').value, $('pnnm').value); }

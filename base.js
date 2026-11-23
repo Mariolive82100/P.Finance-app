@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.55';
+const VER = '1.56';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -257,6 +257,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.56','23 nov 2026',['Portafogli: tasti Compra e Vendi accanto ad Aggiungi portafoglio (quote, prezzo medio di carico e, se vuoi, liquidità del conto con lo stesso nome)']],
   ['1.55','23 nov 2026',['Passivi: nuova scelta "Debito già in corso" (debito residuo di oggi e data dell\'ultima rata): i mesi già registrati non cambiano e il debito scende da solo dal mese prossimo']],
   ['1.54','23 nov 2026',['Icone di Beni (casa) e Passivi (freccia a zigzag verso il basso), anche sul telefono; in Passivi, Aggiungi passivo offre il piano di rimborso (importo, data di inizio e di fine) con calcolo automatico del capitale residuo']],
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
