@@ -207,8 +207,8 @@ function ringPath(CX, CY, a0, a1, ra, rb) {
   return `M${p1[0]} ${p1[1]}A${rb} ${rb} 0 ${big} 1 ${p2[0]} ${p2[1]}L${p3[0]} ${p3[1]}A${ra} ${ra} 0 ${big} 0 ${p4[0]} ${p4[1]}Z`;
 }
 /* piccola (big = false) o grande (big = true): stessa selezione delle fette in entrambe */
-function qSvg(key, Dz, big) {
-  const pb = pieDati(qRoot(key, Dz)), tot = pb.total || 1, CX = 200, CY = 200, r0 = big ? 84 : 100, r1 = big ? 176 : 188, f = big ? 0.5 : 1;
+function qSvg(key, Dz, big, rt) {
+  const pb = pieDati(rt || qRoot(key, Dz)), tot = pb.total || 1, CX = 200, CY = 200, r0 = big ? 84 : 100, r1 = big ? 176 : 188, f = big ? 0.5 : 1;
   const T = (y, sz, w, c, t) => `<text x="${CX}" y="${y}" text-anchor="middle" font-size="${sz}" font-weight="${w}" fill="${c}">${esc(t)}</text>`;
   const sel = S.qsel && S.qsel[key] != null && pb.groups[S.qsel[key]] ? S.qsel[key] : -1;
   let ang = -Math.PI / 2, o = '';
@@ -230,6 +230,18 @@ function bigPie(key, Dz, back = true) {
   if (!r.pb.groups.length) return `<div class="card pcard qcard" id="pie">${head}<p>Nessuna voce da mostrare.</p></div>`;
   const leg = r.pb.groups.map((g, i) => `<div class="pl ${i === r.sel ? 'on' : ''}" data-act="qs" data-v="${key}:${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
   return `<div class="card pcard qcard${S.panim === 'in' ? ' anim-in' : ''}" id="pie" data-act="qdes" data-v="${key}">${head}<div class="pbody"><div class="psvg"><svg class="pie" viewBox="0 0 400 400"><g>${r.svg}</g></svg></div><div class="pleg">${leg}</div></div></div>`;
+}
+/* Portafogli (computer): torta per classi di investimento di un gruppo di portafogli */
+function portRoot(ports) {
+  const m = new Map(); ports.forEach(v => (v.prodotti || []).forEach(p => { const c = p.classe || 'Altro'; m.set(c, (m.get(c) || 0) + prodVal(p)); }));
+  const kids = [...m].filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]).map(([c, x]) => ({ id: 'r/' + c, label: c, val: x, pct: null, tone: 'a', lv: 'm', kids: [] }));
+  return { id: 'r', label: 'Classi', val: kids.reduce((s, k) => s + k.val, 0), pct: null, tone: 'a', lv: 'r', kids };
+}
+function portPieCard(key, title, root) {
+  const r = qSvg(key, null, true, root);
+  if (!r.pb.groups.length) return `<div class="card ppie"><h2>${esc(title)}</h2><p class="note">Nessun prodotto da mostrare.</p></div>`;
+  const leg = r.pb.groups.map((g, i) => `<div class="pl ${i === r.sel ? 'on' : ''}" data-act="qs" data-v="${key}:${i}"><i style="background:${g.col}"></i><span class="a">${esc(g.label)}</span><span>${eur0(g.sum)} · ${g.pct}</span></div>`).join('');
+  return `<div class="card ppie"><h2>${esc(title)} <span class="lbl">per classe</span></h2><div class="pbody"><div class="psvg"><svg class="pie" viewBox="0 0 400 400"><g>${r.svg}</g></svg></div><div class="pleg">${leg}</div></div></div>`;
 }
 function quadCard(Dz, single) {
   const keys = single ? ['l', 'a', 'i', 'p'] : ['c', 'a', 'i', 'p'];

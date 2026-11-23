@@ -250,12 +250,13 @@ function pagePortMob() {
   const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
     const ports = allPorts.filter(v => accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
     if (!ports.length) return '';
-    return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(t)}</span></div>${ports.map(block).join('')}</div>`;
+    const html = `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(t)}</span></div>${ports.map(block).join('')}</div>`;
+    return innerWidth >= 1000 ? `<div class="prow"><div>${html}</div>${portPieCard('pp_' + k, n, portRoot(ports))}</div>` : html;
   }).join('');
   const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addPort && S.pe == null ? `<div class="card"><h2>Nuovo portafoglio</h2><label class="lbl">Account<select id="pnacc">${opt}</select></label><label class="lbl">Nome (es. Directa)<input id="pnnm" maxlength="40" placeholder="Nome del portafoglio"></label><div class="acts"><button class="b" data-act="pmnew">Crea portafoglio</button><button class="b s" data-act="paddc">Annulla</button></div></div>` : '';
   const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button>${innerWidth >= 1000 ? `<button class="b s" data-act="rfs">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : ''}</div>` : ''}</div>`;
-  return `<div class="con">${head}${form}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && S.pe == null ? importCard() : ''}</div>`;
+  return `<div class="con">${head}${form}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && allPorts.length ? `<div class="prow one">${portPieCard('pp_all', 'Portafoglio aggregato', portRoot(allPorts))}</div>` : ''}</div>`;
 }
 
 /* ---------- Telefono: modifica dei prodotti di un portafoglio ---------- */
