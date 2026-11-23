@@ -309,6 +309,14 @@ async function act(el) {
       const nm = $('xnn').value.trim(), k = $('xnacc').value, account = k === 'main' ? '' : k;
       if (!nm) { S.msg = 'Scrivi il nome.'; return render(); }
       if (D.voci.some(x => C.ev(x) && x.nome.toLowerCase() === nm.toLowerCase() && (x.account || '') === account)) { S.msg = 'Esiste già una voce con questo nome in questo account.'; return render(); }
+      if (kind === 'pas' && $('xr')) {
+        const res = pnum($('xr').value), fin = $('xf').value, t = new Date(), oggi = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+        if (!isFinite(res) || res <= 0) { S.msg = 'Inserisci il debito residuo di oggi.'; return render(); }
+        if (!fin || fin <= oggi) { S.msg = 'La data dell\'ultima rata deve essere futura.'; return render(); }
+        const dp = applyPiano({ tipo: 'passivo', categoria: $('xncat').value, nome: nm, account, piano: true, inCorso: true, capitale: r2(res), inizio: oggi, fine: fin, valore: 0 });
+        const rp = await addDoc(collection(db, 'users', D.uid, 'voci'), dp); D.voci.push({ id: rp.id, ...dp });
+        await syncStorico(); S.addX = null; S.msg = 'Passivo in corso aggiunto: scende da solo dal mese prossimo.'; return render();
+      }
       if (kind === 'pas' && $('xk')) {
         const cap = pnum($('xk').value), ini = $('xi').value, fin = $('xf').value;
         if (!isFinite(cap) || cap <= 0) { S.msg = 'Inserisci l\'importo preso a prestito.'; return render(); }
