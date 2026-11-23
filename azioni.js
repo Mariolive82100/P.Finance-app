@@ -37,6 +37,29 @@ async function act(el) {
     if (a === 'shtest') { const c = sheetCfg(); if (!c) return; try { const j = await chiamaFoglio(c, { prova: '1' }); S.msg = j.ok ? 'Collegamento riuscito.' : 'Lo script risponde ma: ' + (j.errore || 'errore') + '.'; } catch (e) { S.msg = 'Lo script non risponde: controlla indirizzo e pubblicazione.'; } return render(); }
     if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
+    if (a === 'cnd') { S.tab = 'cnd'; S.menu = false; window.scrollTo(0, 0); return render(); }
+    if (a === 'cndcopy') { try { await navigator.clipboard.writeText(S.user.uid); S.msg = 'Codice copiato.'; } catch (e) { S.msg = 'Copia non riuscita: tieni premuto sul codice e copialo.'; } return render(); }
+    if (a === 'cndadd' || a === 'cnddel') {
+      const mio = S.user.uid, vw = [...((S.profile && S.profile.viewers) || [])];
+      let nv;
+      if (a === 'cnddel') nv = vw.filter(x => x !== v);
+      else {
+        const c = ($('cndu') ? $('cndu').value : '').trim(), n = ($('cndn') ? $('cndn').value : '').trim();
+        if (!/^[A-Za-z0-9]{20,40}$/.test(c) || c === mio) { S.msg = 'Il codice non è valido.'; return render(); }
+        if (vw.includes(c)) { S.msg = 'Questa persona ha già l\'accesso.'; return render(); }
+        if (vw.length >= 10) { S.msg = 'Puoi condividere al massimo con 10 persone.'; return render(); }
+        nv = [...vw, c]; if (n) { const l = lsJ('pf_lbl', {}); l[c] = n; try { localStorage.setItem('pf_lbl', JSON.stringify(l)); } catch (e) {} }
+      }
+      await updateDoc(doc(db, 'users', mio), { viewers: nv }); S.profile.viewers = nv; S.msg = 'Accesso aggiornato.'; return render();
+    }
+    if (a === 'cndaddv') {
+      const c = ($('cndv') ? $('cndv').value : '').trim(), n = ($('cndw') ? $('cndw').value : '').trim() || 'Persona';
+      if (!/^[A-Za-z0-9]{20,40}$/.test(c) || c === S.user.uid) { S.msg = 'Il codice non è valido.'; return render(); }
+      const l = lsJ('pf_visti', []).filter(x => x.uid !== c); l.push({ uid: c, nome: n }); try { localStorage.setItem('pf_visti', JSON.stringify(l)); } catch (e) {} S.msg = 'Persona aggiunta.'; return render();
+    }
+    if (a === 'cndrim') { try { localStorage.setItem('pf_visti', JSON.stringify(lsJ('pf_visti', []).filter(x => x.uid !== v))); } catch (e) {} return render(); }
+    if (a === 'cndvedi') { const x = lsJ('pf_visti', []).find(y => y.uid === v); if (x) return vediDi(x.uid, x.nome); return; }
+    if (a === 'tornaMio') return tornaMio();
     if (a === 'imp') { S.tab = 'imp'; S.menu = false; S.imp = null; S.impErr = null; window.scrollTo(0, 0); return render(); }
     if (a === 'impcl') { if (S.imp && S.imp.righe[+v]) S.imp.righe[+v].classe = el.value; return; }
     if (a === 'impno') { S.imp = null; S.impErr = null; return render(); }
@@ -677,6 +700,25 @@ document.addEventListener('input', e => {
   if (e.target.id === 'pmq') { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.pmrow').forEach(r => { r.style.display = !q || r.textContent.toLowerCase().includes(q) ? '' : 'none'; }); }
 });
 document.addEventListener('change', e => { if (e.target.closest && e.target.closest('.pcm')) portAnteprima(); });
+
+/* ---------- Visualizzazione dei dati di un'altra persona (sola lettura) ---------- */
+const SCRIVI_ORIG = { setDoc, updateDoc, deleteDoc, addDoc };
+const bloccaScritture = on => Object.assign(window, on ? { setDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), updateDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), deleteDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), addDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })) } : SCRIVI_ORIG);
+async function vediDi(uid, nome) {
+  const prec = S.data, precRo = S.ro; if (!S.own) S.own = prec;
+  S.ro = { uid, nome }; bloccaScritture(true);
+  try {
+    S.msg = ''; await loadData(uid, nome);
+    S.fAcc = 'all'; S.edit = null; S.fd = null; S.pop = null; S.popm = null; S.tab = innerWidth >= 1000 ? 'pan' : 'pat'; window.scrollTo(0, 0); render();
+  } catch (e) {
+    S.data = prec; S.ro = precRo; if (!precRo) { S.own = null; bloccaScritture(false); }
+    S.msg = e && e.code === 'permission-denied' ? nome + ' non ti ha (ancora) dato l\'accesso.' : errText(e); render();
+  }
+}
+function tornaMio() {
+  if (!S.own) return; S.data = S.own; S.own = null; S.ro = null; bloccaScritture(false);
+  S.fAcc = 'all'; S.edit = null; S.fd = null; S.pop = null; S.popm = null; S.tab = 'cnd'; S.msg = ''; window.scrollTo(0, 0); render();
+}
 
 onAuthStateChanged(auth, async user => {
   S.user = user; S.msg = '';

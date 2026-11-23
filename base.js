@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.47';
+const VER = '1.48';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -184,6 +184,7 @@ function errText(e) {
   if (c.includes('operation-not-allowed')) return 'Accesso con Google non ancora attivato.';
   if (c.includes('network')) return 'Connessione assente. Riprova.';
   if (c.includes('too-many-requests')) return 'Troppi tentativi. Riprova tra qualche minuto.';
+  if (c.includes('read-only')) return 'Sei in sola visualizzazione: non puoi modificare.';
   if (c.includes('permission-denied')) return 'Permesso negato. Chiedi all\'amministratore.';
   return 'Errore: ' + (c || (e && e.message) || 'sconosciuto');
 }
@@ -197,7 +198,7 @@ async function loadData(uid, nome) {
   ]);
   const accounts = as.docs.map(d => ({ id: d.id, nome: d.data().nome })).sort((a, b) => a.nome.localeCompare(b.nome));
   const voci = vs.docs.map(d => ({ id: d.id, ...d.data() }));
-  await migraCategorie(uid, voci);
+  if (!S.ro) await migraCategorie(uid, voci);
   voci.forEach(applyPiano);
   const arch = voci.filter(v => v.archiviata);
   for (let i = voci.length - 1; i >= 0; i--) if (voci[i].archiviata) voci.splice(i, 1);
@@ -208,7 +209,7 @@ async function loadData(uid, nome) {
 
 async function syncStorico() {
   const D = S.data;
-  if (!D) return;
+  if (!D || S.ro) return;
   const t = { ...totals(D.voci), ...catTot(D.voci) };
   const mk = monthKey();
   const cur = D.storico.find(x => x.mese === mk);
@@ -255,6 +256,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.48','23 nov 2026',['Nuova pagina Condivisione (menu laterale e menu a panino): ognuno ha un codice personale e può dare ad altri la sola visualizzazione dei propri dati, togliendola quando vuole; chi la riceve apre i dati dell\'altro in sola lettura con un tasto per tornare ai propri']],
   ['1.47','23 nov 2026',['Importazioni: l\'importazione del portafoglio non si blocca più se esistono investimenti inseriti a valore; quello con lo stesso nome del conto viene sostituito, gli altri restano']],
   ['1.46','23 nov 2026',['Nuova pagina Importazioni (menu laterale e menu a panino, computer e telefono): importa lo storico e il portafoglio da file CSV, con anteprima prima di confermare']],
   ['1.45','23 nov 2026',['Portafogli: in modifica si può cambiare l\'account del portafoglio (si sposta anche il conto di liquidità collegato)']],
