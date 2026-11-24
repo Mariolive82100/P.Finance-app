@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.70';
+const VER = '1.71';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -323,6 +323,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.71','24 nov 2026',['Andamenti e confronti: i filtri di periodo sono dentro il riquadro, accanto al titolo']],
   ['1.70','24 nov 2026',['Panoramica: Attivi, passivi e netto si evidenzia al passaggio del mouse; "Andamento del patrimonio" diventa "Andamenti e confronti" con filtri di periodo propri (di partenza "Da sempre"); i filtri in cima partono da "Mese corrente"']],
   ['1.69','24 nov 2026',['Panoramica: filtri di periodo sotto il titolo della pagina; "Grafici a torta" diventa "Distribuzioni"; tolti titolo e sottotitolo da Valori per categoria e il "da ..." dal patrimonio netto; variazioni più grandi']],
   ['1.68','24 nov 2026',['Panoramica: il delta di ogni categoria (in euro e in percentuale) è nel riquadro Valori per categoria, accanto al valore; il riquadro Variazioni assolute è stato eliminato; sotto il patrimonio netto c\'è solo la variazione del periodo scelto; nuovi periodi Mese corrente e 30 giorni, tolto Ultimi 6 mesi']],

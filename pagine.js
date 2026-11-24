@@ -562,8 +562,9 @@ function homeBlk(k, c) {
   const has = c.all.length > 0;
   if (k === 'and') {
     if (!has) return '';
-    const r = innerWidth < 1000 ? c.r1 : c.r1 - 44;
-    return `<div class="hubw">${perBarA()}${c.hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, r, c.cols)}</div>` : hubGrid(c.all, c.allF)}</div>`;
+    if (!c.hv) return hubGrid(c.all, c.allF, perBarA());
+    const h = hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, c.r1, c.cols);
+    return `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${h.replace('</h2>', '</h2>' + perBarA())}</div>`;
   }
   if (k === 'col') return colCard(c.t, c.vis);
   if (k === 'ind') return has && c.D ? indicatori(c.D, c.all) : '';

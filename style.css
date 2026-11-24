@@ -391,3 +391,6 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 /* Attivi, passivi e netto: il segmento sotto il mouse resta pieno, gli altri sbiadiscono */
 .colc .sk{transition:opacity .15s;cursor:pointer}
 .colc:has(.sk:hover) .sk:not(:hover){opacity:.3}
+
+.chh .perbarA{margin:0 0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.chh:has(.perbarA){flex-wrap:wrap;gap:6px 12px;align-items:center}

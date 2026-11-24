@@ -262,12 +262,12 @@ function mnBars(sers) {
 function perBar() {
   return `<div class="perbar">${PERS.map(([v, l]) => `<button class="b ${(S.hper || 'mc') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</div>`;
 }
-function hubGrid(all0, all) {
+function hubGrid(all0, all, per) {
   const ok = all.length >= 2, agK = k => ok ? aggSeries(all, aggOf(k, all)) : null;
   const ag = agK('main'), agB = agK('bar'), agP = agK('pas'), d = all0.length >= 2 ? cmpData(all0, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
   const last = ok ? all[all.length - 1] : null, dl = ok ? last.netto - all[all.length - 2].netto : 0;
   const cell = (k, svg, val) => `<div class="qc" data-act="hopen" data-v="${k}"><div class="qh"><b>${HUB[k]}</b>${val || ''}</div><div class="qs">${svg ? mnSvg(svg) : `<p class="note" style="margin:8px 0 0">${ok ? 'Servono più mesi di storico.' : 'Servono almeno 2 mesi di dati.'}</p>`}</div></div>`;
-  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamenti e confronti</h2></div><div class="qg">
+  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamenti e confronti</h2>${per || ''}</div><div class="qg">
     ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
     ${cell('bar', ok && mnBars([{ v: agB.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
     ${cell('pas', ok && mnLines([{ v: agP.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
