@@ -244,16 +244,14 @@ function pageMob0() {
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', vis = vz(D.voci).filter(v => inSc(v, fa)), Dz = { ...D, voci: vis };
   const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = cur && prev ? cur.netto - prev.netto : null;
-  const dsub = dN !== null ? `<div class="lbl dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</div>` : '';
+  const pn = perNetto(t), dsub = pn ? `<div class="lbl dsub">${pn}</div>` : '';
   const head = `<div class="card"><div class="lbl bd">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}${rfsBtn()}</div>${dsub}</div>${accChips()}`;
   if (!D.voci.length) return head + '<div class="card">Nessuna voce da mostrare. Le voci si aggiungono dalla versione per computer.</div>';
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null, r1 = 380;
-  const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
-  let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
-  if (allF.length < 2) allF = all.slice(-2);
+  const allF = perFiltra(all);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const c = { all, allF, hv, r1, t, vis, Dz, single, cur, prev };
-  const lst = homeList().filter(k => !HOME_BLK[k].pc), hasPer = all.length && lst.some(k => k === 'and' || k === 'var');
+  const lst = homeList().filter(k => !HOME_BLK[k].pc), hasPer = !!all.length;
   const body = lst.map(k => homeBlk(k, c)).join('');
   S.hanim = false; S.panim = false; S.tcan = false;
   return `<div class="mob">${head}${S.ro ? '' : `<div class="hmbar">${homeBtn()}</div>`}${homeBar()}${hasPer ? perBar() : ''}${body || (S.hedit ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>')}</div>`;
@@ -535,14 +533,12 @@ function pagePan0() {
   const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = cur && prev ? cur.netto - prev.netto : null;
   const kp = (l, v, sub, c, extra, tail) => `<div class="card"><div class="lbl bd">${l}</div><div class="big ${c || ''}">${v}${extra || ''}</div><div class="lbl">${sub}</div>${tail || ''}</div>`;
   const eye = `<button class="eye" data-act="hide" aria-label="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}" title="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${hideAmt() ? '' : '<path d="M3 3l18 18"/>'}</svg></button>`;
-  const dsub = dN !== null ? `<span class="dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</span>` : '&nbsp;';
+  const pn = perNetto(t), dsub = pn ? `<span class="dsub">${pn}</span>` : '&nbsp;';
   const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(single ? 300 : 290, Math.round(avail * 0.5));
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
   const pr = disParts(Dz, single, !all.length);
   S.anim = false; S.tanim = false;
-  const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
-  let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
-  if (allF.length < 2) allF = all.slice(-2);
+  const allF = perFiltra(all);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const kpis = `<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>`;
   if (!all.length) {
@@ -558,7 +554,7 @@ function pagePan0() {
   S.hanim = false; S.panim = false; S.tcan = false;
   const H = Math.max(0, ...items.map(i => i.r + i.h)) * 10;
   const grid = items.length ? `<div class="hmf${ed ? ' ed' : ''}" style="height:${H}px">${items.map(i => { const px = i.h * 10 - 14; return `<div class="hf" data-k="${i.k}" style="${hmStyle(i)};--r1:${px}px">${i.k === 'and' ? htm.and.replace('height:var(--r1)', '') : htm[i.k]}${ed ? `<div class="hmov" data-hm="move"><span>✥ ${esc(nm(i.k))}</span></div><div class="hrs" data-hm="size" title="Ridimensiona"></div>` : ''}</div>`; }).join('')}</div>` : (ed ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>');
-  return `<div class="pan" style="--r1:${r1}px">${panTop(aname, null, homeBtn())}${kpis}${homeBar()}${lst.some(k => k === 'and' || k === 'var') ? `<div class="g12 pfrow"><div class="s5">${perBar()}</div></div>` : ''}${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+  return `<div class="pan" style="--r1:${r1}px">${panTop(aname, null, homeBtn())}${kpis}${homeBar()}<div class="g12 pfrow"><div class="s8">${perBar()}</div></div>${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
 }
 const hmStyle = i => `left:calc((100% + 14px) * ${i.c} / 12);width:calc((100% + 14px) * ${i.w} / 12 - 14px);top:${i.r * 10}px;height:${i.h * 10 - 14}px`;
 /* ---------- Home modificabile: riquadri, ordine e pannello di scelta ---------- */
@@ -566,7 +562,6 @@ function homeBlk(k, c) {
   const has = c.all.length > 0;
   if (k === 'and') return has ? (c.hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, c.r1, c.cols)}</div>` : hubGrid(c.all, c.allF)) : '';
   if (k === 'col') return colCard(c.t, c.vis);
-  if (k === 'var') return has ? deltaCard(c.vis, c.cur, c.prev, c.all[0], c.all) : '';
   if (k === 'ind') return has && c.D ? indicatori(c.D, c.all) : '';
   if (k === 'val') return valoriCard(c.vis);
   if (k === 'alb') return c.pr ? c.pr.tree : '';

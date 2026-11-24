@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.67';
+const VER = '1.68';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -46,8 +46,8 @@ const totals = voci => {
 /* Attivi divisi in: Liquidità, Portafoglio (categoria Investimenti), Beni (Immobili, Beni, Altro) */
 const catTot = voci => { const at = voci.filter(v => v.tipo === 'attivo'), s = f => at.filter(f).reduce((a, v) => a + v.valore, 0); return { liq: s(v => v.categoria === 'Liquidità'), port: s(v => v.categoria === 'Investimenti'), beni: s(v => v.categoria !== 'Liquidità' && v.categoria !== 'Investimenti') }; };
 /* Home modificabile: elenco dei riquadri disponibili (nome, larghezza su 12 colonne, altezza: 1 = come il grafico, 2 = alta, 0 = libera, solo computer) e ordine di partenza */
-const HOME_BLK = { and: { n: 'Andamento del patrimonio', w: 5, h: 1 }, col: { n: 'Attivi, passivi e netto', w: 3, h: 1 }, var: { n: 'Variazioni assolute', w: 4, h: 1 }, ind: { n: 'Indicatori', w: 5, h: 0, pc: 1 }, val: { n: 'Valori per categoria', w: 7, h: 0 }, alb: { n: 'Albero del patrimonio', w: 5, h: 2, pc: 1 }, tor: { n: 'Torte', w: 7, h: 2 } };
-const HOME_DEF = ['and', 'col', 'var', 'ind', 'val', 'alb', 'tor'];
+const HOME_BLK = { and: { n: 'Andamento del patrimonio', w: 5, h: 1 }, col: { n: 'Attivi, passivi e netto', w: 3, h: 1 }, ind: { n: 'Indicatori', w: 5, h: 0, pc: 1 }, val: { n: 'Valori per categoria', w: 4, h: 1 }, alb: { n: 'Albero del patrimonio', w: 5, h: 2, pc: 1 }, tor: { n: 'Torte', w: 7, h: 2 } };
+const HOME_DEF = ['and', 'col', 'val', 'alb', 'tor', 'ind'];
 /* Ogni voce salvata è "id" oppure "id:colonna,riga,larghezza,altezza" (riga e altezza in passi da 10 px) */
 const hmParse = s => { const [k, g] = String(s).split(':'); if (!HOME_BLK[k]) return null; const a = g ? g.split(',').map(Number) : null; return { k, g: a && a.length === 4 && a.every(Number.isFinite) ? { c: a[0], r: a[1], w: a[2], h: a[3] } : null }; };
 const homeRaw = () => { const h = S.data && Array.isArray(S.data.home) ? S.data.home.map(hmParse).filter(Boolean) : null; return h || HOME_DEF.map(k => ({ k, g: null })); };
@@ -63,7 +63,7 @@ function hlFix(items, fixedK) {
 }
 /* Disposizione dei riquadri sul computer: dalla memoria, oppure quella di partenza (righe da 12 colonne) */
 function homeLayout(r1, ok) {
-  const raw = homeRaw().filter(x => !ok || ok(x.k)), dh = k => k === 'val' ? 18 : k === 'ind' ? 30 : HOME_BLK[k].h === 1 ? Math.ceil((r1 + 14) / 10) : 40;
+  const raw = homeRaw().filter(x => !ok || ok(x.k)), dh = k => k === 'ind' ? 30 : HOME_BLK[k].h === 1 ? Math.ceil((r1 + 14) / 10) : 40;
   if (!raw.some(x => x.g)) {
     const out = []; let y = 0, row = [], s = 0;
     const flush = () => { if (!row.length) return; let c = 0; row.forEach((i, j) => { if (j === row.length - 1) i.w += 12 - s; i.c = c; i.r = y; c += i.w; out.push(i); }); y += Math.max(...row.map(i => i.h)); row = []; s = 0; };
@@ -323,6 +323,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.68','24 nov 2026',['Panoramica: il delta di ogni categoria (in euro e in percentuale) è nel riquadro Valori per categoria, accanto al valore; il riquadro Variazioni assolute è stato eliminato; sotto il patrimonio netto c\'è solo la variazione del periodo scelto; nuovi periodi Mese corrente e 30 giorni, tolto Ultimi 6 mesi']],
   ['1.67','24 nov 2026',['Panoramica: "Modifica home" prende il posto di "Nuova voce"; i grafici ingranditi si adattano alla larghezza reale del riquadro (niente più scritte giganti)']],
   ['1.66','24 nov 2026',['Home libera sul computer: in modalità modifica i riquadri si spostano trascinandoli e si ridimensionano trascinando l\'angolo in basso a destra; non possono sovrapporsi e la disposizione è salvata nel tuo account']],
   ['1.65','24 nov 2026',['Home modificabile: il tasto "Modifica home" permette di scegliere quali riquadri mostrare e in che ordine (frecce su/giù, Aggiungi, Togli, Ripristina); la disposizione è salvata nel tuo account e vale per tutti gli account e per telefono e computer']],
