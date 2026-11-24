@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.75';
+const VER = '1.76';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -254,9 +254,9 @@ async function loadData(uid, nome) {
   const stAll = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
   /* mesi con soli totali di un account (importati per account) non fanno parte dello storico aggregato */
   const storico = stAll.filter(x => typeof x.netto === 'number'), accOnly = stAll.filter(x => typeof x.netto !== 'number' && x.acc);
-  let esclusi = [], home = null;
-  try { const ps = await getDoc(doc(db, 'users', uid)); const pd = ps.exists() ? ps.data() : {}, e = pd.esclusi; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); if (Array.isArray(pd.home)) home = pd.home.filter(s => HOME_BLK[String(s).split(':')[0]]).map(String); } catch (e) {}
-  S.data = { uid, nome, voci, arch, storico, accOnly, accounts, esclusi, home };
+  let esclusi = [], home = null, bil = {};
+  try { const ps = await getDoc(doc(db, 'users', uid)); const pd = ps.exists() ? ps.data() : {}, e = pd.esclusi; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); if (Array.isArray(pd.home)) home = pd.home.filter(s => HOME_BLK[String(s).split(':')[0]]).map(String); if (pd.bil && typeof pd.bil === 'object') for (const k in pd.bil) if ((k === 'main' || accounts.some(a => a.id === k)) && pd.bil[k] && typeof pd.bil[k] === 'object') { bil[k] = {}; for (const c in pd.bil[k]) if (ASSET.includes(c) && isFinite(+pd.bil[k][c])) bil[k][c] = +pd.bil[k][c]; } } catch (e) {}
+  S.data = { uid, nome, voci, arch, storico, accOnly, accounts, esclusi, home, bil };
   await syncStorico();
 }
 
@@ -323,6 +323,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.76','24 nov 2026',['Portafogli: nuova sottopagina Bilanciamento (tolta dal menu laterale): obiettivi per classe e per account, solo acquisti oppure anche vendite, prodotti suggeriti con quote e imposte stimate, registrazione delle operazioni']],
   ['1.75','24 nov 2026',['Portafogli (computer): il portafoglio aggregato compare sempre in fondo, anche con un solo portafoglio']],
   ['1.74','24 nov 2026',['Portafogli (computer): con un solo account selezionato ogni portafoglio ha la sua torta a destra dell\'elenco e l\'aggregato dell\'account resta in fondo; la vista Aggregato è come prima']],
   ['1.73','24 nov 2026',['Portafogli (computer): ogni portafoglio ha la sua torta per classi a destra dell\'elenco']],

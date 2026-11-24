@@ -94,7 +94,7 @@ async function act(el) {
     if (a === 'refresh') return location.reload();
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
-    if (a === 'bil') { S.tab = 'bil'; S.menu = false; window.scrollTo(0, 0); return render(); }
+    if (a === 'bil') { S.tab = 'por'; S.psub = 'bil'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'rfs') return aggiornaPrezzi(true);
     if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' || S.tab === 'ben' || S.tab === 'pas' ? S.tab : 'pan'; S.cfm = false; S.fAcc = S.fAcc === v && v !== 'all' && !['alb','con','por','ben','pas'].includes(S.tab) ? 'all' : v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
@@ -207,6 +207,51 @@ async function act(el) {
     }
     if (a === 'hper') { S.hper = v; return render(); }
     if (a === 'hperA') { S.hperA = v; return render(); }
+    if (a === 'psub') { S.psub = v === 'bil' ? 'bil' : 'elenco'; return render(); }
+    if (a === 'bacc') { S.bacc = v; S.btg = null; S.bpick = {}; S.bnew = {}; return render(); }
+    if (a === 'bmode') { S.bmode = v === 'full' ? 'full' : 'buy'; return render(); }
+    if (a === 'bdel') { const t = bilDraft(); delete t[v]; S.btg = t; return render(); }
+    if (a === 'baddc') { if (!el.value || !ASSET.includes(el.value)) return; const t = bilDraft(); t[el.value] = 0; S.btg = t; return render(); }
+    if (a === 'bsave') {
+      if (S.ro || !D) return;
+      const t = bilDraft(), clean = {}; Object.keys(t).forEach(c => { if (ASSET.includes(c)) { const x = Number(t[c]); clean[c] = isFinite(x) && x > 0 ? Math.round(x * 100) / 100 : 0; } });
+      const sum = Object.values(clean).reduce((s, x) => s + x, 0);
+      if (Math.abs(sum - 100) > 0.05) { S.msg = 'Gli obiettivi devono sommare 100%.'; return render(); }
+      const nb = { ...(D.bil || {}), [S.bacc]: clean };
+      if (!S.demo) await updateDoc(doc(db, 'users', D.uid), { bil: nb });
+      D.bil = nb; S.btg = null; S.msg = 'Obiettivi aggiornati.'; return render();
+    }
+    if (a === 'bilok') {
+      if (S.ro || !D) return;
+      const c = bilCalc(), liqOn = S.bli !== false, nuovi = [], byP = new Map(), liqTxt = [];
+      if (!c.okT || !c.ops.length) { S.msg = 'Nessuna operazione da registrare.'; return render(); }
+      c.ops.forEach(o => { if (!byP.has(o.port.id)) byP.set(o.port.id, { v: o.port, ops: [] }); byP.get(o.port.id).ops.push(o); });
+      for (const { v, ops } of byP.values()) {
+        const prod = (v.prodotti || []).map(p => ({ ...p })); let cash = 0;
+        for (const o of ops) {
+          const i = prod.findIndex(p => String(p.isin || '').toUpperCase() === o.isin), cost = o.q * o.price * (o.nom ? .01 : 1);
+          if (o.buy) {
+            if (i >= 0) { const p = prod[i], q0 = Number(p.quote) || 0; if (p.pmc > 0) p.pmc = Math.round((q0 * p.pmc + o.q * o.price) / (q0 + o.q) * 1e6) / 1e6; p.quote = Math.round((q0 + o.q) * 1e6) / 1e6; }
+            else { const np = { isin: o.isin, nome: (o.nome || '').slice(0, 60), classe: o.c, quote: Math.round(o.q * 1e6) / 1e6, manuale: 0, pmc: Math.round(o.price * 1e6) / 1e6, ...(o.nom ? { nom: true } : {}) }; prod.push(np); nuovi.push(np); }
+            cash -= cost;
+          } else {
+            if (i < 0) continue; const p = prod[i], q0 = Number(p.quote) || 0, r = Math.round((q0 - o.q) * 1e6) / 1e6;
+            if (r <= 1e-9) prod.splice(i, 1); else p.quote = r; cash += cost;
+          }
+        }
+        const { id, assetClass, ...rest } = v, dati = { ...rest, prodotti: prod }; dati.valore = prod.length ? valoreProd(dati) : 0;
+        await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
+        if (liqOn) {
+          const lq = D.voci.find(y => y.categoria === 'Liquidità' && y.nome === v.nome && (y.account || '') === (v.account || ''));
+          if (lq) { const nv = r2(lq.valore + cash); await updateDoc(doc(db, 'users', D.uid, 'voci', lq.id), { valore: nv }); lq.valore = nv; liqTxt.push(v.nome + ' ' + (cash >= 0 ? '+' : '−') + eur(Math.abs(cash))); }
+        }
+      }
+      await syncStorico(); S.bamt = ''; S.bpick = {}; S.bnew = {};
+      S.msg = 'Operazioni registrate: acquisti ' + eur(c.buyT) + (c.sellT > 0 ? ', vendite ' + eur(c.sellT) : '') + '.' + (liqTxt.length ? ' Liquidità: ' + liqTxt.join(', ') + '.' : (liqOn ? ' Nessun conto di liquidità con lo stesso nome del portafoglio: la liquidità non è cambiata.' : ''));
+      render();
+      if (nuovi.length) { if (!isAdmin()) segnalaIsin(nuovi); else { const extra = await sheetAggiungi(nuovi); if (extra) { S.msg += extra; render(); } } }
+      return;
+    }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
     if (a === 'hclose') { S.hq = null; S.hanim = 'out'; return render(); }
     if (a === 'qopen') { S.qd = v; S.panim = 'in'; return render(); }
@@ -957,3 +1002,18 @@ const hmFine = () => {
 };
 document.addEventListener('pointerup', hmFine);
 document.addEventListener('pointercancel', hmFine);
+
+/* Bilanciamento: campi di testo e scelte (si applicano quando si esce dal campo) */
+document.addEventListener('change', e => {
+  const t = e.target, k = t.dataset && t.dataset.bil; if (!k || !S.data) return;
+  const c = t.dataset.c, nw = () => { S.bnew = S.bnew || {}; return S.bnew[c] = S.bnew[c] || {}; };
+  if (k === 'amt') S.bamt = t.value;
+  else if (k === 'tg') { const d = bilDraft(), x = pnum(t.value); d[c] = isFinite(x) && x > 0 ? x : 0; S.btg = d; }
+  else if (k === 'pick') { S.bpick = S.bpick || {}; S.bpick[c] = t.value; }
+  else if (k === 'nisin') nw().isin = t.value.trim().toUpperCase();
+  else if (k === 'nprice') nw().price = t.value;
+  else if (k === 'nnom') nw().nom = t.checked;
+  else if (k === 'nport') nw().port = t.value;
+  else if (k === 'li') { S.bli = t.checked; return; }
+  render();
+});

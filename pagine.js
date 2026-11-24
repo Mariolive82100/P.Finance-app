@@ -30,12 +30,12 @@ function render() {
   const pend = isAdmin() ? S.users.filter(u => !u.approved).length : 0;
   if (S.tab === 'adm' && !isAdmin()) S.tab = 'pat';
   let body = '';
-  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'con') body = pageSaldi(); else if (S.tab === 'por') body = pagePortMob(); else if (S.tab === 'ben') body = pageBeni(); else if (S.tab === 'pas') body = pagePassivi(); else if (S.tab === 'dis') body = wide ? pageDis() : pageSaldi(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'bil') body = pageBil(); else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'imp') body = pageImp(); else if (S.tab === 'cnd') body = pageCnd(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
+  if (S.tab === 'pan') body = pagePan(); else if (S.tab === 'pat' || S.tab === 'nv') body = pagePat(); else if (S.tab === 'alb') body = pageAlb(); else if (S.tab === 'con') body = pageSaldi(); else if (S.tab === 'por') body = portSub() + (S.psub === 'bil' ? pageBilanc() : pagePortMob()); else if (S.tab === 'ben') body = pageBeni(); else if (S.tab === 'pas') body = pagePassivi(); else if (S.tab === 'dis') body = wide ? pageDis() : pageSaldi(); else if (S.tab === 'and') body = pageAnd(); else if (S.tab === 'bil') { S.tab = 'por'; S.psub = 'bil'; body = portSub() + pageBilanc(); } else if (S.tab === 'rep') body = pageRep(); else if (S.tab === 'imp') body = pageImp(); else if (S.tab === 'cnd') body = pageCnd(); else if (S.tab === 'terms') body = pageTerms(); else if (S.tab === 'info') body = pageInfo(); else body = pageAdm();
   el.innerHTML = `<header><div class="hw"><button class="ham" data-act="menu" aria-label="Menu">☰${pend ? '<i class="dot"></i>' : ''}</button><h1>P.Finance <span class="ver">v${VER} beta</span></h1><span class="un">${esc(S.profile.nome)}</span>
     ${wide ? '' : `<button class="b s sm" data-act="hide">${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}</button>`}<button class="b s sm" data-act="share">Condividi</button><button class="b s sm" data-act="logout">Esci</button></div>
     </header>
     <main>
-    ${S.demo ? `<div class="msg ok" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>Modalità demo: dati inventati, nulla viene salvato.</span><button class="b s sm" data-act="demoexit">Esci dalla demo</button></div>` : ''}${S.ro ? `<div class="msg ok" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>Stai guardando i dati di ${esc(S.ro.nome)} in sola visualizzazione.</span><button class="b s sm" data-act="tornaMio">Torna ai miei</button></div>` : ''}<div class="msg ${/salvato\.$|aggiunto\.$|aggiornato\.$|aggiornati\.$|importato\.$|^(Link|Codice) copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${S.toast ? `<div class="toast"><span>${esc(S.toast)}</span><button class="b sm" data-act="undo">Annulla</button></div>` : ''}${arrows()}${wide ? navWide(IC, pend, D) : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`}`;
+    ${S.demo ? `<div class="msg ok" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>Modalità demo: dati inventati, nulla viene salvato.</span><button class="b s sm" data-act="demoexit">Esci dalla demo</button></div>` : ''}${S.ro ? `<div class="msg ok" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>Stai guardando i dati di ${esc(S.ro.nome)} in sola visualizzazione.</span><button class="b s sm" data-act="tornaMio">Torna ai miei</button></div>` : ''}<div class="msg ${/salvato\.$|salvati\.$|registrate\.$|aggiunto\.$|aggiornato\.$|aggiornati\.$|importato\.$|^(Link|Codice) copiato/.test(S.msg) ? 'ok' : ''}">${esc(S.msg)}</div>${body}</main>${S.menu ? drawer() : ''}${S.pop ? popup() : ''}${S.popm ? popupM() : ''}${S.fs ? fsOverlay() : ''}${S.toast ? `<div class="toast"><span>${esc(S.toast)}</span><button class="b sm" data-act="undo">Annulla</button></div>` : ''}${arrows()}${wide ? navWide(IC, pend, D) : `<nav><div class="nv">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}" aria-label="${l}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${l}</button>`).join('')}</div></nav>`}`;
   const hd = document.querySelector('header'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
   navSync();
 }
@@ -49,7 +49,7 @@ function navWide(IC, pend, D) {
   const add = S.addAcc ? `<div class="nadd"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<button class="nplus" data-act="addo">＋ Aggiungi account</button>`;
   const sub = open ? `<div class="nsub">${row('all', 'Aggregato')}${row('main', D.nome)}${D.accounts.map(a => row(a.id, a.nome, true)).join('')}${add}</div>` : '';
   const it = (act, v, ic, l, on, extra) => `<button data-act="${act}"${v ? ` data-v="${v}"` : ''} class="${on ? 'on' : ''}">${sv(ic)}${l}${extra || ''}</button>`;
-  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Saldi', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'ben', IC.ben, 'Beni', S.tab === 'ben')}${it('tab', 'pas', IC.pas, 'Passivi', S.tab === 'pas')}${it('tab', 'bil', '<path d="M12 4v16M5 8h14M5 8l-2 6a3 3 0 0 0 6 0zM19 8l-2 6a3 3 0 0 0 6 0z"/>', 'Bilanciamento', S.tab === 'bil')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${S.demo ? '' : `${it('imp', '', '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>', 'Importazioni', S.tab === 'imp')}${it('cnd', '', '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.3 11l7.4-4M8.3 13l7.4 4"/>', 'Condivisione', S.tab === 'cnd')}`}${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
+  return `<nav><div class="nv">${it('pano', 'all', IC.pan, 'Panoramica', pan && fa === 'all')}${it('tab', 'con', ICX.con, 'Saldi', S.tab === 'con')}${it('tab', 'por', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>', 'Portafogli', S.tab === 'por')}${it('tab', 'ben', IC.ben, 'Beni', S.tab === 'ben')}${it('tab', 'pas', IC.pas, 'Passivi', S.tab === 'pas')}${it('tab', 'rep', IC.rep, 'Report', S.tab === 'rep')}<hr>${S.demo ? '' : `${it('imp', '', '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>', 'Importazioni', S.tab === 'imp')}${it('cnd', '', '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.3 11l7.4-4M8.3 13l7.4 4"/>', 'Condivisione', S.tab === 'cnd')}`}${it('info', '', ICX.inf, 'Info e novità', S.tab === 'info')}${it('terms', '', ICX.ter, 'Termini e condizioni', S.tab === 'terms')}${isAdmin() ? it('admin', '', ICX.adm, 'Amministrazione', S.tab === 'adm', pend ? `<span class="ver" style="background:#fee2e2;color:#b91c1c;margin:0 0 0 auto">${pend}</span>` : '') : ''}</div></nav>`;
 }
 
 /* ---------- Gesto/tasto "indietro" ---------- */
@@ -386,7 +386,6 @@ function portEditMob(v) {
     <p class="note">Le modifiche valgono solo dopo "Salva"; con "Annulla" non cambia nulla. Se l'ISIN non ha il prezzo nel foglio, viene segnalato all'amministratore.</p>`;
 }
 
-function pageBil() { return `<div class="card"><h2>Bilanciamento</h2><p class="note">Pagina in preparazione.</p></div>`; }
 
 function popup() {
   const D = S.data, p = S.pop, v = D.voci.find(x => x.id === p.id) || (D.arch || []).find(x => x.id === p.id), isA = !!v && !D.voci.includes(v);
@@ -609,3 +608,94 @@ const panTop = (name, title, btn) => `<div class="ptop"><h2>${title || 'Panorami
 const compact = v => hideAmt() ? '•••' : new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 const shortM = k => { const [y, m] = k.split('-'); return MESI[+m - 1].slice(0, 3) + ' ' + y.slice(2); };
 
+
+/* ---------- Portafogli: sottopagine Elenco e Bilanciamento ---------- */
+function portSub() {
+  const s = S.psub === 'bil' ? 'bil' : 'elenco';
+  return `<div class="psubs"><button class="${s === 'elenco' ? 'on' : ''}" data-act="psub" data-v="elenco">Elenco</button><button class="${s === 'bil' ? 'on' : ''}" data-act="psub" data-v="bil">Bilanciamento</button></div>`;
+}
+const BCOL = ['#378ADD', '#1D9E75', '#BA7517', '#7F77DD', '#D85A30', '#D4537E', '#888780', '#639922'];
+const bP1 = v => v.toFixed(1).replace('.', ',') + '%';
+/* Calcolo del bilanciamento di un account: ogni numero deriva da portafogli, prezzi e obiettivi */
+function bilCalc() {
+  const D = S.data, acc = S.bacc, ports = D.voci.filter(v => isPort(v) && accKey(v) === acc);
+  const saved = (D.bil && D.bil[acc]) || {}, tgm = S.btg || saved, cur = {};
+  ports.forEach(v => (v.prodotti || []).forEach(p => { const c = p.classe || 'Altro'; cur[c] = (cur[c] || 0) + prodVal(p); }));
+  const V = Object.values(cur).reduce((s, x) => s + x, 0), Xr = pnum(S.bamt || ''), X = isFinite(Xr) && Xr > 0 ? Xr : 0, full = S.bmode === 'full';
+  const cls = ASSET.filter(c => cur[c] > 0 || tgm[c] !== undefined);
+  const tg = c => { const x = Number(tgm[c]); return isFinite(x) && x > 0 ? x : 0; }, sumT = cls.reduce((s, c) => s + tg(c), 0), okT = Math.abs(sumT - 100) < 0.05;
+  const T = V + X, rows = cls.map(c => ({ c, cur: cur[c] || 0, tg: tg(c) }));
+  rows.forEach(r => { r.pct = V > 0 ? r.cur / V * 100 : 0; r.dev = r.pct - r.tg; r.want = T * r.tg / 100; r.buy = 0; r.sell = 0; });
+  if (okT && V > 0) {
+    if (full) rows.forEach(r => { const d = r.want - r.cur; if (d > 0) r.buy = d; else r.sell = -d; });
+    else if (X > 0) { const df = rows.map(r => Math.max(0, r.want - r.cur)), S0 = df.reduce((s, x) => s + x, 0); if (S0 > 0) rows.forEach((r, i) => { r.buy = df[i] * X / S0; }); }
+  }
+  /* prodotti di ogni classe (con portafoglio, prezzo e valore) */
+  const prodOf = c => { const m = new Map(); ports.forEach(v => (v.prodotti || []).forEach(p => { if ((p.classe || 'Altro') !== c || !p.isin) return; const k = String(p.isin).toUpperCase(), pr = S.prezzi && S.prezzi.map[k] > 0 ? S.prezzi.map[k] : (p.pmc > 0 ? p.pmc : 0), val = prodVal(p), x = m.get(k); if (!x) m.set(k, { isin: k, nome: p.nome || '', nom: !!p.nom, price: pr, tot: val, port: v, pv: val, q: Number(p.quote) || 0, p: [{ v, p }] }); else { x.tot += val; x.p.push({ v, p }); if (val > x.pv) { x.pv = val; x.port = v; } } })); return [...m.values()].sort((a, b) => b.tot - a.tot); };
+  const ops = [], notes = [];
+  rows.forEach(r => {
+    r.prods = prodOf(r.c);
+    if (r.buy > 0.5) {
+      const pk = (S.bpick || {})[r.c], cand = r.prods, ch = pk && pk !== '__new' ? cand.find(x => x.isin === pk) : (pk === '__new' || !cand.length ? null : cand[0]);
+      r.pick = ch ? ch.isin : '__new';
+      let isin, price, nom, port, nome = '';
+      if (ch) { isin = ch.isin; price = ch.price; nom = ch.nom; port = ch.port; nome = ch.nome; }
+      else {
+        const n = (S.bnew || {})[r.c] || {}; isin = String(n.isin || '').trim().toUpperCase(); const sp = S.prezzi && S.prezzi.map[isin], pp = pnum(n.price || '');
+        price = sp > 0 ? sp : (isFinite(pp) && pp > 0 ? pp : 0); nom = !!n.nom; port = ports.find(v => v.id === n.port) || ports[0]; r.nw = { isin, sheet: sp > 0, price, nom, port: port && port.id };
+      }
+      r.ok = !!(isin && /^[A-Z0-9]{12}$/.test(isin) && price > 0 && port);
+      if (r.ok) { const unit = nom ? price / 100 : price, q = Math.floor(r.buy / unit + 1e-9), amt = q * unit; r.op = { buy: true, c: r.c, isin, nome, price, nom, port, q, amt, nuovo: !ch }; r.amt = amt; if (q > 0) ops.push(r.op); }
+      else notes.push(r.c);
+    }
+    if (r.sell > 0.5) {
+      const hs = [];
+      r.prods.forEach(x => x.p.forEach(({ v, p }) => { const pr = S.prezzi && S.prezzi.map[x.isin] > 0 ? S.prezzi.map[x.isin] : 0; if (pr > 0 && p.quote > 0) hs.push({ v, p, pr, val: prodVal(p), nom: !!p.nom, isin: x.isin, nome: x.nome }); }));
+      const tv = hs.reduce((s, h) => s + h.val, 0); r.sells = [];
+      if (tv > 0) hs.forEach(h => { const share = Math.min(h.val, r.sell * h.val / tv), unit = h.nom ? h.pr / 100 : h.pr, q = Math.min(Number(h.p.quote), Math.floor(share / unit + 1e-9)); if (q <= 0) return; const gain = h.p.pmc > 0 ? Math.max(0, (h.pr - h.p.pmc) * q * (h.nom ? .01 : 1)) : 0, imp = gain * prodAliq(h.p) / 100, o = { buy: false, c: r.c, isin: h.isin, nome: h.nome, price: h.pr, nom: h.nom, port: h.v, q, amt: q * unit, imp }; r.sells.push(o); ops.push(o); });
+      r.sellAmt = r.sells.reduce((s, o) => s + o.amt, 0);
+      if (!r.sells.length) notes.push(r.c);
+    }
+    r.after = r.cur + (r.amt || 0) - (r.sellAmt || 0);
+  });
+  const buyT = ops.filter(o => o.buy).reduce((s, o) => s + o.amt, 0), sellT = ops.filter(o => !o.buy).reduce((s, o) => s + o.amt, 0), tax = ops.filter(o => !o.buy).reduce((s, o) => s + o.imp, 0);
+  const Va = rows.reduce((s, r) => s + r.after, 0); rows.forEach(r => { r.apct = Va > 0 ? r.after / Va * 100 : 0; });
+  return { acc, ports, rows, V, X, T, full, okT, sumT, ops, notes, buyT, sellT, tax, cash: X + sellT - buyT, saved };
+}
+function pageBilanc() {
+  const D = S.data, accs = accList(D).filter(([k]) => D.voci.some(v => isPort(v) && accKey(v) === k));
+  if (!accs.length) return '<div class="card"><h2>Bilanciamento</h2><p class="note">Serve almeno un portafoglio con dei prodotti: crealo dalla scheda Elenco.</p></div>';
+  if (!S.bacc || !accs.some(([k]) => k === S.bacc)) S.bacc = (S.fAcc && accs.some(([k]) => k === S.fAcc) ? S.fAcc : accs[0][0]);
+  const c = bilCalc(), many = c.ports.length > 1, full = c.full, ro = !!S.ro;
+  const chips = accs.length > 1 ? `<div class="accs">${accs.map(([k, n]) => `<div class="acard${S.bacc === k ? ' on' : ''}" data-act="bacc" data-v="${esc(k)}" style="--at:${accTint(k)}"><div class="lbl bd">${esc(n)}</div></div>`).join('')}</div>` : '';
+  const modes = `<div class="bmodes"><button class="b ${full ? 's' : ''} sm" data-act="bmode" data-v="buy">Solo acquisti</button><button class="b ${full ? '' : 's'} sm" data-act="bmode" data-v="full">Anche vendite</button><label class="lbl bamt">${full ? 'Nuovo versamento €' : 'Importo da investire €'}<input class="bin" data-bil="amt" inputmode="decimal" value="${esc(S.bamt || '')}" placeholder="0"></label></div>`;
+  const maxDev = c.rows.length && c.V > 0 ? Math.max(...c.rows.map(r => Math.abs(r.dev))) : 0;
+  const k = `<div class="bk"><div><span>Portafoglio oggi</span><b>${eur(c.V)}</b></div><div><span>${full ? 'Dopo il versamento' : 'Dopo l\'acquisto'}</span><b>${eur(c.V + c.X)}</b></div><div><span>Scostamento massimo</span><b>${c.okT ? bP1(maxDev).replace('%', ' punti') : '—'}</b></div></div>`;
+  const used = c.rows.map(r => r.c), free = ASSET.filter(a => !used.includes(a));
+  const trs = c.rows.map(r => `<tr><td>${esc(r.c)}</td><td>${eur(r.cur)}</td><td>${bP1(r.pct)}</td><td><input class="bin bt" data-bil="tg" data-c="${esc(r.c)}" inputmode="decimal" value="${r.tg ? String(r.tg).replace('.', ',') : ''}" placeholder="0"> %${r.cur <= 0 ? ` <button class="b s sm r" data-act="bdel" data-v="${esc(r.c)}" aria-label="Togli la classe">✕</button>` : ''}</td><td class="${c.okT && Math.abs(r.dev) >= 0.05 ? (r.dev > 0 ? 'neg' : 'pos') : ''}">${c.okT ? (r.dev >= 0 ? '+' : '−') + Math.abs(r.dev).toFixed(1).replace('.', ',') : '—'}</td><td>${r.buy > 0.5 ? '<b>' + eur(r.amt != null ? r.amt : r.buy) + '</b>' : r.sell > 0.5 ? '' : '—'}</td>${full ? `<td>${r.sell > 0.5 ? '<b>' + eur(r.sellAmt || 0) + '</b>' : '—'}</td>` : ''}<td>${c.okT && c.V > 0 ? bP1(r.apct) : '—'}</td></tr>`).join('');
+  const tbl = `<div class="card"><h3>Obiettivo per classe di investimento</h3><div class="btw"><table class="bt2"><tr><th>Classe</th><th>Oggi</th><th>Oggi %</th><th>Obiettivo</th><th>Scostamento</th><th>Da comprare</th>${full ? '<th>Da vendere</th>' : ''}<th>Dopo</th></tr>${trs}<tr class="tt"><td>Totale</td><td>${eur(c.V)}</td><td>100%</td><td class="${c.okT ? '' : 'neg'}">${bP1(c.sumT)}</td><td></td><td>${eur(c.buyT)}</td>${full ? `<td>${eur(c.sellT)}</td>` : ''}<td></td></tr></table></div>
+    <div class="bfoot">${free.length ? `<select data-act="baddc"><option value="">＋ Aggiungi classe…</option>${free.map(a => `<option>${esc(a)}</option>`).join('')}</select>` : ''}<span class="lbl">${c.okT ? 'Gli obiettivi sommano 100%.' : 'Gli obiettivi devono sommare 100%: ora ' + bP1(c.sumT) + '.'}</span><span class="grow"></span>${ro ? '' : `<button class="b sm" data-act="bsave"${c.okT ? '' : ' disabled'}>Salva obiettivi</button>`}</div></div>`;
+  const bars = c.V > 0 && c.okT ? `<div class="card"><h3>Oggi, dopo e obiettivo</h3>${[['Oggi', r => r.pct], ['Dopo', r => r.apct], ['Obiettivo', r => r.tg]].map(([l, f]) => `<div class="lbl" style="margin-top:6px">${l}</div><div class="bbar">${c.rows.map(r => `<div style="width:${Math.max(0, f(r)).toFixed(2)}%;background:${BCOL[ASSET.indexOf(r.c) % 8]}" data-tip="${esc(r.c + ' · ' + bP1(f(r)))}"></div>`).join('')}</div>`).join('')}<div class="blg">${c.rows.map(r => `<span><i style="background:${BCOL[ASSET.indexOf(r.c) % 8]}"></i>${esc(r.c)}</span>`).join('')}</div></div>` : '';
+  /* prodotti da comprare */
+  const buyRows = c.rows.filter(r => r.buy > 0.5).map(r => {
+    const sel = `<select data-bil="pick" data-c="${esc(r.c)}">${r.prods.map(x => `<option value="${esc(x.isin)}" ${r.pick === x.isin ? 'selected' : ''}>${esc(x.nome || x.isin)}</option>`).join('')}<option value="__new" ${r.pick === '__new' ? 'selected' : ''}>Altro prodotto (ISIN)…</option></select>`;
+    let det;
+    if (r.pick === '__new') {
+      const n = (S.bnew || {})[r.c] || {}, w = r.nw || {};
+      det = `<div class="bnew"><input class="bin" data-bil="nisin" data-c="${esc(r.c)}" maxlength="12" placeholder="ISIN" value="${esc(n.isin || '')}" autocapitalize="characters">${w.sheet ? `<span class="lbl">Prezzo nel foglio: ${nfm(w.price)}</span>` : `<input class="bin" data-bil="nprice" data-c="${esc(r.c)}" inputmode="decimal" placeholder="Prezzo" value="${esc(n.price || '')}">`}<label class="nl"><input type="checkbox" data-bil="nnom" data-c="${esc(r.c)}" ${n.nom ? 'checked' : ''}>Obbligazione (prezzo in %)</label>${many ? `<select data-bil="nport" data-c="${esc(r.c)}">${c.ports.map(v => `<option value="${v.id}" ${w.port === v.id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select>` : ''}</div>`;
+    }
+    const o = r.op;
+    return `<tr><td>${esc(r.c)}</td><td class="bsel">${sel}${det || ''}</td><td>${o ? (o.nom ? nfm(o.price) + ' %' : nfm(o.price)) : '—'}</td><td>${o ? nfm(o.q) + (o.nom ? ' nom.' : '') : '—'}</td><td>${o ? '<b>' + eur(o.amt) + '</b>' : '<span class="lbl">Mancano i dati</span>'}</td></tr>`;
+  }).join('');
+  const sellRows = c.rows.flatMap(r => (r.sells || []).map(o => `<tr><td>${esc(r.c)}</td><td class="bsel">${esc(o.nome || o.isin)}${many ? `<small class="lbl" style="display:block">${esc(o.port.nome)}</small>` : ''}</td><td>${o.nom ? nfm(o.price) + ' %' : nfm(o.price)}</td><td>${nfm(o.q)}${o.nom ? ' nom.' : ''}</td><td><b>${eur(o.amt)}</b>${o.imp > 0.5 ? `<small class="lbl" style="display:block">imposta ~${eur(o.imp)}</small>` : ''}</td></tr>`));
+  const opsCard = c.okT && c.V > 0 && (buyRows || sellRows.length) ? `<div class="card"><h3>Operazioni suggerite</h3>
+    ${buyRows ? `<div class="lbl" style="margin:0 0 4px">Da comprare</div><div class="btw"><table class="bt2 bops"><tr><th>Classe</th><th>Prodotto</th><th>Prezzo</th><th>Quote</th><th>Importo</th></tr>${buyRows}</table></div>` : ''}
+    ${sellRows.length ? `<div class="lbl" style="margin:10px 0 4px">Da vendere</div><div class="btw"><table class="bt2 bops"><tr><th>Classe</th><th>Prodotto</th><th>Prezzo</th><th>Quote</th><th>Importo</th></tr>${sellRows.join('')}</table></div>` : ''}
+    <div class="bfoot"><span class="lbl">Acquisti ${eur(c.buyT)}${c.sellT > 0 ? ' · vendite ' + eur(c.sellT) + ' · imposte stimate ' + eur(c.tax) : ''} · ${c.cash >= 0 ? 'resta non investito' : 'serve in più'} ${eur(Math.abs(c.cash))}</span><span class="grow"></span></div>
+    ${c.notes.length ? `<p class="note">Per ${esc(c.notes.join(', '))} non posso calcolare le quote: serve un prodotto con prezzo nel foglio.</p>` : ''}
+    ${ro || !c.ops.length ? '' : `<label class="nl" style="margin:8px 0"><input type="checkbox" data-bil="li" ${S.bli === false ? '' : 'checked'}>Aggiorna la liquidità del conto con lo stesso nome del portafoglio</label><div class="acts"><button class="b" data-act="bilok">Registra le operazioni</button></div>`}
+    <p class="note">Le quote sono arrotondate per difetto al pezzo intero. Le imposte sono una stima sulle plusvalenze, con l'aliquota di ogni prodotto.</p></div>` : '';
+  const hint = !c.okT ? '<p class="note">Scrivi gli obiettivi per classe e fai in modo che sommino 100%: poi compaiono le operazioni.</p>' : (!full && c.X <= 0 ? '<p class="note">Scrivi l\'importo da investire: l\'app lo ripartisce sulle classi più sotto obiettivo.</p>' : (c.okT && !c.ops.length && c.V > 0 ? '<p class="note">Il portafoglio è già in linea con gli obiettivi: nessuna operazione.</p>' : ''));
+  return `<div class="bil">${chips}${modes}${k}${tbl}${hint}${bars}${opsCard}</div>`;
+}
+const bilDraft = () => S.btg || { ...(((S.data.bil || {})[S.bacc]) || {}) };
