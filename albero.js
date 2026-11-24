@@ -251,7 +251,7 @@ function quadCard(Dz, single) {
   const keys = single ? ['l', 'a', 'i', 'p'] : ['c', 'a', 'i', 'p'];
   if (S.qd && !keys.includes(S.qd)) S.qd = null;
   if (S.qd) return bigPie(S.qd, Dz, true);
-  return `<div class="card pcard qcard${S.panim === 'out' ? ' anim-out' : ''}" id="pie"><h2>Grafici a torta</h2><div class="qg">${keys.map(k => miniPie(k, Dz)).join('')}</div></div>`;
+  return `<div class="card pcard qcard${S.panim === 'out' ? ' anim-out' : ''}" id="pie"><h2>Distribuzioni</h2><div class="qg">${keys.map(k => miniPie(k, Dz)).join('')}</div></div>`;
 }
 
 /* Passaggio del mouse: evidenzia il blocco con il suo ramo e sbiadisce il resto (senza ridisegnare) */

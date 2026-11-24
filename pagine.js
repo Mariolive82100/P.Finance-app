@@ -554,7 +554,7 @@ function pagePan0() {
   S.hanim = false; S.panim = false; S.tcan = false;
   const H = Math.max(0, ...items.map(i => i.r + i.h)) * 10;
   const grid = items.length ? `<div class="hmf${ed ? ' ed' : ''}" style="height:${H}px">${items.map(i => { const px = i.h * 10 - 14; return `<div class="hf" data-k="${i.k}" style="${hmStyle(i)};--r1:${px}px">${i.k === 'and' ? htm.and.replace('height:var(--r1)', '') : htm[i.k]}${ed ? `<div class="hmov" data-hm="move"><span>✥ ${esc(nm(i.k))}</span></div><div class="hrs" data-hm="size" title="Ridimensiona"></div>` : ''}</div>`; }).join('')}</div>` : (ed ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>');
-  return `<div class="pan" style="--r1:${r1}px">${panTop(aname, null, homeBtn())}${kpis}${homeBar()}<div class="g12 pfrow"><div class="s8">${perBar()}</div></div>${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+  return `<div class="pan" style="--r1:${r1}px">${panTop(aname, null, homeBtn())}<div class="g12 pfrow"><div class="s8">${perBar()}</div></div>${kpis}${homeBar()}${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
 }
 const hmStyle = i => `left:calc((100% + 14px) * ${i.c} / 12);width:calc((100% + 14px) * ${i.w} / 12 - 14px);top:${i.r * 10}px;height:${i.h * 10 - 14}px`;
 /* ---------- Home modificabile: riquadri, ordine e pannello di scelta ---------- */

@@ -300,7 +300,7 @@ function perBase(hist) {
 function perNetto(t) {
   const b = perBase(S.data.storico); if (!b || typeof b.a.netto !== 'number') return '';
   const d = t.netto - b.a.netto, k = d > 0.5 ? 'pos' : d < -0.5 ? 'neg' : '';
-  return `<span class="${k}">${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${b.a.netto ? ' · ' + pct(d / Math.abs(b.a.netto)) : ''}</span> ${esc(b.lab)}`;
+  return `<span class="${k}"${S.hper === '30' ? ' title="Stima: lo storico è mensile"' : ''}>${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${b.a.netto ? ' · ' + pct(d / Math.abs(b.a.netto)) : ''}</span>`;
 }
 /* Valori attuali delle categorie, ognuno con la sua variazione nel periodo scelto (clic: grafico per categoria) */
 function valoriCard(vis) {
@@ -318,7 +318,7 @@ function valoriCard(vis) {
     CHS.dx = { title: 'Andamento per categoria', pts: h.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), liq: typeof x.liq === 'number' ? x.liq : null, port: typeof x.port === 'number' ? x.port : null, beni: typeof x.beni === 'number' ? x.beni : null, passivi: x.passivi })), series: [{ k: 'liq', c: '#0f766e', l: 'Liquidità', fit: 1, nm: 1 }, { k: 'port', c: '#1d4ed8', l: 'Portafoglio', fit: 1, nm: 1 }, { k: 'beni', c: '#a16207', l: 'Beni', fit: 1, nm: 1 }, { k: 'passivi', c: '#b91c1c', l: 'Passivi', fit: 1, nm: 1 }] };
     clk = ' data-act="dxopen"';
   }
-  return `<div class="card pcard vcard${clk ? ' dxc' : ''}"${clk}><div class="chh"><h2>Valori per categoria</h2></div><div class="lbl" style="margin:-4px 0 6px">${b ? 'Variazione ' + esc(b.lab) : 'Servono almeno 2 mesi di dati'}</div><div class="qg">${items.map(tile).join('')}</div></div>`;
+  return `<div class="card pcard vcard${clk ? ' dxc' : ''}"${clk}><div class="qg">${items.map(tile).join('')}</div></div>`;
 }
 /* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
 function colCard(t, vis) {

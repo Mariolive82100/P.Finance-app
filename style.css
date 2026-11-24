@@ -192,7 +192,7 @@ nav .nplus{display:block;padding:7px 10px;font-size:12px;border-radius:8px}
 .hubc>.card{flex:1;min-height:0;height:auto!important}
 }
 @media(min-width:1000px){.chsel .chcmp select{max-width:180px;font-size:12px;padding:5px 8px;text-overflow:ellipsis}}
-@media(min-width:1000px){.pan .kpis .dsub{font-size:15px;font-weight:600;color:#3f5a57}.pan .kpis .dsub .pos{color:#15803d}.pan .kpis .dsub .neg{color:#b91c1c}}
+@media(min-width:1000px){.pan .kpis .dsub{font-size:17px;font-weight:600;color:#3f5a57}.pan .kpis .dsub .pos{color:#15803d}.pan .kpis .dsub .neg{color:#b91c1c}}
 @media(min-width:1000px){.qh{display:flex;justify-content:space-between;align-items:baseline;gap:6px;flex:none}.qv{font-size:12px;font-weight:700}}
 @media(min-width:1000px){.hubc .note{display:none}}
 @keyframes zIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:none}}
@@ -378,3 +378,6 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .vcard .dq .vrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px}
 .vcard .dq .dv{margin-top:2px}.vcard .dq .dp{font-size:13px;font-weight:600}.vcard .dq .dp.dvx{color:#8aa09d;font-weight:500}
 .mob .vcard .qg{grid-template-columns:1fr 1fr}.mob .vcard .dq .dv{font-size:16px}
+
+.vcard .dq .dv{font-size:24px}.vcard .dq .dp{font-size:16px}.mob .vcard .dq .dv{font-size:17px}.mob .vcard .dq .dp{font-size:13px}
+.g12.pfrow{margin-bottom:0}
