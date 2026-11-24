@@ -394,3 +394,9 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 
 .chh .perbarA{margin:0 0 0 auto;flex-wrap:wrap;justify-content:flex-end}
 .chh:has(.perbarA){flex-wrap:wrap;gap:6px 12px;align-items:center}
+
+/* Portafogli (computer): tabella a sinistra, torta del portafoglio a destra */
+.pblk.pwp{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:start}
+.pwp .pwl{min-width:0}
+.pwp>.card{margin:0}
+.pwp .ppie .pbody{flex-direction:column;align-items:stretch}.pwp .ppie .psvg{max-width:210px;width:100%;margin:0 auto;flex:none}.pwp .ppie .pleg{max-height:none}

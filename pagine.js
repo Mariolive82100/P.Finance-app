@@ -333,19 +333,22 @@ function pagePortMob() {
     const L = v.prodotti || [], m = new Map(); L.forEach(p => { const c = p.classe || 'Altro'; m.set(c, (m.get(c) || 0) + prodVal(p)); });
     const cl = [...m].sort((a, b) => b[1] - a[1]).map(([c, x]) => `${esc(c)} ${v.valore > 0 ? Math.round(x / v.valore * 100) : 0}%`).join(' · ');
     const op = !pCol(v.id);
-    return `<div class="pblk"><div class="phd"><b class="grow" data-act="pcol" data-v="${v.id}" style="cursor:pointer"><span class="chev ${op ? 'open' : ''}">▸︎</span> ${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span><button class="b s sm" data-act="pedit" data-v="${v.id}">Modifica</button></div>${op ? (L.length ? L.map(prodMob).join('') + (cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : '') : '<div class="lbl">Nessun prodotto.</div>') : ''}</div>`;
+    const inner = `<div class="phd"><b class="grow" data-act="pcol" data-v="${v.id}" style="cursor:pointer"><span class="chev ${op ? 'open' : ''}">▸︎</span> ${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span><button class="b s sm" data-act="pedit" data-v="${v.id}">Modifica</button></div>${op ? (L.length ? L.map(prodMob).join('') + (cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : '') : '<div class="lbl">Nessun prodotto.</div>') : ''}`;
+    /* computer: ogni portafoglio ha la sua torta a destra della tabella */
+    if (innerWidth >= 1000 && op && v.valore > 0) return `<div class="pblk pwp"><div class="pwl">${inner}</div>${portPieCard('pp_' + v.id, many ? v.nome + ' · ' + accName(v) : v.nome, portRoot([v]))}</div>`;
+    return `<div class="pblk">${inner}</div>`;
   };
-  const allPorts = D.voci.filter(v => isPort(v) && inSc(v, fa));
+  const allPorts = D.voci.filter(v => isPort(v) && inSc(v, fa)), many = new Set(allPorts.map(accKey)).size > 1;
   const secs = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => {
     const ports = allPorts.filter(v => accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
     if (!ports.length) return '';
     const html = `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(t)}</span></div>${ports.map(block).join('')}</div>`;
-    return innerWidth >= 1000 ? `<div class="prow"><div>${html}</div>${portPieCard('pp_' + k, n, portRoot(ports))}</div>` : html;
+    return html;
   }).join('');
   const opt = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addPort && S.pe == null ? `<div class="card"><h2>Nuovo portafoglio</h2><label class="lbl">Account<select id="pnacc">${opt}</select></label><label class="lbl">Nome (es. Directa)<input id="pnnm" maxlength="40" placeholder="Nome del portafoglio"></label><div class="acts"><button class="b" data-act="pmnew">Crea portafoglio</button><button class="b s" data-act="paddc">Annulla</button></div></div>` : '';
   const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button><button class="b s" data-act="tradeo" data-v="buy">Compra</button><button class="b s" data-act="tradeo" data-v="sell">Vendi</button>${innerWidth >= 1000 ? `<button class="b s" data-act="rfs">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : ''}</div>` : ''}</div>`;
-  return `<div class="con">${accBar(fa)}${head}${form}${S.pe == null ? tradeForm(allPorts) : ''}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && allPorts.length ? `<div class="prow one">${portPieCard('pp_all', 'Portafoglio aggregato', portRoot(allPorts))}</div>` : ''}</div>`;
+  return `<div class="con">${accBar(fa)}${head}${form}${S.pe == null ? tradeForm(allPorts) : ''}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && allPorts.length > 1 ? `<div class="prow one">${portPieCard('pp_all', 'Portafoglio aggregato', portRoot(allPorts))}</div>` : ''}</div>`;
 }
 
 /* ---------- Telefono: modifica dei prodotti di un portafoglio ---------- */
