@@ -248,7 +248,7 @@ function pageMob0() {
   const head = `<div class="card"><div class="lbl bd">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}${rfsBtn()}</div>${dsub}</div>${accChips()}`;
   if (!D.voci.length) return head + '<div class="card">Nessuna voce da mostrare. Le voci si aggiungono dalla versione per computer.</div>';
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null, r1 = 380;
-  const allF = perFiltra(all);
+  const allF = perFiltraA(all);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const c = { all, allF, hv, r1, t, vis, Dz, single, cur, prev };
   const lst = homeList().filter(k => !HOME_BLK[k].pc), hasPer = !!all.length;
@@ -538,7 +538,7 @@ function pagePan0() {
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
   const pr = disParts(Dz, single, !all.length);
   S.anim = false; S.tanim = false;
-  const allF = perFiltra(all);
+  const allF = perFiltraA(all);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const kpis = `<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>`;
   if (!all.length) {
@@ -560,7 +560,11 @@ const hmStyle = i => `left:calc((100% + 14px) * ${i.c} / 12);width:calc((100% + 
 /* ---------- Home modificabile: riquadri, ordine e pannello di scelta ---------- */
 function homeBlk(k, c) {
   const has = c.all.length > 0;
-  if (k === 'and') return has ? (c.hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, c.r1, c.cols)}</div>` : hubGrid(c.all, c.allF)) : '';
+  if (k === 'and') {
+    if (!has) return '';
+    const r = innerWidth < 1000 ? c.r1 : c.r1 - 44;
+    return `<div class="hubw">${perBarA()}${c.hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, r, c.cols)}</div>` : hubGrid(c.all, c.allF)}</div>`;
+  }
   if (k === 'col') return colCard(c.t, c.vis);
   if (k === 'ind') return has && c.D ? indicatori(c.D, c.all) : '';
   if (k === 'val') return valoriCard(c.vis);

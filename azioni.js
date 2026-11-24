@@ -206,6 +206,7 @@ async function act(el) {
       return homeSalva(homeStr(raw));
     }
     if (a === 'hper') { S.hper = v; return render(); }
+    if (a === 'hperA') { S.hperA = v; return render(); }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
     if (a === 'hclose') { S.hq = null; S.hanim = 'out'; return render(); }
     if (a === 'qopen') { S.qd = v; S.panim = 'in'; return render(); }

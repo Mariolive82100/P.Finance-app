@@ -87,7 +87,7 @@ function fsOverlay() {
   const s = CHS[S.fs]; if (!s) return '';
   const id = S.fs + 'F';
   lcInit(id, S.fs, s.pts, s.series, Math.max(320, innerWidth - 24), Math.max(200, innerHeight - 150));
-  const per = S.fs === 'dx' ? `<span class="chb">${PERS.map(([v, l]) => `<button class="b sm ${(S.hper || 'all') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</span>` : '';
+  const per = S.fs === 'dx' ? `<span class="chb">${PERS.map(([v, l]) => `<button class="b sm ${(S.hper || 'mc') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</span>` : '';
   return `<div class="fs"><div class="chh"><h2>${esc(s.title)}</h2>${per}<button class="b sm" data-act="fs" data-v="">✕ Chiudi</button></div>${lcLegend(s.series)}${lcBlock(id)}${lcZoomBar(S.fs)}</div>`;
 }
 function lcRepaint(key) { document.querySelectorAll('.lcw[data-k="' + key + '"]').forEach(w => { if (CH[w.dataset.ch]) w.innerHTML = lcSvg(w.dataset.ch); }); }
@@ -260,14 +260,14 @@ function mnBars(sers) {
 }
 /* Filtri di periodo: stanno sopra il riquadro "Andamento del patrimonio" */
 function perBar() {
-  return `<div class="perbar">${PERS.map(([v, l]) => `<button class="b ${(S.hper || 'all') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</div>`;
+  return `<div class="perbar">${PERS.map(([v, l]) => `<button class="b ${(S.hper || 'mc') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</div>`;
 }
 function hubGrid(all0, all) {
   const ok = all.length >= 2, agK = k => ok ? aggSeries(all, aggOf(k, all)) : null;
   const ag = agK('main'), agB = agK('bar'), agP = agK('pas'), d = all0.length >= 2 ? cmpData(all0, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
   const last = ok ? all[all.length - 1] : null, dl = ok ? last.netto - all[all.length - 2].netto : 0;
   const cell = (k, svg, val) => `<div class="qc" data-act="hopen" data-v="${k}"><div class="qh"><b>${HUB[k]}</b>${val || ''}</div><div class="qs">${svg ? mnSvg(svg) : `<p class="note" style="margin:8px 0 0">${ok ? 'Servono più mesi di storico.' : 'Servono almeno 2 mesi di dati.'}</p>`}</div></div>`;
-  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamento del patrimonio</h2></div><div class="qg">
+  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamenti e confronti</h2></div><div class="qg">
     ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
     ${cell('bar', ok && mnBars([{ v: agB.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
     ${cell('pas', ok && mnLines([{ v: agP.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
@@ -275,16 +275,21 @@ function hubGrid(all0, all) {
 }
 /* Periodi per i delta: mese corrente, 30 giorni, anno in corso, 12 mesi, da sempre */
 const PERS = [['mc', 'Mese corrente'], ['30', '30 giorni'], ['ytd', 'Anno in corso'], ['12', 'Ultimi 12 mesi'], ['all', 'Da sempre']];
-function perFiltra(all) {
-  const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
+function perFiltra(all, hper) {
+  const hp = hper || S.hper || 'mc', yk = monthKey().slice(0, 4);
   let r = hp === 'mc' ? all.slice(-2) : hp === '30' ? all.slice(-3) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
   if (r.length < 2) r = all.slice(-2);
   return r;
 }
+/* Periodo proprio del riquadro Andamenti e confronti (indipendente dai filtri in cima) */
+const perFiltraA = all => perFiltra(all, S.hperA || 'all');
+function perBarA() {
+  return `<div class="perbar perbarA">${PERS.map(([v, l]) => `<button class="b ${(S.hperA || 'all') === v ? '' : 's'}" data-act="hperA" data-v="${v}">${l}</button>`).join('')}</div>`;
+}
 /* Valori di partenza del periodo scelto: { a: valori di partenza, lab: testo } oppure null se manca lo storico */
 function perBase(hist) {
   if (!hist || hist.length < 2) return null;
-  const hp = S.hper || 'all', mk = monthKey();
+  const hp = S.hper || 'mc', mk = monthKey();
   if (hp === 'mc') { const p = hist.filter(s => s.mese < mk).pop(); return p ? { a: p, lab: 'su ' + monthName(p.mese) } : null; }
   if (hp === '30') {
     /* lo storico è mensile: il valore di 30 giorni fa è una stima tra due fine mese */
@@ -327,7 +332,7 @@ function colCard(t, vis) {
   if (A <= 0 && P <= 0) return `<div class="card colc">${head}<p class="note">Nessuna voce da mostrare.</p></div>`;
   const top = Math.max(A, pp + np, 1), H = 230, T0 = 14, sc = H / (top + nn), y0 = T0 + top * sc, pc = v => A > 0 ? (v / A * 100).toFixed(1).replace('.', ',') + '%' : '';
   const T = (x, y, sz, w, c, tx) => `<text x="${x}" y="${y.toFixed(1)}" text-anchor="middle" font-size="${sz}" font-weight="${w}" fill="${c}">${esc(tx)}</text>`;
-  const bar = (x, yt, h, col, name, v) => { if (h <= 0) return ''; let o = `<rect x="${x}" y="${yt.toFixed(1)}" width="100" height="${h.toFixed(1)}" fill="${col}" data-tip="${esc(name + ' · ' + eur(v) + (A > 0 ? ' · ' + pc(v) + ' degli attivi' : ''))}"/>`; if (h >= 22) o += T(x + 50, yt + h / 2 + (h >= 40 ? -2 : 4), 13, 700, '#fff', eur0(v)); if (h >= 40 && A > 0) o += T(x + 50, yt + h / 2 + 14, 11, 400, '#fff', pc(v)); return o; };
+  const bar = (x, yt, h, col, name, v) => { if (h <= 0) return ''; let o = '<g class="sk">' + `<rect x="${x}" y="${yt.toFixed(1)}" width="100" height="${h.toFixed(1)}" fill="${col}" data-tip="${esc(name + ' · ' + eur(v) + (A > 0 ? ' · ' + pc(v) + ' degli attivi' : ''))}"/>`; if (h >= 22) o += T(x + 50, yt + h / 2 + (h >= 40 ? -2 : 4), 13, 700, '#fff', eur0(v)); if (h >= 40 && A > 0) o += T(x + 50, yt + h / 2 + 14, 11, 400, '#fff', pc(v)); return o + '</g>'; };
   let o = `<line x1="10" x2="290" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#9db3af" stroke-width="1.2"/>`;
   const PA = ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#115e59', '#0e7490', '#22d3ee', '#65a30d'], cm = {};
   (vis || []).filter(v => v.tipo === 'attivo').forEach(v => { const k = v.categoria || 'Altro'; cm[k] = (cm[k] || 0) + v.valore; });

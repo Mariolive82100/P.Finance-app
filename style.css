@@ -381,3 +381,13 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 
 .vcard .dq .dv{font-size:24px}.vcard .dq .dp{font-size:16px}.mob .vcard .dq .dv{font-size:17px}.mob .vcard .dq .dp{font-size:13px}
 .g12.pfrow{margin-bottom:0}
+
+/* Andamenti e confronti: filtri propri sopra il grafico */
+.hubw{display:flex;flex-direction:column;min-height:0}
+.hf>.hubw{height:100%}.hf>.hubw>.hubc,.hf>.hubw>.card{flex:1;min-height:0;height:auto!important}
+.hubw>.hubc{height:auto}
+.perbarA{margin:0 0 8px;gap:6px}.perbarA .b{padding:5px 11px;font-size:12px}
+.hf>.hubw>.hubc{display:flex;flex-direction:column}.hf>.hubw>.hubc>.card{flex:1;min-height:0;height:auto!important}
+/* Attivi, passivi e netto: il segmento sotto il mouse resta pieno, gli altri sbiadiscono */
+.colc .sk{transition:opacity .15s;cursor:pointer}
+.colc:has(.sk:hover) .sk:not(:hover){opacity:.3}
