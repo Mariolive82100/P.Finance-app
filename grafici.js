@@ -280,7 +280,7 @@ function hubGrid(all0, all, per) {
 const PERS = [['mc', 'Mese corrente'], ['30', '30 giorni'], ['ytd', 'Anno in corso'], ['12', 'Ultimi 12 mesi'], ['all', 'Da sempre']];
 function perFiltra(all, hper) {
   const hp = hper || S.hper || 'mc', yk = monthKey().slice(0, 4);
-  let r = hp === 'mc' ? all.slice(-2) : hp === '30' ? all.slice(-3) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
+  let r = hp === 'mc' ? all.slice(-2) : hp === '30' ? all.slice(-3) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk || s === all.filter(x => x.mese < yk + '-01').pop()) : all;
   if (r.length < 2) r = all.slice(-2);
   return r;
 }
