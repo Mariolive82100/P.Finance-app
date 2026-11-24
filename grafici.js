@@ -444,7 +444,7 @@ function indicatori(D, st) {
 }
 
 function pageRep() {
-  const D = S.data, st = D.storico;
+  const D = aggD(), st = D.storico;
   if (!st.length) return '<div class="card">Nessun dato disponibile. Inserisci almeno una voce nella pagina Patrimonio.</div>';
   if (innerWidth >= 1000) return pdfCard();
   const cur = st[st.length - 1], prev = st.length > 1 ? st[st.length - 2] : null;

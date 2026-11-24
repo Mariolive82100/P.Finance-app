@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.59';
+const VER = '1.60';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -45,6 +45,24 @@ const totals = voci => {
 };
 /* Attivi divisi in: Liquidità, Portafoglio (categoria Investimenti), Beni (Immobili, Beni, Altro) */
 const catTot = voci => { const at = voci.filter(v => v.tipo === 'attivo'), s = f => at.filter(f).reduce((a, v) => a + v.valore, 0); return { liq: s(v => v.categoria === 'Liquidità'), port: s(v => v.categoria === 'Investimenti'), beni: s(v => v.categoria !== 'Liquidità' && v.categoria !== 'Investimenti') }; };
+/* Account esclusi dall'aggregato: elenco di chiavi ('main' = account principale) salvato nel profilo */
+const isEsc = k => !!(S.data && S.data.esclusi && S.data.esclusi.includes(k));
+const inSc = (v, fa) => fa === 'all' ? !isEsc(v.account || 'main') : (v.account || 'main') === fa;
+const inScK = (k, fa) => fa === 'all' ? !isEsc(k) : k === fa;
+const aggVoci = D => D.voci.filter(v => !isEsc(v.account || 'main'));
+const aggD = () => ({ ...S.data, voci: aggVoci(S.data) });
+/* Storico di un singolo account: mesi per cui esistono i suoi totali */
+function histOf(D, key) {
+  const m = new Map();
+  [...D.storico, ...(D.accOnly || [])].forEach(s => { const a = s.acc && s.acc[key]; if (a && typeof a.netto === 'number') m.set(s.mese, { mese: s.mese, ...a }); });
+  return [...m.values()].sort((x, y) => x.mese.localeCompare(y.mese));
+}
+/* Totali per account (salvati ogni mese nello storico) */
+function totAcc(D) {
+  const o = {}, keys = new Set(D.voci.map(v => v.account || 'main'));
+  keys.forEach(k => { const vs = D.voci.filter(v => (v.account || 'main') === k); o[k] = { ...totals(vs), ...catTot(vs) }; });
+  return o;
+}
 const cls = v => v >= 0 ? 'pos' : 'neg';
 const pnum = s => parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
 const r2 = v => Math.round(v * 100) / 100;
@@ -203,21 +221,25 @@ async function loadData(uid, nome) {
   voci.forEach(applyPiano);
   const arch = voci.filter(v => v.archiviata);
   for (let i = voci.length - 1; i >= 0; i--) if (voci[i].archiviata) voci.splice(i, 1);
-  const storico = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
-  S.data = { uid, nome, voci, arch, storico, accounts };
+  const stAll = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
+  /* mesi con soli totali di un account (importati per account) non fanno parte dello storico aggregato */
+  const storico = stAll.filter(x => typeof x.netto === 'number'), accOnly = stAll.filter(x => typeof x.netto !== 'number' && x.acc);
+  let esclusi = [];
+  try { const ps = await getDoc(doc(db, 'users', uid)); const e = ps.exists() ? ps.data().esclusi : null; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); } catch (e) {}
+  S.data = { uid, nome, voci, arch, storico, accOnly, accounts, esclusi };
   await syncStorico();
 }
 
 async function syncStorico() {
   const D = S.data;
   if (!D || S.ro || S.demo) return;
-  const t = { ...totals(D.voci), ...catTot(D.voci) };
+  const inc = aggVoci(D), t = { ...totals(inc), ...catTot(inc) }, acc = totAcc(D);
   const mk = monthKey();
   const cur = D.storico.find(x => x.mese === mk);
   if (!D.voci.length && !cur) return;
-  if (cur && cur.attivi === t.attivi && cur.passivi === t.passivi && cur.liq === t.liq && cur.port === t.port && cur.beni === t.beni) return;
-  await setDoc(doc(db, 'users', D.uid, 'storico', mk), { ...t, aggiornato: serverTimestamp() });
-  if (cur) Object.assign(cur, t); else { D.storico.push({ mese: mk, ...t }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
+  if (cur && cur.attivi === t.attivi && cur.passivi === t.passivi && cur.liq === t.liq && cur.port === t.port && cur.beni === t.beni && JSON.stringify(cur.acc || null) === JSON.stringify(acc)) return;
+  await setDoc(doc(db, 'users', D.uid, 'storico', mk), { ...t, acc, aggiornato: serverTimestamp() });
+  if (cur) Object.assign(cur, t, { acc }); else { D.storico.push({ mese: mk, ...t, acc }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
 }
 
 async function loadUsers() {
@@ -257,6 +279,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.60','24 nov 2026',['Account escludibili dall\'aggregato: toccando un account (anche il principale) compare il tasto « Escludi dall\'aggregato »; l\'account escluso resta consultabile da solo ma non entra in totali, grafici, albero, report e storico aggregato','Lo storico mensile salva anche i totali di ogni account; in Importazioni lo storico CSV si può caricare per un singolo account, e nella vista del singolo account compare il suo storico mese per mese']],
   ['1.59','24 nov 2026',['Home: quando è selezionato un account compare il tasto « Aggregato » per tornare al patrimonio totale; toccando di nuovo lo stesso account si torna all\'aggregato']],
   ['1.58','24 nov 2026',['Variazioni assolute: accanto al titolo la variazione del patrimonio netto nel periodo scelto (stesso filtro di Andamento del patrimonio)','Toccando il riquadro si apre un unico grafico con Liquidità, Portafoglio, Beni e Passivi, con il filtro per periodo']],
   ['1.57','24 nov 2026',['Schermata iniziale: tasto Installa l\'app (con istruzioni per iPhone) prima dell\'accesso; animazione di apertura con l\'euro che si ingrandisce e poi la P di P.Finance']],

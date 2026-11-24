@@ -62,6 +62,12 @@ async function act(el) {
     if (a === 'cndrim') { try { localStorage.setItem('pf_visti', JSON.stringify(lsJ('pf_visti', []).filter(x => x.uid !== v))); } catch (e) {} return render(); }
     if (a === 'cndvedi') { const x = lsJ('pf_visti', []).find(y => y.uid === v); if (x) return vediDi(x.uid, x.nome); return; }
     if (a === 'tornaMio') return tornaMio();
+    if (a === 'escl') {
+      const D = S.data; if (S.ro || S.demo || !D) return;
+      const nv = isEsc(v) ? D.esclusi.filter(x => x !== v) : [...D.esclusi, v];
+      await updateDoc(doc(db, 'users', D.uid), { esclusi: nv }); D.esclusi = nv; if (S.profile) S.profile.esclusi = nv;
+      await syncStorico(); S.msg = isEsc(v) ? 'Account fuori dall\'aggregato.' : 'Account incluso nell\'aggregato.'; return render();
+    }
     if (a === 'imp') { S.tab = 'imp'; S.menu = false; S.imp = null; S.impErr = null; window.scrollTo(0, 0); return render(); }
     if (a === 'impcl') { if (S.imp && S.imp.righe[+v]) S.imp.righe[+v].classe = el.value; return; }
     if (a === 'impno') { S.imp = null; S.impErr = null; return render(); }
@@ -248,6 +254,7 @@ async function act(el) {
       if (D.voci.some(x => x.account === v)) { S.msg = 'Prima sposta o elimina le voci di questo account.'; return render(); }
       if (!confirm('Eliminare questo account?')) return;
       await deleteDoc(doc(db, 'users', D.uid, 'account', v)); D.accounts = D.accounts.filter(x => x.id !== v);
+      if (isEsc(v)) { D.esclusi = D.esclusi.filter(x => x !== v); try { await updateDoc(doc(db, 'users', D.uid), { esclusi: D.esclusi }); } catch (e) {} }
       if (S.fAcc === v) S.fAcc = 'all'; return render();
     }
     if (a === 'range') { S.range = el.value; return render(); }
@@ -281,7 +288,7 @@ async function act(el) {
       if (mm >= monthKey()) { S.msg = 'Puoi inserire solo mesi passati: il mese in corso si aggiorna da solo.'; return render(); }
       if (!isFinite(at) || !isFinite(pa) || at < 0 || pa < 0) { S.msg = 'Inserisci attivi e passivi validi (zero o più).'; return render(); }
       const dati = { attivi: r2(at), passivi: r2(pa), netto: r2(at - pa) };
-      await setDoc(doc(db, 'users', D.uid, 'storico', mm), { ...dati, manuale: true, aggiornato: serverTimestamp() });
+      await setDoc(doc(db, 'users', D.uid, 'storico', mm), { ...dati, manuale: true, aggiornato: serverTimestamp() }, { merge: true });
       const ex = D.storico.find(x => x.mese === mm);
       if (ex) Object.assign(ex, dati, { manuale: true }); else { D.storico.push({ mese: mm, ...dati, manuale: true }); D.storico.sort((x, y) => x.mese.localeCompare(y.mese)); }
       S.editM = null; S.draft = null; S.msg = 'Mese salvato.'; render(); const fm = $('formm'); return fm && fm.scrollIntoView({ block: 'center' });
@@ -443,7 +450,7 @@ async function act(el) {
     }
     if (a === 'pdfmake') {
       S.pdfBusy = true; S.pdf = null; render(); await new Promise(r => setTimeout(r, 40));
-      try { await caricaPdfLib(); S.pdf = await creaPdf(S.data, !!S.pdfHide); } finally { S.pdfBusy = false; }
+      try { await caricaPdfLib(); S.pdf = await creaPdf(aggD(), !!S.pdfHide); } finally { S.pdfBusy = false; }
       return render();
     }
     if (a === 'pdfsave') {
@@ -640,7 +647,7 @@ function meseDaTesto(t) {
   return null;
 }
 function storicoProposta(txt) {
-  const D = S.data, R = csvRighe(txt), mk = monthKey();
+  const D = S.data, R = csvRighe(txt), mk = monthKey(), ak = S.impAccS && S.impAccS !== 'all' ? S.impAccS : '';
   const hi = R.findIndex(r => r.some(c => /^data$/.test(sanif(c))) && r.some(c => /^liquid/.test(sanif(c))));
   if (hi < 0) throw new Error('Non trovo le colonne Data, Liquidità, Investimenti, Beni, Passivi. Hai scelto il file giusto?');
   const H = R[hi].map(sanif), iD = H.indexOf('data'), iL = H.findIndex(h => /^liquid/.test(h)), iI = H.findIndex(h => /^(investiment|portafogli)/.test(h)), iB = H.findIndex(h => /^beni/.test(h)), iP = H.findIndex(h => /^passiv/.test(h));
@@ -652,26 +659,34 @@ function storicoProposta(txt) {
     if (![liq, port, beni, pas].every(isFinite)) continue;
     const attivi = liq + port + beni, passivi = Math.abs(pas);
     if (attivi === 0 && passivi === 0) continue;
-    const ex = D.storico.find(x => x.mese === mese);
-    if (mese >= mk || (ex && !ex.manuale)) { skip++; continue; }
+    const ex = ak ? [...D.storico, ...(D.accOnly || [])].find(x => x.mese === mese && x.acc && x.acc[ak]) : D.storico.find(x => x.mese === mese);
+    if (mese >= mk || (ex && !(ak ? ex.acc[ak].manuale : ex.manuale))) { skip++; continue; }
     if (mesi.some(x => x.mese === mese)) continue;
     mesi.push({ mese, attivi: r2(attivi), passivi: r2(passivi), netto: r2(attivi - passivi), liq: r2(Math.max(liq, 0)), port: r2(Math.max(port, 0)), beni: r2(Math.max(beni, 0)) });
     if (ex) agg++; else nuovi++;
   }
   if (!mesi.length) throw new Error('Nessun mese da importare' + (skip ? ' (quelli nel file sono il mese in corso o già registrati dall\'app).' : ': non trovo righe con data e importi.'));
   mesi.sort((x, y) => x.mese.localeCompare(y.mese));
-  return { kind: 'sto', mesi, nuovi, agg, skip };
+  return { kind: 'sto', mesi, nuovi, agg, skip, acc: ak };
 }
 async function impStoricoApplica() {
   const D = S.data, P = S.imp; if (!P || P.kind !== 'sto') return;
   try {
     for (const m of P.mesi) {
       const { mese, ...dati } = m;
-      await setDoc(doc(db, 'users', D.uid, 'storico', mese), { ...dati, manuale: true, aggiornato: serverTimestamp() });
+      if (P.acc) {
+        /* solo i totali dell'account scelto: l'aggregato non cambia */
+        await setDoc(doc(db, 'users', D.uid, 'storico', mese), { acc: { [P.acc]: { ...dati, manuale: true } }, aggiornato: serverTimestamp() }, { merge: true });
+        let ex = D.storico.find(x => x.mese === mese) || (D.accOnly = D.accOnly || []).find(x => x.mese === mese);
+        if (!ex) { ex = { mese, acc: {} }; D.accOnly.push(ex); }
+        ex.acc = { ...(ex.acc || {}), [P.acc]: { ...dati, manuale: true } };
+        continue;
+      }
+      await setDoc(doc(db, 'users', D.uid, 'storico', mese), { ...dati, manuale: true, aggiornato: serverTimestamp() }, { merge: true });
       const ex = D.storico.find(x => x.mese === mese); if (ex) Object.assign(ex, dati, { manuale: true }); else D.storico.push({ mese, ...dati, manuale: true });
     }
     D.storico.sort((x, y) => x.mese.localeCompare(y.mese));
-    S.msg = `Storico importato: ${P.mesi.length} mesi.`; S.imp = null; S.impErr = null; render();
+    S.msg = `Storico importato: ${P.mesi.length} mesi` + (P.acc ? ' (solo per l\'account scelto).' : '.'); S.imp = null; S.impErr = null; render();
   } catch (e) { S.msg = 'Importazione non riuscita' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + errText(e)); render(); }
 }
 const CLASSE_NOTA = { SGLD: 'Oro e materie prime', BITC: 'Criptovalute', BTCE: 'Criptovalute', ZBTC: 'Criptovalute' };
@@ -723,7 +738,7 @@ async function impPortApplica() {
 }
 document.addEventListener('change', async e => {
   const id = e.target.id; if ((id !== 'imps' && id !== 'impp') || !e.target.files[0] || !S.data) return;
-  if ($('impn')) S.impNome = $('impn').value; if ($('impa')) S.impAcc = $('impa').value;
+  if ($('impn')) S.impNome = $('impn').value; if ($('impa')) S.impAcc = $('impa').value; if ($('impsa')) S.impAccS = $('impsa').value;
   const k = id === 'imps' ? 'sto' : 'port';
   try { const txt = await leggiFile(e.target.files[0]); S.imp = k === 'sto' ? storicoProposta(txt) : portafoglioProposta(txt); S.impErr = null; }
   catch (x) { S.imp = null; S.impErr = [k, x.message || 'File non valido.']; }
@@ -751,7 +766,7 @@ document.addEventListener('change', async e => {
       const dati = { attivi: r2(at), passivi: r2(pa), netto: r2(at - pa) };
       /* colonne facoltative 4-6: liquidità, portafoglio, beni */
       [['liq', 3], ['port', 4], ['beni', 5]].forEach(([k, j]) => { const x = p[j] !== undefined && p[j] !== '' ? Number(p[j].replace(',', '.')) : NaN; if (isFinite(x) && x >= 0) dati[k] = r2(x); });
-      await setDoc(doc(db, 'users', D.uid, 'storico', p[0]), { ...dati, manuale: true, aggiornato: serverTimestamp() });
+      await setDoc(doc(db, 'users', D.uid, 'storico', p[0]), { ...dati, manuale: true, aggiornato: serverTimestamp() }, { merge: true });
       if (ex) Object.assign(ex, dati, { manuale: true }); else D.storico.push({ mese: p[0], ...dati, manuale: true });
       ok++;
     }

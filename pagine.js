@@ -45,7 +45,7 @@ function navWide(IC, pend, D) {
   const fa = S.fAcc || 'all', pan = S.tab === 'pan', pa = pan || S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' || S.tab === 'ben' || S.tab === 'pas', open = S.accOpen || (pa && fa !== 'all');
   const sv = d => `<svg viewBox="0 0 24 24">${d}</svg>`;
   const ICX = { acc: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.8-6 6-6s6 2.5 6 6"/><path d="M16 5a3 3 0 0 1 0 6M18 14c2 .7 3 2.5 3 5"/>', inf: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', ter: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>', adm: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>', con: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="7" cy="6" r=".6"/><circle cx="7" cy="12" r=".6"/><circle cx="7" cy="18" r=".6"/>', alb: '<circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 12h4c3 0 4-6 6-6M11 12c3 0 4 6 6 6"/>' };
-  const row = (k, n, ed) => `<div class="nr"><button data-act="accsel" data-v="${esc(k)}" class="${pa && fa === k ? 'on' : ''}">${esc(n)}</button>${ed ? `<span class="nic" data-act="rena" data-v="${k}" title="Rinomina">✎</span><span class="nic" data-act="dela" data-v="${k}" title="Elimina">✕</span>` : ''}</div>`;
+  const row = (k, n, ed) => `<div class="nr"><button data-act="accsel" data-v="${esc(k)}" class="${pa && fa === k ? 'on' : ''}">${esc(n)}${k !== 'all' && isEsc(k) ? ' <small>(fuori)</small>' : ''}</button>${ed ? `<span class="nic" data-act="rena" data-v="${k}" title="Rinomina">✎</span><span class="nic" data-act="dela" data-v="${k}" title="Elimina">✕</span>` : ''}</div>`;
   const add = S.addAcc ? `<div class="nadd"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<button class="nplus" data-act="addo">＋ Aggiungi account</button>`;
   const sub = open ? `<div class="nsub">${row('all', 'Aggregato')}${row('main', D.nome)}${D.accounts.map(a => row(a.id, a.nome, true)).join('')}${add}</div>` : '';
   const it = (act, v, ic, l, on, extra) => `<button data-act="${act}"${v ? ` data-v="${v}"` : ''} class="${on ? 'on' : ''}">${sv(ic)}${l}${extra || ''}</button>`;
@@ -91,7 +91,7 @@ const accName = v => { const D = S.data; if (!v.account) return D.nome; const a 
 function pagePat() {
   if (innerWidth < 1000) return pageMob();
   const D = S.data, fa = S.fAcc || 'all', ed = S.edit && D.voci.find(v => v.id === S.edit);
-  const vis = vz(D.voci).filter(v => fa === 'all' || accKey(v) === fa), t = totals(vis);
+  const vis = vz(D.voci).filter(v => inSc(v, fa)), t = totals(vis);
   const g = (id, d) => (S.fd && S.fd[id] !== undefined) ? S.fd[id] : d;
   const tipo = g('ft', ed ? ed.tipo : 'attivo');
   const mod = tipo === 'passivo' ? g('fm', ed ? (ed.piano ? 'piano' : 'manuale') : 'piano') : 'manuale';
@@ -180,9 +180,10 @@ function pageImp() {
   const D = S.data, I = S.imp, CSVACC = '.csv,.txt,text/csv,text/plain,application/csv,application/vnd.ms-excel';
   const accs = [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
   /* storico */
-  let st = `<div class="lbl">Carica il file CSV dello storico: servono le colonne Data (es. dic 23), Liquidità, Investimenti, Beni e Passivi. Le righe vuote in cima non danno problemi.</div><input id="imps" type="file" accept="${CSVACC}">`;
+  const selS = `<label class="lbl">Importa lo storico per</label><select id="impsa"><option value="all" ${(S.impAccS || 'all') === 'all' ? 'selected' : ''}>Aggregato (totale degli account inclusi)</option>${accs.map(([k, n]) => `<option value="${esc(k)}" ${S.impAccS === k ? 'selected' : ''}>${esc(n)}${isEsc(k) ? ' (fuori dall\'aggregato)' : ''}</option>`).join('')}</select>`;
+  let st = selS + `<div class="lbl">Carica il file CSV dello storico: servono le colonne Data (es. dic 23), Liquidità, Investimenti, Beni e Passivi. Le righe vuote in cima non danno problemi.</div><input id="imps" type="file" accept="${CSVACC}">`;
   if (I && I.kind === 'sto') st = `<div class="lbl" style="margin-bottom:6px">Anteprima: ${I.mesi.length} mesi da ${meseIt(I.mesi[0].mese)} a ${meseIt(I.mesi[I.mesi.length - 1].mese)}</div>
-    <div class="row"><div class="n">Nuovi mesi</div><div class="v">${I.nuovi}</div></div><div class="row"><div class="n">Mesi già inseriti a mano (verranno aggiornati)</div><div class="v">${I.agg}</div></div>${I.skip ? `<div class="row"><div class="n">Saltati<small>mese in corso o già registrato dall'app</small></div><div class="v">${I.skip}</div></div>` : ''}
+    ${I.acc ? `<div class="lbl" style="margin-bottom:6px">Solo per l'account scelto: il totale aggregato non cambia.</div>` : ''}<div class="row"><div class="n">Nuovi mesi</div><div class="v">${I.nuovi}</div></div><div class="row"><div class="n">Mesi già inseriti a mano (verranno aggiornati)</div><div class="v">${I.agg}</div></div>${I.skip ? `<div class="row"><div class="n">Saltati<small>mese in corso o già registrato dall'app</small></div><div class="v">${I.skip}</div></div>` : ''}
     <div class="acts"><button class="b" data-act="impsok">Conferma</button><button class="b s" data-act="impno">Annulla</button></div>`;
   /* portafoglio */
   let po;
@@ -229,8 +230,8 @@ const updTxt = () => { const q = S.prezzi && S.prezzi.quando ? S.prezzi.quando :
 const rfsBtn = () => `<button class="eye${S.prezziBusy ? ' spin' : ''}" data-act="rfs" aria-label="Aggiorna" title="Aggiorna prezzi e dati"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v4.5h-4.5"/></svg></button><span class="upd" title="${esc(prezziStato())}">${S.prezziBusy ? 'Aggiorno…' : updTxt()}</span>`;
 function accChips() {
   const D = S.data, fa = S.fAcc || 'all', wide = innerWidth >= 1000, ac = wide ? 'accsel' : 'facc', V = vz(D.voci);
-  const net = k => totals(V.filter(v => k === 'all' || accKey(v) === k)).netto;
-  const box = (k, n, ed) => `<div class="acard${fa === k ? ' on' : ''}" data-act="${ac}" data-v="${esc(k)}"${k !== 'all' ? ` style="--at:${accTint(k)}"` : ''}><div class="lbl bd">${esc(n)}</div><div class="av ${cls(net(k))}">${eur(net(k))}</div>${ed && fa === k ? `<span class="chpe"><button class="ic" data-act="rena" data-v="${k}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${k}" aria-label="Elimina account">✕</button></span>` : ''}</div>`;
+  const net = k => totals(V.filter(v => inSc(v, k))).netto;
+  const box = (k, n, ed) => `<div class="acard${fa === k ? ' on' : ''}" data-act="${ac}" data-v="${esc(k)}"${k !== 'all' ? ` style="--at:${accTint(k)}"` : ''}><div class="lbl bd">${esc(n)}</div><div class="av ${cls(net(k))}">${eur(net(k))}</div>${k !== 'all' && isEsc(k) ? '<div class="lbl exc">fuori dall\'aggregato</div>' : ''}${k !== 'all' && fa === k && !S.ro ? `<button class="b s sm exb" data-act="escl" data-v="${esc(k)}">${isEsc(k) ? 'Includi nell\'aggregato' : 'Escludi dall\'aggregato'}</button>` : ''}${ed && fa === k ? `<span class="chpe"><button class="ic" data-act="rena" data-v="${k}" aria-label="Rinomina">✎</button><button class="ic" data-act="dela" data-v="${k}" aria-label="Elimina account">✕</button></span>` : ''}</div>`;
   const add = S.addAcc ? `<div class="acard add"><input id="an" maxlength="30" placeholder="Nome (es. Anna)"><div class="acts"><button class="b sm" data-act="adda">Aggiungi</button><button class="b s sm" data-act="addc">Annulla</button></div></div>` : `<div class="acard plus" data-act="addo" role="button" aria-label="Aggiungi account" title="Aggiungi account">+</div>`;
   const back = fa !== 'all' ? `<div class="acard back" data-act="${ac}" data-v="all" role="button">← Aggregato</div>` : '';
   return `<div class="accs">${back}${box('main', D.nome)}${D.accounts.map(a => box(a.id, a.nome, true)).join('')}${add}</div>`;
@@ -240,7 +241,7 @@ function accChips() {
 function pageMob() {
   const D = S.data, all = D.storico;
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
-  const single = fa !== 'all', vis = vz(D.voci).filter(v => !single || accKey(v) === fa), Dz = { ...D, voci: vis };
+  const single = fa !== 'all', vis = vz(D.voci).filter(v => inSc(v, fa)), Dz = { ...D, voci: vis };
   const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = !single && cur && prev ? cur.netto - prev.netto : null;
   const dsub = dN !== null ? `<div class="lbl dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</div>` : '';
   const head = `<div class="card"><div class="lbl bd">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}${rfsBtn()}</div>${dsub}</div>${accChips()}`;
@@ -252,7 +253,7 @@ function pageMob() {
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   let top = '';
   if (!single && all.length) top = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
-  const body = hv && !single ? '' : colCard(t, vis) + (!single && all.length ? deltaCard(vis, cur, prev, all[0], all) : '') + quadCard(Dz, single);
+  const body = hv && !single ? '' : colCard(t, vis) + (!single && all.length ? deltaCard(vis, cur, prev, all[0], all) : '') + quadCard(Dz, single) + (single ? histCard(fa) : '');
   S.hanim = false; S.panim = false; S.tcan = false;
   return `<div class="mob">${head}${top}${body}</div>`;
 }
@@ -261,16 +262,16 @@ function pageSaldi() {
   const D = S.data, wide = innerWidth >= 1000;
   let fa = wide ? (S.fAcc || 'all') : 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', aname = !single ? '' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
-  const fm = !!S.cfm, liq = D.voci.filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità' && (!single || accKey(v) === fa));
+  const fm = !!S.cfm, liq = D.voci.filter(v => v.tipo === 'attivo' && v.categoria === 'Liquidità' && inSc(v, fa));
   const tot = a => a.reduce((s, v) => s + v.valore, 0);
-  const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
+  const secs = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => {
     const mine = liq.filter(v => accKey(v) === k).sort((a, b) => dn(a).localeCompare(dn(b)));
     if (!mine.length) return '';
     const html = `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(tot(mine))}</span></div>${mine.map(v => `<div class="pblk"><div class="phd"><b class="grow">${esc(dn(v))}</b>${fm && !v.piano && !hasProd(v) ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}" style="margin:0;max-width:150px;text-align:right">` : `<span class="lbl">${eur(v.valore)}</span>`}${fm ? `<button class="b s sm r" type="button" data-act="cdel" data-v="${v.id}" aria-label="Elimina conto">✕</button>` : `<button class="b s sm" data-act="tleaf" data-v="${v.id}">Modifica</button>`}</div></div>`).join('')}</div>`;
     return wide ? `<div class="prow"><div>${html}</div>${portPieCard('sp_' + k, n, contiRoot(mine), 'per conto')}</div>` : html;
   }).join('');
   const bar = fm ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfmsave">Salva valori</button><button class="b s" data-act="cfmno">Annulla</button></div><p class="note">Con ✕ elimini un conto: per qualche secondo compare "Annulla" per tornare indietro.</p>` : `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfm">Aggiorna saldi</button><button class="b s" data-act="caddo">Aggiungi conto</button></div>`;
-  const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  const opt = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addConto && !fm ? `<div class="card"><h2>Nuovo conto di liquidità</h2><label class="lbl">Account<select id="cnacc">${opt}</select></label><label class="lbl">Nome del conto<input id="cnn" maxlength="40" placeholder="es. Conto Fineco"></label><label class="lbl">Saldo attuale €<input id="cnv" inputmode="decimal" placeholder="0"></label><div class="acts"><button class="b" data-act="caddok">Salva conto</button><button class="b s" data-act="caddc">Annulla</button></div></div>` : '';
   const out = `<div class="card"><div class="lbl bd">Liquidità totale${aname ? ' · ' + esc(aname) : ''}</div><div class="big">${eur(tot(liq))}</div>${bar}</div>${form}${secs || (S.addConto ? '' : '<div class="card">Nessun conto di liquidità. Aggiungine uno.</div>')}${wide && liq.length ? `<div class="prow one">${portPieCard('sp_all', 'Liquidità aggregata', contiRoot(liq), 'per conto')}</div>` : ''}`;
   return wide ? `<div class="con">${out}</div>` : out;
@@ -284,16 +285,16 @@ function pageVoci(kind) {
   const C = VOCI_CFG[kind], D = S.data, wide = innerWidth >= 1000;
   let fa = wide ? (S.fAcc || 'all') : 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', aname = !single ? '' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
-  const fm = !!S.cfm, lst = D.voci.filter(v => C.ev(v) && (!single || accKey(v) === fa));
+  const fm = !!S.cfm, lst = D.voci.filter(v => C.ev(v) && inSc(v, fa));
   const tot = a => a.reduce((s, v) => s + v.valore, 0);
-  const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
+  const secs = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => {
     const mine = lst.filter(v => accKey(v) === k).sort((a, b) => dn(a).localeCompare(dn(b)));
     if (!mine.length) return '';
     const html = `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(tot(mine))}</span></div>${mine.map(v => `<div class="pblk"><div class="phd"><b class="grow">${esc(dn(v))}<small class="lbl" style="display:block;font-weight:400">${esc(v.categoria || '')}${v.piano ? ' · ' + eur(piano(v).rata) + '/mese fino al ' + fmtD(v.fine) : ''}</small></b>${fm && !v.piano ? `<input class="cvi" id="cv_${v.id}" inputmode="decimal" value="${String(v.valore).replace('.', ',')}" data-id="${v.id}" style="margin:0;max-width:150px;text-align:right">` : `<span class="lbl">${eur(v.valore)}</span>`}${fm ? `<button class="b s sm r" type="button" data-act="cdel" data-v="${v.id}" aria-label="Elimina">✕</button>` : `<button class="b s sm" data-act="tleaf" data-v="${v.id}">Modifica</button>`}</div></div>`).join('')}</div>`;
     return wide ? `<div class="prow"><div>${html}</div>${portPieCard(C.pre + k, n, contiRoot(mine, C.tone), C.sub)}</div>` : html;
   }).join('');
   const bar = fm ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfmsave">Salva valori</button><button class="b s" data-act="cfmno">Annulla</button></div><p class="note">Con ✕ elimini una voce: per qualche secondo compare "Annulla" per tornare indietro.</p>` : `<div class="acts" style="margin-top:10px"><button class="b" data-act="cfm">${C.upd}</button><button class="b s" data-act="xaddo" data-v="${kind}">${C.add}</button></div>`;
-  const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  const opt = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const xm = kind === 'pas' ? (S.xmod || 'piano') : 'manuale';
   const form = S.addX === kind && !fm ? `<div class="card"><h2>${C.nuovo}</h2><label class="lbl">Account<select id="xnacc">${opt}</select></label><label class="lbl">Tipo<select id="xncat">${C.cats().map(c => `<option>${esc(c)}</option>`).join('')}</select></label><label class="lbl">Nome<input id="xnn" maxlength="40" placeholder="${C.ph}" value="${esc(S.xnn || '')}"></label>${kind === 'pas' ? `<label class="lbl">Come vuoi inserire il debito?<select id="xmod" data-act="xmod"><option value="piano" ${xm === 'piano' ? 'selected' : ''}>Nuovo debito: piano di rimborso (inizio e fine)</option><option value="incorso" ${xm === 'incorso' ? 'selected' : ''}>Debito già in corso: parte dal mese prossimo</option><option value="manuale" ${xm === 'manuale' ? 'selected' : ''}>Importo a mano</option></select></label>` : ''}${kind === 'pas' && xm === 'incorso' ? `<label class="lbl">Debito residuo oggi (€)<input id="xr" inputmode="decimal" placeholder="es. 150000"></label><label class="lbl">Data dell'ultima rata<input id="xf" type="date"></label><p class="note">I mesi già registrati non cambiano: oggi il debito vale quanto scrivi, poi scende da solo ogni mese a partire dal prossimo, fino a zero all'ultima rata.</p>` : kind === 'pas' && xm === 'piano' ? `<label class="lbl">Importo preso a prestito (€)<input id="xk" inputmode="decimal" placeholder="es. 200000"></label><label class="lbl">Data di inizio<input id="xi" type="date"></label><label class="lbl">Data di fine<input id="xf" type="date"></label><p class="note">L'app calcola la rata del solo capitale (importo diviso numero di mesi): ogni mese il debito scende da solo fino a zero all'ultima rata.</p>` : `<label class="lbl">${C.imp}<input id="xnv" inputmode="decimal" placeholder="0"></label>`}<div class="acts"><button class="b" data-act="xaddok">${C.ok}</button><button class="b s" data-act="xaddc">Annulla</button></div></div>` : '';
   const out = `<div class="card"><div class="lbl bd">${C.tot}${aname ? ' · ' + esc(aname) : ''}</div><div class="big ${C.cls}">${eur(tot(lst))}</div>${bar}</div>${form}${secs || (S.addX === kind ? '' : `<div class="card">${C.vuoto}</div>`)}${wide && lst.length ? `<div class="prow one">${portPieCard(C.pre + 'all', C.agg, contiRoot(lst, C.tone), C.sub)}</div>` : ''}`;
@@ -335,14 +336,14 @@ function pagePortMob() {
     const op = !pCol(v.id);
     return `<div class="pblk"><div class="phd"><b class="grow" data-act="pcol" data-v="${v.id}" style="cursor:pointer"><span class="chev ${op ? 'open' : ''}">▸︎</span> ${esc(v.nome)}</b><span class="lbl">${eur(v.valore)}</span><button class="b s sm" data-act="pedit" data-v="${v.id}">Modifica</button></div>${op ? (L.length ? L.map(prodMob).join('') + (cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : '') : '<div class="lbl">Nessun prodotto.</div>') : ''}</div>`;
   };
-  const allPorts = D.voci.filter(v => isPort(v) && (!single || accKey(v) === fa));
-  const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
+  const allPorts = D.voci.filter(v => isPort(v) && inSc(v, fa));
+  const secs = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => {
     const ports = allPorts.filter(v => accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
     if (!ports.length) return '';
     const html = `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2"><h2>${esc(n)}</h2><span class="lbl bd">${eur(t)}</span></div>${ports.map(block).join('')}</div>`;
     return innerWidth >= 1000 ? `<div class="prow"><div>${html}</div>${portPieCard('pp_' + k, n, portRoot(ports))}</div>` : html;
   }).join('');
-  const opt = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  const opt = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addPort && S.pe == null ? `<div class="card"><h2>Nuovo portafoglio</h2><label class="lbl">Account<select id="pnacc">${opt}</select></label><label class="lbl">Nome (es. Directa)<input id="pnnm" maxlength="40" placeholder="Nome del portafoglio"></label><div class="acts"><button class="b" data-act="pmnew">Crea portafoglio</button><button class="b s" data-act="paddc">Annulla</button></div></div>` : '';
   const head = `<div class="card"><div class="lbl bd">Totale portafogli</div><div class="big">${eur(allPorts.reduce((s, v) => s + v.valore, 0))}</div>${S.pe == null ? `<div class="acts" style="margin-top:10px"><button class="b" data-act="paddo">Aggiungi portafoglio</button><button class="b s" data-act="tradeo" data-v="buy">Compra</button><button class="b s" data-act="tradeo" data-v="sell">Vendi</button>${innerWidth >= 1000 ? `<button class="b s" data-act="rfs">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : ''}</div>` : ''}</div>`;
   return `<div class="con">${head}${form}${S.pe == null ? tradeForm(allPorts) : ''}${secs || (S.addPort ? '' : '<div class="card">Nessun portafoglio. Aggiungine uno.</div>')}${innerWidth >= 1000 && allPorts.length ? `<div class="prow one">${portPieCard('pp_all', 'Portafoglio aggregato', portRoot(allPorts))}</div>` : ''}</div>`;
@@ -412,7 +413,7 @@ function pageDis() {
 }
 function disParts(Dz0, single, noTree) {
   const D = S.data; if (!S.tx) S.tx = new Set(['r']);
-  const Dz = Dz0 || { ...D, voci: vz(D.voci) }, wide = innerWidth >= 1000, root = alberoDati(Dz, single ? 'agg' : S.tview || 'agg');
+  const Dz = Dz0 || { ...D, voci: vz(aggVoci(D)) }, wide = innerWidth >= 1000, root = alberoDati(Dz, single ? 'agg' : S.tview || 'agg');
   const found = (S.pp || ['r']).slice().reverse().map(id => alberoTrova(root, id)).find(Boolean) || alberoTrova(root, 'r');
   S.pp = found.path.map(n => n.id);
   /* l'albero è sempre tutto aperto */
@@ -444,7 +445,7 @@ function pageAlb() {
   const D = S.data;
   if (!D.voci.length) return panTop('Aggregato', 'Albero') + '<div class="card">Nessuna voce da mostrare. Aggiungile con il tasto Nuova voce.</div>';
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
-  const single = fa !== 'all', vis = vz(D.voci).filter(v => !single || accKey(v) === fa), Dz = { ...D, voci: vis };
+  const single = fa !== 'all', vis = vz(D.voci).filter(v => inSc(v, fa)), Dz = { ...D, voci: vis };
   const aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
   S.tfull = true; const pr = disParts(Dz, single); S.tfull = false;
   S.anim = false; S.tanim = false; S.tcan = false;
@@ -456,7 +457,7 @@ function pageCon() {
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
   const q = (S.cq || '').trim().toLowerCase(), fm = !!S.cfm, col = S.ccol || {}, isCol = k => fm ? false : col[k] !== undefined ? col[k] : S.ccAll !== false;
-  const flt = arr => arr.filter(v => (!single || accKey(v) === fa) && (!q || (dn(v) + ' ' + v.categoria + ' ' + (v.dove || '') + ' ' + accName(v)).toLowerCase().includes(q)))
+  const flt = arr => arr.filter(v => inSc(v, fa) && (!q || (dn(v) + ' ' + v.categoria + ' ' + (v.dove || '') + ' ' + accName(v)).toLowerCase().includes(q)))
     .sort((a, b) => dn(a).localeCompare(dn(b)));
   const GC = { n: dn, v: v => v.valore }, srt = (t, arr) => sortArr(t, arr, GC);
   const act = v => `<button class="b s sm" data-act="cedit" data-v="${v.id}">Modifica</button> <button class="b s sm" data-act="carch" data-v="${v.id}">Archivia</button> <button class="b s sm r" data-act="cdel" data-v="${v.id}">Elimina</button>`;
@@ -473,7 +474,7 @@ function pageCon() {
   const cOrd = ['Liquidità', 'Beni', ...CATS.attivo.filter(c => !['Liquidità', 'Investimenti', 'Beni'].includes(c))];
   const headT = (t, off) => `<tr>${thS(t, 'n', 'Nome', 'cn', off)}${thS(t, 'v', 'Valore', 'cv', off)}<th></th></tr>`;
   const cg = '<colgroup><col style="width:46%"><col style="width:22%"><col></colgroup>';
-  const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
+  const secs = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => {
     const mine = att.filter(v => accKey(v) === k);
     const t = totals(mine), body = cOrd.map(c => grp(k + '|' + c, c, mine.filter(v => v.tipo === 'attivo' && v.categoria === c))).join('') + grp(k + '|Passivi', 'Passivi', mine.filter(v => v.tipo === 'passivo'));
     const ac = accCol(k) && !(mine.length && S.cfm);
@@ -490,7 +491,7 @@ function pagePort() {
   const D = S.data;
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
-  const conv = portProposta(D).filter(G => !single || (G.account || 'main') === fa);
+  const conv = portProposta(D).filter(G => inScK(G.account || 'main', fa));
   const convCard = conv.length ? `<div class="card"><h2>Riunisci le voci di investimento</h2><p class="lbl" style="margin-top:0">Le voci di investimento attuali (una per conto e classe) diventano un portafoglio per conto, con un prodotto per riga. Il totale non cambia. Controlla l'anteprima e conferma.</p>${conv.map(G => `<div class="row"><div class="n">${esc(G.dove)} · ${esc(accName({ account: G.account }))}<small>${G.voci.length} ${G.voci.length === 1 ? 'voce' : 'voci'} (${esc(G.voci.map(dn).join(', '))}) → ${G.prodotti.length} prodotti${G.exId ? ' · si aggiunge al portafoglio già esistente' : ''}</small></div><div class="v">${eur(G.valore)}</div></div>`).join('')}<div class="acts"><button class="b" data-act="pconv">Riunisci nei portafogli</button></div></div>` : '';
   const stato = isAdmin() ? `<button class="b sm" data-act="prezzi">${S.prezziBusy ? 'Aggiorno…' : 'Aggiorna prezzi'}</button>` : '';
   const prodRow = p => {
@@ -513,7 +514,7 @@ function pagePort() {
     return `${viewHead(v)}
     ${L.length ? `<table class="ct"><colgroup><col style="width:22%"><col style="width:12%"><col style="width:8%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:8%"><col></colgroup><tr>${thS('prod', 'n', 'Prodotto', 'cn')}${thS('prod', 'c', 'Classe')}${thS('prod', 'q', 'Quote', 'cv')}${thS('prod', 'p', 'Prezzo', 'cv')}${thS('prod', 'm', 'Prezzo medio di carico', 'cv')}${thS('prod', 'v', 'Valore', 'cv')}${thS('prod', 'g', 'Capital gain netto', 'cv')}${thS('prod', 'a', 'Aliquota', 'cv')}${thS('prod', 'i', 'Imposte latenti', 'cv')}</tr>${sortArr('prod', L, GP).map(prodRow).join('')}</table>${cl ? `<div class="lbl" style="margin-top:6px">${cl}</div>` : ''}` : '<div class="lbl">Nessun prodotto: premi Modifica per aggiungerli.</div>'}`;
   };
-  const secs = accList(D).filter(([k]) => !single || k === fa).map(([k, n]) => {
+  const secs = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => {
     const ports = D.voci.filter(v => isPort(v) && accKey(v) === k).sort((a, b) => a.nome.localeCompare(b.nome)), t = ports.reduce((s, v) => s + v.valore, 0);
     const ac = accCol(k) && !ports.some(v => S.pe === v.id);
     return `<div class="card acc" style="--at:${accTint(k)}"><div class="ptop2" data-act="acol" data-v="${esc(k)}" style="cursor:pointer"><h2><span class="chev ${ac ? '' : 'open'}">▸︎</span> ${esc(n)}</h2><span class="lbl">${ports.length} ${ports.length === 1 ? 'portafoglio' : 'portafogli'} · ${eur(t)}</span></div>
@@ -527,7 +528,7 @@ function pagePan() {
   const D = S.data, all = D.storico;
   if (!D.voci.length) return panTop('Aggregato') + '<div class="card">Nessuna voce da mostrare. Aggiungile con il tasto Nuova voce.</div>';
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
-  const single = fa !== 'all', vis = vz(D.voci).filter(v => !single || accKey(v) === fa), Dz = { ...D, voci: vis };
+  const single = fa !== 'all', vis = vz(D.voci).filter(v => inSc(v, fa)), Dz = { ...D, voci: vis };
   const aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
   const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = !single && cur && prev ? cur.netto - prev.netto : null;
   const kp = (l, v, sub, c, extra, tail) => `<div class="card"><div class="lbl bd">${l}</div><div class="big ${c || ''}">${v}${extra || ''}</div><div class="lbl">${sub}</div>${tail || ''}</div>`;
@@ -543,9 +544,15 @@ function pagePan() {
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
   S.hanim = false; S.panim = false; S.tcan = false;
-  const row2 = single || !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(D, all)}</div><div class="s7">${pr.pie}</div></div><div class="g12 r3"><div class="s5">${pr.tree}</div><div class="s7">${formMese()}</div></div>`;
+  const row2 = single || !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(aggD(), all)}</div><div class="s7">${pr.pie}</div></div><div class="g12 r3"><div class="s5">${pr.tree}</div><div class="s7">${formMese()}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>
-    ${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+    ${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+}
+/* Storico mese per mese di un singolo account */
+function histCard(k) {
+  const D = S.data, h = histOf(D, k); if (!h.length) return '';
+  const rows = h.slice().reverse().slice(0, 24).map((s, i, a) => { const p = a[i + 1], d = p ? s.netto - p.netto : null; return `<div class="row"><div class="n">${esc(monthName(s.mese))}<small>attivi ${eur(s.attivi)} · passivi ${eur(s.passivi)}</small></div><div class="v ${cls(s.netto)}">${eur(s.netto)}${d !== null ? `<small class="${d >= 0 ? 'pos' : 'neg'}" style="display:block">${d >= 0 ? '+' : ''}${eur(d)}</small>` : ''}</div></div>`; }).join('');
+  return `<div class="card"><h2 style="margin-top:0">Storico dell'account</h2>${rows}</div>`;
 }
 const panTop = (name, title) => `<div class="ptop"><h2>${title || 'Panoramica'} · ${esc(name)}</h2><div class="pbtn"><button class="b sm" data-act="nv">Nuova voce</button></div></div>`;
 
