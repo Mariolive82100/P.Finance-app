@@ -238,11 +238,12 @@ function accChips() {
 }
 /* ---------- Telefono (sola consultazione) ---------- */
 /* Patrimonio: patrimonio netto + gli stessi riquadri della Panoramica del computer */
-function pageMob() {
+function pageMob() { return conStoricoAcc(pageMob0); }
+function pageMob0() {
   const D = S.data, all = D.storico;
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', vis = vz(D.voci).filter(v => inSc(v, fa)), Dz = { ...D, voci: vis };
-  const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = !single && cur && prev ? cur.netto - prev.netto : null;
+  const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = cur && prev ? cur.netto - prev.netto : null;
   const dsub = dN !== null ? `<div class="lbl dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</div>` : '';
   const head = `<div class="card"><div class="lbl bd">Patrimonio netto</div><div class="big ${cls(t.netto)}">${eur(t.netto)}${rfsBtn()}</div>${dsub}</div>${accChips()}`;
   if (!D.voci.length) return head + '<div class="card">Nessuna voce da mostrare. Le voci si aggiungono dalla versione per computer.</div>';
@@ -252,8 +253,8 @@ function pageMob() {
   if (allF.length < 2) allF = all.slice(-2);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   let top = '';
-  if (!single && all.length) top = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
-  const body = hv && !single ? '' : colCard(t, vis) + (!single && all.length ? deltaCard(vis, cur, prev, all[0], all) : '') + quadCard(Dz, single) + (single ? histCard(fa) : '');
+  if (all.length) top = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
+  const body = hv ? '' : colCard(t, vis) + (all.length ? deltaCard(vis, cur, prev, all[0], all) : '') + quadCard(Dz, single);
   S.hanim = false; S.panim = false; S.tcan = false;
   return `<div class="mob">${head}${top}${body}</div>`;
 }
@@ -524,19 +525,20 @@ function pagePort() {
   return `<div class="con"><div class="ptop"><h2>Portafogli · ${esc(aname)}</h2><div class="pbtn">${stato}<button class="b s sm" data-act="pcolall" data-v="${accList(D).every(([k]) => accCol(k)) ? 0 : 1}">${accList(D).every(([k]) => accCol(k)) ? 'Espandi tutto' : 'Comprimi tutto'}</button></div></div>${convCard}${secs}${importCard()}</div>`;
 }
 
-function pagePan() {
+function pagePan() { return conStoricoAcc(pagePan0); }
+function pagePan0() {
   const D = S.data, all = D.storico;
   if (!D.voci.length) return panTop('Aggregato') + '<div class="card">Nessuna voce da mostrare. Aggiungile con il tasto Nuova voce.</div>';
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', vis = vz(D.voci).filter(v => inSc(v, fa)), Dz = { ...D, voci: vis };
   const aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
-  const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = !single && cur && prev ? cur.netto - prev.netto : null;
+  const t = totals(vis), cur = all[all.length - 1], prev = all.length > 1 ? all[all.length - 2] : null, dN = cur && prev ? cur.netto - prev.netto : null;
   const kp = (l, v, sub, c, extra, tail) => `<div class="card"><div class="lbl bd">${l}</div><div class="big ${c || ''}">${v}${extra || ''}</div><div class="lbl">${sub}</div>${tail || ''}</div>`;
   const eye = `<button class="eye" data-act="hide" aria-label="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}" title="${hideAmt() ? 'Mostra importi' : 'Nascondi importi'}"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${hideAmt() ? '' : '<path d="M3 3l18 18"/>'}</svg></button>`;
   const dsub = dN !== null ? `<span class="dsub"><span class="${dN > 0 ? 'pos' : dN < 0 ? 'neg' : ''}">${dN >= 0 ? '+' : ''}${eur(dN)}</span> su ${esc(monthName(prev.mese))}</span>` : '&nbsp;';
   const hh = (document.querySelector('header') || {}).offsetHeight || 56, avail = innerHeight - hh - 58 - 80 - 28, r1 = Math.max(single ? 300 : 290, Math.round(avail * 0.5));
   const keys = ['main', 'bar', 'pas', 'cmp2'], hv = keys.includes(S.hq) ? S.hq : null;
-  const pr = disParts(Dz, single, single || !all.length);
+  const pr = disParts(Dz, single, !all.length);
   S.anim = false; S.tanim = false;
   const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
   let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
@@ -544,14 +546,22 @@ function pagePan() {
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
   S.hanim = false; S.panim = false; S.tcan = false;
-  const row2 = single || !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(aggD(), all)}</div><div class="s7">${pr.pie}</div></div><div class="g12 r3"><div class="s5">${pr.tree}</div><div class="s7">${formMese()}</div></div>`;
+  const row2 = !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(single ? Dz : aggD(), all)}</div><div class="s7">${pr.pie}</div></div><div class="g12 r3"><div class="s5">${pr.tree}</div><div class="s7">${single ? '' : formMese()}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>
-    ${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+    ${single && !all.length ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${single && !all.length ? '' : row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
 }
 /* Riga per scegliere l'account nelle pagine Saldi, Portafogli, Beni, Passivi */
 function accBar(fa) {
   const D = S.data; if (!D.accounts.length) return '';
   return `<div class="accs">${[['all', 'Aggregato'], ['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])].map(([k, n]) => `<div class="acard${fa === k ? ' on' : ''}" data-act="facc" data-v="${esc(k)}"${k !== 'all' ? ` style="--at:${accTint(k)}"` : ''}><div class="lbl bd">${esc(n)}${k !== 'all' && isEsc(k) ? ' <small>(fuori)</small>' : ''}</div></div>`).join('')}</div>`;
+}
+/* Vista di un singolo account: stessa struttura dell'aggregato, ma con lo storico di quell'account (solo per disegnare la pagina) */
+function conStoricoAcc(fn) {
+  const D = S.data, fa = S.fAcc || 'all';
+  if (fa === 'all' || !D) return fn();
+  const h = histOf(D, fa); if (!h.length) return fn();
+  S.data = { ...D, storico: h, _acc: fa };
+  try { return fn(); } finally { S.data = D; }
 }
 /* Storico mese per mese di un singolo account */
 function histCard(k) {

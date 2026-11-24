@@ -268,6 +268,7 @@ async function act(el) {
       if (v === '0') { delete ZM[k]; lcRepaint(k); } else if (v === 'in') lcZoom(k, 1.6, m); else if (v === 'out') lcZoom(k, 1 / 1.6, m); else lcPan(k, (v === 'l' ? -1 : 1) * sp * 0.35);
       return;
     }
+    if (a === 'rowm' && (S.fAcc || 'all') !== 'all') return;
     if (a === 'rowm') { S.popm = { mese: v, mode: 'menu' }; return render(); }
     if (a === 'pmclose') { S.popm = null; return render(); }
     if (a === 'pmback') { S.popm.mode = 'menu'; return render(); }
