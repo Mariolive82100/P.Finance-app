@@ -345,3 +345,16 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .vcard .qg{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:auto}.mob .vcard .qg{grid-template-columns:1fr 1fr}.vcard .qc{cursor:default}.vcard .dq{padding:12px}
 .g12.r3{align-items:stretch}.g12.r3 .s7{position:relative;min-height:380px}.g12.r3 .s7>.qcard{height:100%;min-height:380px}
 .g12.r2 .s7>.vcard{height:auto;min-height:0}
+
+/* Home modificabile */
+.hmbar{display:flex;justify-content:flex-end;margin:0 0 8px}
+.hed .hrow{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #e3ecea}.hed .hrow .grow{flex:1;min-width:0;font-size:14px}
+.hed .hadd{display:flex;flex-wrap:wrap;gap:6px}
+.hed .b[disabled]{opacity:.35;pointer-events:none}
+.g12.hm{align-items:stretch}.g12.hm .hb{position:relative;min-width:0}
+.g12.hm .hb.h1{height:var(--r1)}.g12.hm .hb.h1>.card{height:100%}
+.g12.hm .hb.h2{min-height:380px}.g12.hm .hb.h2>.qcard{height:100%;min-height:380px}
+.g12.hm .hb.h2>.tcol{position:absolute;inset:0;height:auto;display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;overflow:hidden}
+.g12.hm .hb.h2>.tcol h2{flex:0 0 auto}
+.g12.hm .hb.h0>.card{height:auto}.g12.hm .hb.h0>.vcard{height:auto;min-height:0}
+.g12.hm .hb.h0{align-self:start}

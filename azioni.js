@@ -195,6 +195,18 @@ async function act(el) {
       return;
     }
     if (a === 'tclose') { S.tex = false; S.tcan = true; return render(); }
+    if (a === 'hedit') { S.hedit = !S.hedit; return render(); }
+    if (a === 'hup' || a === 'hdn' || a === 'hrm' || a === 'hadd' || a === 'hrip') {
+      const D = S.data; if (S.ro || !D) return;
+      let l = homeList(); const mob = innerWidth < 1000, vis = l.filter(k => !(mob && HOME_BLK[k].pc));
+      if (a === 'hrip') l = HOME_DEF.slice();
+      else if (a === 'hrm') l = l.filter(k => k !== v);
+      else if (a === 'hadd') { if (HOME_BLK[v] && !l.includes(v)) l.push(v); }
+      else { const i = vis.indexOf(v), j = i + (a === 'hup' ? -1 : 1); if (i < 0 || j < 0 || j >= vis.length) return; const x = l.indexOf(vis[i]), y = l.indexOf(vis[j]); [l[x], l[y]] = [l[y], l[x]]; }
+      D.home = l; if (S.own) S.own.home = l; render();
+      if (!S.demo) { try { await updateDoc(doc(db, 'users', D.uid), { home: l }); } catch (e) { S.msg = 'Disposizione non salvata: controlla le regole di sicurezza e riprova.'; render(); } }
+      return;
+    }
     if (a === 'hper') { S.hper = v; return render(); }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
     if (a === 'hclose') { S.hq = null; S.hanim = 'out'; return render(); }

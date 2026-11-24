@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.64';
+const VER = '1.65';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -45,6 +45,10 @@ const totals = voci => {
 };
 /* Attivi divisi in: Liquidità, Portafoglio (categoria Investimenti), Beni (Immobili, Beni, Altro) */
 const catTot = voci => { const at = voci.filter(v => v.tipo === 'attivo'), s = f => at.filter(f).reduce((a, v) => a + v.valore, 0); return { liq: s(v => v.categoria === 'Liquidità'), port: s(v => v.categoria === 'Investimenti'), beni: s(v => v.categoria !== 'Liquidità' && v.categoria !== 'Investimenti') }; };
+/* Home modificabile: elenco dei riquadri disponibili (nome, larghezza su 12 colonne, altezza: 1 = come il grafico, 2 = alta, 0 = libera, solo computer) e ordine di partenza */
+const HOME_BLK = { and: { n: 'Andamento del patrimonio', w: 5, h: 1 }, col: { n: 'Attivi, passivi e netto', w: 3, h: 1 }, var: { n: 'Variazioni assolute', w: 4, h: 1 }, ind: { n: 'Indicatori', w: 5, h: 0, pc: 1 }, val: { n: 'Valori per categoria', w: 7, h: 0 }, alb: { n: 'Albero del patrimonio', w: 5, h: 2, pc: 1 }, tor: { n: 'Torte', w: 7, h: 2 } };
+const HOME_DEF = ['and', 'col', 'var', 'ind', 'val', 'alb', 'tor'];
+const homeList = () => { const h = S.data && Array.isArray(S.data.home) ? S.data.home.filter(k => HOME_BLK[k]) : null; return h || HOME_DEF.slice(); };
 /* Account esclusi dall'aggregato: elenco di chiavi ('main' = account principale) salvato nel profilo */
 const isEsc = k => !!(S.data && S.data.esclusi && S.data.esclusi.includes(k));
 const inSc = (v, fa) => fa === 'all' ? !isEsc(v.account || 'main') : (v.account || 'main') === fa;
@@ -224,9 +228,9 @@ async function loadData(uid, nome) {
   const stAll = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
   /* mesi con soli totali di un account (importati per account) non fanno parte dello storico aggregato */
   const storico = stAll.filter(x => typeof x.netto === 'number'), accOnly = stAll.filter(x => typeof x.netto !== 'number' && x.acc);
-  let esclusi = [];
-  try { const ps = await getDoc(doc(db, 'users', uid)); const e = ps.exists() ? ps.data().esclusi : null; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); } catch (e) {}
-  S.data = { uid, nome, voci, arch, storico, accOnly, accounts, esclusi };
+  let esclusi = [], home = null;
+  try { const ps = await getDoc(doc(db, 'users', uid)); const pd = ps.exists() ? ps.data() : {}, e = pd.esclusi; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); if (Array.isArray(pd.home)) home = pd.home.filter(k => HOME_BLK[k]); } catch (e) {}
+  S.data = { uid, nome, voci, arch, storico, accOnly, accounts, esclusi, home };
   await syncStorico();
 }
 
@@ -293,6 +297,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.65','24 nov 2026',['Home modificabile: il tasto "Modifica home" permette di scegliere quali riquadri mostrare e in che ordine (frecce su/giù, Aggiungi, Togli, Ripristina); la disposizione è salvata nel tuo account e vale per tutti gli account e per telefono e computer']],
   ['1.50','23 nov 2026',['Variazioni assolute: ogni riquadro mostra il valore, la variazione sul mese precedente e quella totale dall\'inizio delle registrazioni']],
   ['1.49','23 nov 2026',['Modalità demo: nella schermata di accesso "Prova la demo" apre l\'app con dati inventati (10 anni, da 50.000 a 500.000 euro); nulla viene salvato e non si vedono dati reali']],
   ['1.48','23 nov 2026',['Nuova pagina Condivisione (menu laterale e menu a panino): ognuno ha un codice personale e può dare ad altri la sola visualizzazione dei propri dati, togliendola quando vuole; chi la riceve apre i dati dell\'altro in sola lettura con un tasto per tornare ai propri']],

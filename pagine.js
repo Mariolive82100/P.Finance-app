@@ -252,11 +252,11 @@ function pageMob0() {
   let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
   if (allF.length < 2) allF = all.slice(-2);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
-  let top = '';
-  if (all.length) top = perBar() + (hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF));
-  const body = hv ? '' : colCard(t, vis) + (all.length ? deltaCard(vis, cur, prev, all[0], all) : '') + valoriCard(vis) + quadCard(Dz, single);
+  const c = { all, allF, hv, r1, t, vis, Dz, single, cur, prev };
+  const lst = homeList().filter(k => !HOME_BLK[k].pc), hasPer = all.length && lst.some(k => k === 'and' || k === 'var');
+  const body = lst.map(k => homeBlk(k, c)).join('');
   S.hanim = false; S.panim = false; S.tcan = false;
-  return `<div class="mob">${head}${top}${body}</div>`;
+  return `<div class="mob">${head}${homeBar()}${hasPer ? perBar() : ''}${body || (S.hedit ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>')}</div>`;
 }
 /* Saldi: i conti di liquidità di ogni account */
 function pageSaldi() {
@@ -544,11 +544,45 @@ function pagePan0() {
   let allF = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
   if (allF.length < 2) allF = all.slice(-2);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
-  const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
+  const kpis = `<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>`;
+  if (!all.length) {
+    S.hanim = false; S.panim = false; S.tcan = false;
+    return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}${kpis}${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${hubGrid(all, allF)}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${pr.pie}</div></div>`}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+  }
+  const c = { all, allF, hv, r1, t, vis, Dz, single, cur, prev, pr, D: single ? Dz : aggD() };
+  const lst = homeList(), items = homePack(lst.map(k => ({ k, h: HOME_BLK[k].h, w: HOME_BLK[k].w, html: homeBlk(k, c) })).filter(x => x.html));
   S.hanim = false; S.panim = false; S.tcan = false;
-  const row2 = !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(single ? Dz : aggD(), all)}</div><div class="s7">${valoriCard(vis)}</div></div><div class="g12 r3"><div class="s5">${pr.tree}</div><div class="s7">${pr.pie}</div></div>`;
-  return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>
-    ${single && !all.length ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `${all.length ? `<div class="g12 pfrow"><div class="s5">${perBar()}</div></div>` : ''}<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${single && !all.length ? '' : row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+  const grid = items.length ? `<div class="g12 hm">${items.map(x => `<div class="hb h${x.h}" style="grid-column:span ${x.w}">${x.html}</div>`).join('')}</div>` : (S.hedit ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>');
+  return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}${kpis}${homeBar()}${lst.some(k => k === 'and' || k === 'var') ? `<div class="g12 pfrow"><div class="s5">${perBar()}</div></div>` : ''}${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+}
+/* ---------- Home modificabile: riquadri, ordine e pannello di scelta ---------- */
+function homeBlk(k, c) {
+  const has = c.all.length > 0;
+  if (k === 'and') return has ? (c.hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, c.r1)}</div>` : hubGrid(c.all, c.allF)) : '';
+  if (k === 'col') return colCard(c.t, c.vis);
+  if (k === 'var') return has ? deltaCard(c.vis, c.cur, c.prev, c.all[0], c.all) : '';
+  if (k === 'ind') return has && c.D ? indicatori(c.D, c.all) : '';
+  if (k === 'val') return valoriCard(c.vis);
+  if (k === 'alb') return c.pr ? c.pr.tree : '';
+  if (k === 'tor') return c.pr ? c.pr.pie : quadCard(c.Dz, c.single);
+  return '';
+}
+/* Riempie le righe da 12 colonne senza buchi: l'ultimo riquadro di ogni riga prende lo spazio che resta */
+function homePack(items) {
+  const out = []; let row = [], s = 0;
+  const close = () => { if (row.length) { row[row.length - 1].w += 12 - s; out.push(...row); } row = []; s = 0; };
+  items.forEach(it => { if (s + it.w > 12) close(); row.push({ ...it }); s += it.w; });
+  close(); return out;
+}
+/* Tasto "Modifica home" e, quando è aperto, l'elenco dei riquadri con frecce, Togli e Aggiungi */
+function homeBar() {
+  if (S.ro) return '';
+  const ed = !!S.hedit;
+  const btn = `<div class="hmbar"><button class="b ${ed ? '' : 's'} sm" data-act="hedit">${ed ? 'Fine modifica' : 'Modifica home'}</button></div>`;
+  if (!ed) return btn;
+  const mob = innerWidth < 1000, ok = k => !(mob && HOME_BLK[k].pc), lst = homeList().filter(ok), off = Object.keys(HOME_BLK).filter(k => ok(k) && !homeList().includes(k));
+  const rows = lst.map((k, i) => `<div class="hrow"><b class="grow">${esc(HOME_BLK[k].n)}</b><button class="b s sm" data-act="hup" data-v="${k}"${i ? '' : ' disabled'} aria-label="Sposta su">↑</button><button class="b s sm" data-act="hdn" data-v="${k}"${i < lst.length - 1 ? '' : ' disabled'} aria-label="Sposta giù">↓</button><button class="b s sm r" data-act="hrm" data-v="${k}">Togli</button></div>`).join('');
+  return `<div class="card hed"><div class="chh"><h2>Modifica home</h2></div>${rows || '<p class="note">Nessun riquadro: aggiungine uno.</p>'}${off.length ? `<div class="lbl" style="margin:10px 0 6px">Riquadri disponibili</div><div class="hadd">${off.map(k => `<button class="b s sm" data-act="hadd" data-v="${k}">＋ ${esc(HOME_BLK[k].n)}</button>`).join('')}</div>` : ''}<div class="acts" style="margin-top:10px"><button class="b s sm" data-act="hrip">Ripristina l'ordine iniziale</button><button class="b sm" data-act="hedit">Fine</button></div>${mob ? '<p class="note">Su telefono non compaiono Indicatori e Albero: restano nella home del computer.</p>' : ''}</div>`;
 }
 /* Riga per scegliere l'account nelle pagine Saldi, Portafogli, Beni, Passivi */
 function accBar(fa) {
