@@ -444,13 +444,13 @@ function hubBody(key, all, r1, cols) {
 /* Pagina dedicata all'albero del patrimonio (solo computer), dopo la Panoramica */
 function pageAlb() {
   const D = S.data;
-  if (!D.voci.length) return panTop('Aggregato', 'Albero') + '<div class="card">Nessuna voce da mostrare. Aggiungile con il tasto Nuova voce.</div>';
+  if (!D.voci.length) return panTop('Aggregato', 'Albero', '') + '<div class="card">Nessuna voce da mostrare. Aggiungile con il tasto Nuova voce.</div>';
   let fa = S.fAcc || 'all'; if (fa !== 'all' && fa !== 'main' && !D.accounts.some(a => a.id === fa)) fa = S.fAcc = 'all';
   const single = fa !== 'all', vis = vz(D.voci).filter(v => inSc(v, fa)), Dz = { ...D, voci: vis };
   const aname = !single ? 'Aggregato' : fa === 'main' ? D.nome : D.accounts.find(a => a.id === fa).nome;
   S.tfull = true; const pr = disParts(Dz, single); S.tfull = false;
   S.anim = false; S.tanim = false; S.tcan = false;
-  return `<div class="alb">${panTop(aname, 'Albero')}${pr.tree}</div>`;
+  return `<div class="alb">${panTop(aname, 'Albero', '')}${pr.tree}</div>`;
 }
 const accList = D => [['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])];
 function pageCon() {
@@ -485,7 +485,7 @@ function pageCon() {
     ? `<div class="tbar"><span class="lbl" style="flex:1">Scrivi i nuovi valori (Invio passa al successivo), poi salva una volta sola.</span><button class="b sm" data-act="cfmsave">Salva valori</button><button class="b s sm" data-act="cfmno">Annulla</button></div>`
     : `<div class="tbar"><input id="cq" placeholder="Cerca un conto…" value="${esc(S.cq || '')}" style="max-width:260px;margin:0"><span style="flex:1"></span><button class="b s sm" data-act="ccolall" data-v="${S.ccAll !== false ? 0 : 1}">${S.ccAll !== false ? 'Espandi tutto' : 'Comprimi tutto'}</button><button class="b sm" data-act="cfm">Aggiorna fine mese</button></div>`;
   const archSec = (D.arch || []).length ? `<div class="card"><h2 style="cursor:pointer" data-act="carcs">Archiviati (${(D.arch || []).length}) ${S.carc ? '▾' : '▸'}</h2>${S.carc ? (arc.length ? `<table class="ct">${cg}${headT('arc')}${arc.map(v => row(v, true)).join('')}</table>` : '<div class="lbl">Nessun conto trovato.</div>') : '<div class="lbl">Escono dai totali, lo storico resta. Apri per ripristinarli.</div>'}</div>` : '';
-  return `<div class="con">${panTop(aname, 'Liquidità')}<div class="card">${tbar}</div>${secs}${archSec}</div>`;
+  return `<div class="con">${panTop(aname, 'Liquidità', '')}<div class="card">${tbar}</div>${secs}${archSec}</div>`;
 }
 
 function pagePort() {

@@ -208,7 +208,7 @@ function barSvg(st) {
 function formMese(force) {
   const D = S.data;
   const open = force || S.editM || (S.exp && S.exp.fm);
-  if (!open) return `<div class="card"><div class="row cl cat" data-act="exp" data-v="fm" style="border:0;padding:0"><div class="n">Ricostruisci lo storico<small>aggiungi i mesi passati a mano o da file</small></div><span class="chev">▸︎</span></div></div>`;
+  if (!open) return '';
   const e = S.editM && D.storico.find(x => x.mese === S.editM), dr = S.draft || {};
   const f = v => String(v).replace('.', ',');
   const hd = !force && !e ? `<div class="row cl cat" data-act="exp" data-v="fm" style="border:0;padding:0"><h2 style="margin:0">Ricostruisci lo storico</h2><span class="chev open">▸︎</span></div>` : `<h2>${e ? 'Modifica mese' : 'Ricostruisci lo storico'}</h2>`;

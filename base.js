@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.76';
+const VER = '1.77';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -323,6 +323,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.77','24 nov 2026',['Tolto "Nuova voce" dalle pagine Albero e Liquidità; tolto "Ricostruisci lo storico" dalla pagina Storico (restano la modifica di un mese toccando la riga e l\'importazione da file)']],
   ['1.76','24 nov 2026',['Portafogli: nuova sottopagina Bilanciamento (tolta dal menu laterale): obiettivi per classe e per account, solo acquisti oppure anche vendite, prodotti suggeriti con quote e imposte stimate, registrazione delle operazioni']],
   ['1.75','24 nov 2026',['Portafogli (computer): il portafoglio aggregato compare sempre in fondo, anche con un solo portafoglio']],
   ['1.74','24 nov 2026',['Portafogli (computer): con un solo account selezionato ogni portafoglio ha la sua torta a destra dell\'elenco e l\'aggregato dell\'account resta in fondo; la vista Aggregato è come prima']],
