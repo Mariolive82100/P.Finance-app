@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.57';
+const VER = '1.58';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -257,6 +257,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.58','24 nov 2026',['Variazioni assolute: accanto al titolo la variazione del patrimonio netto nel periodo scelto (stesso filtro di Andamento del patrimonio)','Toccando il riquadro si apre un unico grafico con Liquidità, Portafoglio, Beni e Passivi, con il filtro per periodo']],
   ['1.57','24 nov 2026',['Schermata iniziale: tasto Installa l\'app (con istruzioni per iPhone) prima dell\'accesso; animazione di apertura con l\'euro che si ingrandisce e poi la P di P.Finance']],
   ['1.56','23 nov 2026',['Portafogli: tasti Compra e Vendi accanto ad Aggiungi portafoglio (quote, prezzo medio di carico e, se vuoi, liquidità del conto con lo stesso nome)']],
   ['1.55','23 nov 2026',['Passivi: nuova scelta "Debito già in corso" (debito residuo di oggi e data dell\'ultima rata): i mesi già registrati non cambiano e il debito scende da solo dal mese prossimo']],

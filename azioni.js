@@ -254,6 +254,7 @@ async function act(el) {
     if (a === 'yrsel') { if (!el.value) return; S.yr = el.value; S.range = 'year'; return render(); }
     if (a === 'rfrom' || a === 'rto') { if (!/^\d{4}-\d{2}$/.test(el.value)) return; if (a === 'rfrom') S.rFrom = el.value; else S.rTo = el.value; return render(); }
     if (a === 'cmpm') { S.cmp = el.value; return render(); }
+    if (a === 'dxopen') { S.fs = 'dx'; return render(); }
     if (a === 'fs') { S.fs = v || null; return render(); }
     if (a === 'zm') {
       const k = el.dataset.k, c = CHK[k]; if (!c) return; const z = ZM[k] || { a: 0, b: c.pts.length - 1 }, sp = z.b - z.a, m = (z.a + z.b) / 2;

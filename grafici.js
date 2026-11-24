@@ -87,7 +87,8 @@ function fsOverlay() {
   const s = CHS[S.fs]; if (!s) return '';
   const id = S.fs + 'F';
   lcInit(id, S.fs, s.pts, s.series, Math.max(320, innerWidth - 24), Math.max(200, innerHeight - 150));
-  return `<div class="fs"><div class="chh"><h2>${esc(s.title)}</h2><button class="b sm" data-act="fs" data-v="">✕ Chiudi</button></div>${lcLegend(s.series)}${lcBlock(id)}${lcZoomBar(S.fs)}</div>`;
+  const per = S.fs === 'dx' ? `<span class="chb">${PERS.map(([v, l]) => `<button class="b sm ${(S.hper || 'all') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</span>` : '';
+  return `<div class="fs"><div class="chh"><h2>${esc(s.title)}</h2>${per}<button class="b sm" data-act="fs" data-v="">✕ Chiudi</button></div>${lcLegend(s.series)}${lcBlock(id)}${lcZoomBar(S.fs)}</div>`;
 }
 function lcRepaint(key) { document.querySelectorAll('.lcw[data-k="' + key + '"]').forEach(w => { if (CH[w.dataset.ch]) w.innerHTML = lcSvg(w.dataset.ch); }); }
 function lcSet(key, a, b) {
@@ -269,7 +270,14 @@ function hubGrid(all0, all) {
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
 /* Quattro riquadri: variazione rispetto al mese precedente (Liquidità, Portafoglio, Beni, Passivi) */
-function deltaCard(vis, cur, prev, first) {
+const PERS = [['6', 'Ultimi 6 mesi'], ['ytd', 'Anno in corso'], ['12', 'Ultimi 12 mesi'], ['all', 'Da sempre']];
+function perFiltra(all) {
+  const hp = S.hper || 'all', yk = monthKey().slice(0, 4);
+  let r = hp === '6' ? all.slice(-6) : hp === '12' ? all.slice(-12) : hp === 'ytd' ? all.filter(s => s.mese.slice(0, 4) === yk) : all;
+  if (r.length < 2) r = all.slice(-2);
+  return r;
+}
+function deltaCard(vis, cur, prev, first, hist) {
   const c = { ...totals(vis), ...catTot(vis) }, f = first && cur && first.mese !== cur.mese ? first : null;
   const items = [['Liquidità', 'liq', c.liq, 0], ['Portafoglio', 'port', c.port, 0], ['Beni', 'beni', c.beni, 0], ['Passivi', 'passivi', c.passivi, 1]];
   const line = (lab, now, old, inv) => {
@@ -278,7 +286,15 @@ function deltaCard(vis, cur, prev, first) {
     return `<div class="dp ${k}"><span class="lbl">${lab}</span> ${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${old ? ' · ' + pct(d / Math.abs(old)) : ''}</div>`;
   };
   const tile = ([l, key, now, inv]) => `<div class="qc dq"><b>${l}</b><div class="dv">${eur(now)}</div>${prev ? line('Mese', now, prev[key], inv) : ''}${f ? line('Totale', now, f[key], inv) : ''}</div>`;
-  return `<div class="card pcard qcard"><h2>Variazioni assolute</h2><div class="lbl" style="margin:-4px 0 6px">${prev ? 'Mese: su ' + esc(monthName(prev.mese)) : ''}${prev && f ? ' · ' : ''}${f ? 'Totale: da ' + esc(monthName(f.mese)) : ''}</div><div class="qg">${items.map(tile).join('')}</div></div>`;
+  /* variazione del patrimonio netto nel periodo scelto + dati del grafico che si apre al tocco */
+  const h = hist && hist.length >= 2 ? perFiltra(hist) : null; let nv = '', clk = '';
+  if (h && h.length >= 2) {
+    const a = h[0], z = h[h.length - 1], d = z.netto - a.netto, k = d > 0.5 ? 'pos' : d < -0.5 ? 'neg' : '';
+    nv = `<span class="dpn ${k}" title="Patrimonio netto da ${esc(monthName(a.mese))}">Netto ${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${a.netto ? ' · ' + pct(d / Math.abs(a.netto)) : ''}<small> da ${esc(shortM(a.mese))}</small></span>`;
+    CHS.dx = { title: 'Andamento per categoria', pts: h.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), liq: typeof x.liq === 'number' ? x.liq : null, port: typeof x.port === 'number' ? x.port : null, beni: typeof x.beni === 'number' ? x.beni : null, passivi: x.passivi })), series: [{ k: 'liq', c: '#0f766e', l: 'Liquidità', fit: 1, nm: 1 }, { k: 'port', c: '#1d4ed8', l: 'Portafoglio', fit: 1, nm: 1 }, { k: 'beni', c: '#a16207', l: 'Beni', fit: 1, nm: 1 }, { k: 'passivi', c: '#b91c1c', l: 'Passivi', fit: 1, nm: 1 }] };
+    clk = ' data-act="dxopen"';
+  }
+  return `<div class="card pcard qcard${clk ? ' dxc' : ''}"${clk}><div class="chh dxh"><h2>Variazioni assolute</h2>${nv}</div><div class="lbl" style="margin:-4px 0 6px">${prev ? 'Mese: su ' + esc(monthName(prev.mese)) : ''}${prev && f ? ' · ' : ''}${f ? 'Totale: da ' + esc(monthName(f.mese)) : ''}</div><div class="qg">${items.map(tile).join('')}</div></div>`;
 }
 /* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
 function colCard(t, vis) {
