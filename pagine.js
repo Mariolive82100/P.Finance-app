@@ -546,7 +546,7 @@ function pagePan0() {
     return `<div class="pan" style="--r1:${r1}px">${panTop(aname, null, homeBtn())}${kpis}${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${hubGrid(all, allF)}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${pr.pie}</div></div>`}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
   }
   const c = { all, allF, hv, r1, t, vis, Dz, single, cur, prev, pr, D: single ? Dz : aggD() };
-  const ed = !!S.hedit, nm = k => HOME_BLK[k].n, lst = homeList();
+  const ed = !!S.hedit && !S.ro, nm = k => HOME_BLK[k].n, lst = homeList();
   let items = homeLayout(r1), htm = {};
   items.forEach(i => { htm[i.k] = homeBlk(i.k, { ...c, r1: i.h * 10 - 14, cols: i.w }); });
   items = hlFix(items.filter(i => htm[i.k]), null);
