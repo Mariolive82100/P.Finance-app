@@ -225,15 +225,17 @@ function serMain() {
   const vis = S.sel instanceof Set && S.sel.size ? S.sel : new Set(['attivi', 'passivi', 'netto']);
   return [{ k: 'attivi', c: '#0f766e', l: 'Attivi' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }, { k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto' }, { k: 'var', c: '#6d28d9', l: 'Variazione dal primo punto visibile', zero: 1, rebase: 1 }].map(x => ({ ...x, tog: 1, off: !vis.has(x.k) }));
 }
+const nz = v => typeof v === 'number' ? v : null;
 function aggSeries(all, A) {
   const curY = monthKey().slice(0, 4), yrsAll = [...new Set(all.map(s => s.mese.slice(0, 4)))];
-  let pts = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto, abs: s.netto, var: 0 }));
+  let pts = all.map(s => ({ mese: s.mese, lab: shortM(s.mese), long: monthName(s.mese), attivi: s.attivi, passivi: s.passivi, netto: s.netto, abs: s.netto, var: 0, liq: nz(s.liq), port: nz(s.port), beni: nz(s.beni) }));
   let dBar = all.slice(1).map((x, i) => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), v: x.netto - all[i].netto }));
   if (A !== 'm') {
     const avg = (a, k) => a.reduce((t, x) => t + x[k], 0) / a.length, by = yrsAll.map(y => all.filter(s => s.mese.slice(0, 4) === y));
     const lg = (g, y) => A === 'yf' ? `${y} · ${monthName(g[g.length - 1].mese)}${y === curY ? ' (in corso)' : ''}` : `Media ${y}${y === curY ? ' (in corso)' : ''}`;
     const val = (g, k) => A === 'yf' ? g[g.length - 1][k] : avg(g, k);
-    pts = by.map((g, i) => ({ lab: yrsAll[i], long: lg(g, yrsAll[i]), attivi: val(g, 'attivi'), passivi: val(g, 'passivi'), netto: val(g, 'netto'), abs: val(g, 'netto'), var: 0 }));
+    const valN = (g, k) => { if (A === 'yf') return nz(g[g.length - 1][k]); const a = g.map(s => s[k]).filter(v => typeof v === 'number'); return a.length ? a.reduce((t, x) => t + x, 0) / a.length : null; };
+    pts = by.map((g, i) => ({ lab: yrsAll[i], long: lg(g, yrsAll[i]), attivi: val(g, 'attivi'), passivi: val(g, 'passivi'), netto: val(g, 'netto'), abs: val(g, 'netto'), var: 0, liq: valN(g, 'liq'), port: valN(g, 'port'), beni: valN(g, 'beni') }));
     dBar = [];
     by.forEach((g, i) => {
       if (A === 'yf') { if (i) dBar.push({ lab: yrsAll[i], long: lg(g, yrsAll[i]), v: g[g.length - 1].netto - by[i - 1][by[i - 1].length - 1].netto }); }
@@ -243,7 +245,8 @@ function aggSeries(all, A) {
   return { pts, dBar };
 }
 /* ---------- Computer: riquadro andamento a quattro sottoquadranti (mini grafici, tocco = si ingrandisce) ---------- */
-const HUB = { main: 'Patrimonio netto', bar: 'Variazione mensile', pas: 'Passivi', cmp2: 'Confronto crescita' };
+const CAT_S = [{ k: 'liq', c: '#0f766e', l: 'Liquidità' }, { k: 'port', c: '#1d4ed8', l: 'Investimenti' }, { k: 'beni', c: '#a16207', l: 'Beni' }, { k: 'passivi', c: '#b91c1c', l: 'Passivi' }];
+const HUB = { main: 'Patrimonio netto', bar: 'Variazione mensile', pas: 'Andamento categorie', cmp2: 'Confronto crescita' };
 const mnSvg = o => `<svg viewBox="0 0 320 110" preserveAspectRatio="none" style="width:100%;height:100%">${o}</svg>`;
 function mnLines(sers) {
   const all = sers.flatMap(x => x.v).filter(v => v != null); if (!all.length) return '';
@@ -270,7 +273,7 @@ function hubGrid(all0, all, per) {
   return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamenti e confronti</h2>${per || ''}</div><div class="qg">
     ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
     ${cell('bar', ok && mnBars([{ v: agB.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
-    ${cell('pas', ok && mnLines([{ v: agP.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
+    ${cell('pas', ok && mnLines(CAT_S.map(x => ({ v: agP.pts.map(p => p[x.k]), c: x.c }))), ok ? `<span class="qv">${CAT_S.map(x => `<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${x.c};margin-left:5px" title="${x.l}"></i>`).join('')}</span>` : '')}
     ${cell('cmp2', cmpOk && mnLines([{ v: d.cB, c: '#9aa9c7' }, { v: d.cA, c: '#1d4ed8' }]))}</div></div>`;
 }
 /* Periodi per i delta: mese corrente, 30 giorni, anno in corso, 12 mesi, da sempre */

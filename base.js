@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.78';
+const VER = '1.79';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -323,6 +323,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.79','24 nov 2026',['Andamenti e confronti: al posto del grafico dei passivi c\'è l\'andamento delle categorie (liquidità, investimenti, beni e passivi), con ingrandimento al clic']],
   ['1.78','24 nov 2026',['Portafogli: tolto "Registra le operazioni" dal Bilanciamento (non modifica più nulla); nuova scheda Resoconto in sola lettura con il piano da fare (cosa comprare e vendere, quote, importi, imposte stimate); le colonne delle tabelle del bilanciamento sono allineate tra loro']],
   ['1.77','24 nov 2026',['Tolto "Nuova voce" dalle pagine Albero e Liquidità; tolto "Ricostruisci lo storico" dalla pagina Storico (restano la modifica di un mese toccando la riga e l\'importazione da file)']],
   ['1.76','24 nov 2026',['Portafogli: nuova sottopagina Bilanciamento (tolta dal menu laterale): obiettivi per classe e per account, solo acquisti oppure anche vendite, prodotti suggeriti con quote e imposte stimate, registrazione delle operazioni']],

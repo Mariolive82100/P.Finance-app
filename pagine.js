@@ -434,9 +434,9 @@ function hubBody(key, all, r1, cols) {
     return lcCard('bar', A === 'yf' ? 'Variazione annuale del patrimonio netto' : A === 'ya' ? 'Variazione mensile media del patrimonio netto, per anno' : 'Variazione mensile del patrimonio netto', aggSeries(all, A).dBar, [{ k: 'v', c: '#15803d', l: A === 'yf' ? 'Variazione annuale' : A === 'ya' ? 'Variazione mensile media' : 'Variazione mensile', bar: 1 }], W, H);
   }
   if (key === 'pas') {
-    if (!hist) return no('Andamento dei passivi');
+    if (!hist) return no('Andamento delle categorie');
     const A = aggOf('pas', all);
-    return lcCard('pas', 'Andamento dei passivi', aggSeries(all, A).pts, [{ k: 'passivi', c: '#b91c1c', l: 'Passivi', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150 + 70));
+    return lcCard('pas', 'Andamento delle categorie', aggSeries(all, A).pts, CAT_S.map(x => ({ k: x.k, c: x.c, l: x.l, fit: 1, nm: 1 })), W, Math.max(130, r1 - 150 + 70));
   }
   if (!hist) return no('Confronto tra periodi');
   const c = cmpParts(all, true, W, Math.max(80, r1 - 124), Math.max(80, r1 - 134)); return c.b || c.a;
