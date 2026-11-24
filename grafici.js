@@ -258,12 +258,16 @@ function mnBars(sers) {
   sers.forEach((x, k) => x.v.forEach((v, i) => { if (v == null) return; const yv = Y(v), c = x.c || (v >= 0 ? '#15803d' : '#b91c1c'); o += `<rect x="${(4 + slot * i + slot * 0.1 + bw * k).toFixed(1)}" y="${Math.min(y0, yv).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(yv - y0)).toFixed(1)}" fill="${c}"/>`; }));
   return o;
 }
+/* Filtri di periodo: stanno sopra il riquadro "Andamento del patrimonio" */
+function perBar() {
+  return `<div class="perbar">${PERS.map(([v, l]) => `<button class="b ${(S.hper || 'all') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</div>`;
+}
 function hubGrid(all0, all) {
   const ok = all.length >= 2, agK = k => ok ? aggSeries(all, aggOf(k, all)) : null;
   const ag = agK('main'), agB = agK('bar'), agP = agK('pas'), d = all0.length >= 2 ? cmpData(all0, S.cmp || 'y') : null, cmpOk = d && (d.dB.some(v => v != null) || d.cB.some(v => v != null));
   const last = ok ? all[all.length - 1] : null, dl = ok ? last.netto - all[all.length - 2].netto : 0;
   const cell = (k, svg, val) => `<div class="qc" data-act="hopen" data-v="${k}"><div class="qh"><b>${HUB[k]}</b>${val || ''}</div><div class="qs">${svg ? mnSvg(svg) : `<p class="note" style="margin:8px 0 0">${ok ? 'Servono più mesi di storico.' : 'Servono almeno 2 mesi di dati.'}</p>`}</div></div>`;
-  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamento del patrimonio</h2><span class="chb">${[['6', 'Ultimi 6 mesi'], ['ytd', 'Anno in corso'], ['12', 'Ultimi 12 mesi'], ['all', 'Da sempre']].map(([v, l]) => `<button class="b sm ${(S.hper || 'all') === v ? '' : 's'}" data-act="hper" data-v="${v}">${l}</button>`).join('')}</span></div><div class="qg">
+  return `<div class="card pcard qcard${S.hanim === 'out' ? ' anim-out' : ''}"><div class="chh"><h2>Andamento del patrimonio</h2></div><div class="qg">
     ${cell('main', ok && mnLines([{ v: ag.pts.map(x => x.netto), c: '#1d4ed8' }]), ok ? `<span class="qv">${esc(compact(last.netto))}</span>` : '')}
     ${cell('bar', ok && mnBars([{ v: agB.dBar.map(x => x.v) }]), ok ? `<span class="qv ${dl >= 0 ? 'pos' : 'neg'}">${dl >= 0 ? '+' : ''}${esc(compact(dl))}</span>` : '')}
     ${cell('pas', ok && mnLines([{ v: agP.pts.map(x => x.passivi), c: '#b91c1c' }]), ok ? `<span class="qv">${esc(compact(last.passivi))}</span>` : '')}
@@ -278,23 +282,29 @@ function perFiltra(all) {
   return r;
 }
 function deltaCard(vis, cur, prev, first, hist) {
-  const c = { ...totals(vis), ...catTot(vis) }, f = first && cur && first.mese !== cur.mese ? first : null;
+  const c = { ...totals(vis), ...catTot(vis) };
   const items = [['Liquidità', 'liq', c.liq, 0], ['Portafoglio', 'port', c.port, 0], ['Beni', 'beni', c.beni, 0], ['Passivi', 'passivi', c.passivi, 1]];
-  const line = (lab, now, old, inv) => {
-    if (typeof old !== 'number') return `<div class="dp lbl">${lab}: —</div>`;
+  /* variazione nel periodo scelto: valore attuale meno valore del primo mese del periodo */
+  const h = hist && hist.length >= 2 ? perFiltra(hist) : null, a = h && h.length >= 2 ? h[0] : null; let nv = '', clk = '';
+  const line = (now, old, inv) => {
+    if (!a || typeof old !== 'number') return '<div class="dv dvx">—</div>';
     const d = now - old, good = inv ? -d : d, k = good > 0.5 ? 'pos' : good < -0.5 ? 'neg' : '';
-    return `<div class="dp ${k}"><span class="lbl">${lab}</span> ${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${old ? ' · ' + pct(d / Math.abs(old)) : ''}</div>`;
+    return `<div class="dv ${k}">${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}</div><div class="dp ${k}">${old ? pct(d / Math.abs(old)) : ''}</div>`;
   };
-  const tile = ([l, key, now, inv]) => `<div class="qc dq"><b>${l}</b><div class="dv">${eur(now)}</div>${prev ? line('Mese', now, prev[key], inv) : ''}${f ? line('Totale', now, f[key], inv) : ''}</div>`;
-  /* variazione del patrimonio netto nel periodo scelto + dati del grafico che si apre al tocco */
-  const h = hist && hist.length >= 2 ? perFiltra(hist) : null; let nv = '', clk = '';
-  if (h && h.length >= 2) {
-    const a = h[0], z = h[h.length - 1], d = z.netto - a.netto, k = d > 0.5 ? 'pos' : d < -0.5 ? 'neg' : '';
+  const tile = ([l, key, now, inv]) => `<div class="qc dq"><b>${l}</b>${line(now, a ? a[key] : null, inv)}</div>`;
+  if (a) {
+    const z = h[h.length - 1], d = z.netto - a.netto, k = d > 0.5 ? 'pos' : d < -0.5 ? 'neg' : '';
     nv = `<span class="dpn ${k}" title="Patrimonio netto da ${esc(monthName(a.mese))}">Netto ${d >= 0 ? '+' : '−'}${eur(Math.abs(d))}${a.netto ? ' · ' + pct(d / Math.abs(a.netto)) : ''}<small> da ${esc(shortM(a.mese))}</small></span>`;
     CHS.dx = { title: 'Andamento per categoria', pts: h.map(x => ({ mese: x.mese, lab: shortM(x.mese), long: monthName(x.mese), liq: typeof x.liq === 'number' ? x.liq : null, port: typeof x.port === 'number' ? x.port : null, beni: typeof x.beni === 'number' ? x.beni : null, passivi: x.passivi })), series: [{ k: 'liq', c: '#0f766e', l: 'Liquidità', fit: 1, nm: 1 }, { k: 'port', c: '#1d4ed8', l: 'Portafoglio', fit: 1, nm: 1 }, { k: 'beni', c: '#a16207', l: 'Beni', fit: 1, nm: 1 }, { k: 'passivi', c: '#b91c1c', l: 'Passivi', fit: 1, nm: 1 }] };
     clk = ' data-act="dxopen"';
   }
-  return `<div class="card pcard qcard${clk ? ' dxc' : ''}"${clk}><div class="chh dxh"><h2>Variazioni assolute</h2>${nv}</div><div class="lbl" style="margin:-4px 0 6px">${prev ? 'Mese: su ' + esc(monthName(prev.mese)) : ''}${prev && f ? ' · ' : ''}${f ? 'Totale: da ' + esc(monthName(f.mese)) : ''}</div><div class="qg">${items.map(tile).join('')}</div></div>`;
+  return `<div class="card pcard qcard${clk ? ' dxc' : ''}"${clk}><div class="chh dxh"><h2>Variazioni assolute</h2>${nv}</div><div class="lbl" style="margin:-4px 0 6px">${a ? 'Variazione da ' + esc(monthName(a.mese)) : 'Servono almeno 2 mesi di dati'}</div><div class="qg">${items.map(tile).join('')}</div></div>`;
+}
+/* Valori assoluti delle categorie (stato attuale) */
+function valoriCard(vis) {
+  const c = { ...totals(vis), ...catTot(vis) };
+  const items = [['Liquidità', c.liq, ''], ['Portafoglio', c.port, ''], ['Beni', c.beni, ''], ['Passivi', c.passivi, 'neg']];
+  return `<div class="card pcard vcard"><div class="chh"><h2>Valori per categoria</h2></div><div class="qg">${items.map(([l, v, k]) => `<div class="qc dq"><b>${l}</b><div class="dv ${k}">${eur(v)}</div></div>`).join('')}</div></div>`;
 }
 /* Colonne impilate: una colonna con gli attivi, una con passivi + patrimonio netto (stessa altezza degli attivi) */
 function colCard(t, vis) {

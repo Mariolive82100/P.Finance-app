@@ -336,3 +336,12 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .acard.back{display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700;color:#0f766e;min-width:110px}.acard.back:hover{background:#e8f3f1}
 
 .acard .exc{font-style:italic;color:#b45309;margin-top:2px}.acard .exb{margin-top:8px;white-space:nowrap}
+
+/* v1.64: filtri di periodo sopra l'andamento, riquadri variazioni e valori */
+.perbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.perbar .b{padding:9px 16px;font-size:14px;white-space:nowrap}
+.mob .perbar{gap:6px;margin:0 0 10px}.mob .perbar .b{padding:9px 12px;font-size:13px}
+.g12.pfrow{margin-bottom:8px}
+.dq .dv.dvx{color:#8aa09d;font-weight:500}.dq .dp{margin-top:0}
+.vcard .qg{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:auto}.mob .vcard .qg{grid-template-columns:1fr 1fr}.vcard .qc{cursor:default}.vcard .dq{padding:12px}
+.g12.r3{align-items:stretch}.g12.r3 .s7{position:relative;min-height:380px}.g12.r3 .s7>.qcard{height:100%;min-height:380px}
+.g12.r2 .s7>.vcard{height:auto;min-height:0}

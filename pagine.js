@@ -253,8 +253,8 @@ function pageMob0() {
   if (allF.length < 2) allF = all.slice(-2);
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   let top = '';
-  if (all.length) top = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
-  const body = hv ? '' : colCard(t, vis) + (all.length ? deltaCard(vis, cur, prev, all[0], all) : '') + quadCard(Dz, single);
+  if (all.length) top = perBar() + (hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF));
+  const body = hv ? '' : colCard(t, vis) + (all.length ? deltaCard(vis, cur, prev, all[0], all) : '') + valoriCard(vis) + quadCard(Dz, single);
   S.hanim = false; S.panim = false; S.tcan = false;
   return `<div class="mob">${head}${top}${body}</div>`;
 }
@@ -546,9 +546,9 @@ function pagePan0() {
   if (S.aggK) for (const k in S.aggK) if (S.aggK[k] === 'ya') S.aggK[k] = 'yf';
   const left = hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(hv, hv === 'cmp2' ? all : allF, r1)}</div>` : hubGrid(all, allF);
   S.hanim = false; S.panim = false; S.tcan = false;
-  const row2 = !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(single ? Dz : aggD(), all)}</div><div class="s7">${pr.pie}</div></div><div class="g12 r3"><div class="s5">${pr.tree}</div><div class="s7">${single ? '' : formMese()}</div></div>`;
+  const row2 = !all.length ? '' : `<div class="g12 r2"><div class="s5">${indicatori(single ? Dz : aggD(), all)}</div><div class="s7">${valoriCard(vis)}</div></div><div class="g12 r3"><div class="s5">${pr.tree}</div><div class="s7">${pr.pie}</div></div>`;
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>
-    ${single && !all.length ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${single && !all.length ? '' : row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+    ${single && !all.length ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `${all.length ? `<div class="g12 pfrow"><div class="s5">${perBar()}</div></div>` : ''}<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${single && !all.length ? '' : row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
 }
 /* Riga per scegliere l'account nelle pagine Saldi, Portafogli, Beni, Passivi */
 function accBar(fa) {
