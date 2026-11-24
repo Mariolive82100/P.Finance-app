@@ -418,3 +418,5 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .bil .card h3{margin:0 0 8px;font-size:15px}.bil .pos{color:#15803d}.bil .neg{color:#b91c1c}
 .bil .b[disabled]{opacity:.4;pointer-events:none}
 @media(max-width:999px){.bil .bk{grid-template-columns:1fr}.bil .bamt{margin-left:0}}
+
+.bil table.bt2{table-layout:fixed}.bil table.bops{min-width:560px}.bil table.bmain{min-width:640px}.bil table.bmain th:first-child,.bil table.bmain td:first-child{width:17%}.bil table.bcls{min-width:380px}.bil .bt2 td.bsel{min-width:0;overflow-wrap:anywhere}

@@ -207,7 +207,7 @@ async function act(el) {
     }
     if (a === 'hper') { S.hper = v; return render(); }
     if (a === 'hperA') { S.hperA = v; return render(); }
-    if (a === 'psub') { S.psub = v === 'bil' ? 'bil' : 'elenco'; return render(); }
+    if (a === 'psub') { S.psub = v === 'bil' ? 'bil' : v === 'res' ? 'res' : 'elenco'; return render(); }
     if (a === 'bacc') { S.bacc = v; S.btg = null; S.bpick = {}; S.bnew = {}; return render(); }
     if (a === 'bmode') { S.bmode = v === 'full' ? 'full' : 'buy'; return render(); }
     if (a === 'bdel') { const t = bilDraft(); delete t[v]; S.btg = t; return render(); }
@@ -220,37 +220,6 @@ async function act(el) {
       const nb = { ...(D.bil || {}), [S.bacc]: clean };
       if (!S.demo) await updateDoc(doc(db, 'users', D.uid), { bil: nb });
       D.bil = nb; S.btg = null; S.msg = 'Obiettivi aggiornati.'; return render();
-    }
-    if (a === 'bilok') {
-      if (S.ro || !D) return;
-      const c = bilCalc(), liqOn = S.bli !== false, nuovi = [], byP = new Map(), liqTxt = [];
-      if (!c.okT || !c.ops.length) { S.msg = 'Nessuna operazione da registrare.'; return render(); }
-      c.ops.forEach(o => { if (!byP.has(o.port.id)) byP.set(o.port.id, { v: o.port, ops: [] }); byP.get(o.port.id).ops.push(o); });
-      for (const { v, ops } of byP.values()) {
-        const prod = (v.prodotti || []).map(p => ({ ...p })); let cash = 0;
-        for (const o of ops) {
-          const i = prod.findIndex(p => String(p.isin || '').toUpperCase() === o.isin), cost = o.q * o.price * (o.nom ? .01 : 1);
-          if (o.buy) {
-            if (i >= 0) { const p = prod[i], q0 = Number(p.quote) || 0; if (p.pmc > 0) p.pmc = Math.round((q0 * p.pmc + o.q * o.price) / (q0 + o.q) * 1e6) / 1e6; p.quote = Math.round((q0 + o.q) * 1e6) / 1e6; }
-            else { const np = { isin: o.isin, nome: (o.nome || '').slice(0, 60), classe: o.c, quote: Math.round(o.q * 1e6) / 1e6, manuale: 0, pmc: Math.round(o.price * 1e6) / 1e6, ...(o.nom ? { nom: true } : {}) }; prod.push(np); nuovi.push(np); }
-            cash -= cost;
-          } else {
-            if (i < 0) continue; const p = prod[i], q0 = Number(p.quote) || 0, r = Math.round((q0 - o.q) * 1e6) / 1e6;
-            if (r <= 1e-9) prod.splice(i, 1); else p.quote = r; cash += cost;
-          }
-        }
-        const { id, assetClass, ...rest } = v, dati = { ...rest, prodotti: prod }; dati.valore = prod.length ? valoreProd(dati) : 0;
-        await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
-        if (liqOn) {
-          const lq = D.voci.find(y => y.categoria === 'Liquidità' && y.nome === v.nome && (y.account || '') === (v.account || ''));
-          if (lq) { const nv = r2(lq.valore + cash); await updateDoc(doc(db, 'users', D.uid, 'voci', lq.id), { valore: nv }); lq.valore = nv; liqTxt.push(v.nome + ' ' + (cash >= 0 ? '+' : '−') + eur(Math.abs(cash))); }
-        }
-      }
-      await syncStorico(); S.bamt = ''; S.bpick = {}; S.bnew = {};
-      S.msg = 'Operazioni registrate: acquisti ' + eur(c.buyT) + (c.sellT > 0 ? ', vendite ' + eur(c.sellT) : '') + '.' + (liqTxt.length ? ' Liquidità: ' + liqTxt.join(', ') + '.' : (liqOn ? ' Nessun conto di liquidità con lo stesso nome del portafoglio: la liquidità non è cambiata.' : ''));
-      render();
-      if (nuovi.length) { if (!isAdmin()) segnalaIsin(nuovi); else { const extra = await sheetAggiungi(nuovi); if (extra) { S.msg += extra; render(); } } }
-      return;
     }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
     if (a === 'hclose') { S.hq = null; S.hanim = 'out'; return render(); }
@@ -1014,6 +983,5 @@ document.addEventListener('change', e => {
   else if (k === 'nprice') nw().price = t.value;
   else if (k === 'nnom') nw().nom = t.checked;
   else if (k === 'nport') nw().port = t.value;
-  else if (k === 'li') { S.bli = t.checked; return; }
   render();
 });
