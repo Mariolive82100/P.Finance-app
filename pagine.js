@@ -71,9 +71,15 @@ window.addEventListener('popstate', e => {
   render(); if (changed) window.scrollTo(0, 0);
 });
 
+window.addEventListener('pf-inst', () => { if (document.querySelector('.auth')) render(); });
 function renderAuth(el) {
+  const inst = (matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? '' : (() => {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    const tip = !S.instTip || window.PF_INST ? '' : `<p class="note" style="margin:0 0 10px">${ios ? 'Su iPhone e iPad apri questa pagina con Safari, tocca il tasto Condividi (il quadrato con la freccia) e scegli “Aggiungi alla schermata Home”.' : 'Apri il menu del browser (i tre puntini) e scegli “Installa app” oppure “Aggiungi a schermata Home”.'}</p>`;
+    return `<button class="b" style="width:100%;margin-bottom:${tip ? 6 : 12}px" data-act="install">Installa l'app sul telefono</button>${tip}`;
+  })();
   el.innerHTML = `<div class="auth card"><h2>P.Finance <span class="ver">v${VER} beta</span></h2>
-    <button class="b" style="width:100%" data-act="google">Accedi con Google</button>
+    ${inst}<button class="b" style="width:100%" data-act="google">Accedi con Google</button>
     <p class="note">Al primo accesso l'amministratore dovrà approvarti.</p>
     <button class="b s" style="width:100%;margin-top:10px" data-act="demo">Prova la demo</button><p class="note">La demo usa dati inventati e non salva niente.</p>
     <div class="msg" id="am">${esc(S.msg)}</div></div>`;

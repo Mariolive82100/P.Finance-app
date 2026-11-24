@@ -78,6 +78,11 @@ async function act(el) {
       return;
     }
     if (a === 'mode') { S.mode = v; return render(); }
+    if (a === 'install') {
+      const e = window.PF_INST;
+      if (e) { window.PF_INST = null; try { e.prompt(); await e.userChoice; } catch (x) {} return render(); }
+      S.instTip = !S.instTip; return render();
+    }
     if (a === 'google') { await signInWithPopup(auth, new GoogleAuthProvider()); return; }
     if (a === 'logout') { S.tab = 'pat'; S.menu = false; S.pop = null; S.fAcc = 'all'; await signOut(auth); try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {} return location.reload(); }
     if (a === 'refresh') return location.reload();
