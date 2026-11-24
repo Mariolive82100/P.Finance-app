@@ -274,7 +274,7 @@ function pageSaldi() {
   const opt = accList(D).filter(([k]) => inScK(k, fa)).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   const form = S.addConto && !fm ? `<div class="card"><h2>Nuovo conto di liquidità</h2><label class="lbl">Account<select id="cnacc">${opt}</select></label><label class="lbl">Nome del conto<input id="cnn" maxlength="40" placeholder="es. Conto Fineco"></label><label class="lbl">Saldo attuale €<input id="cnv" inputmode="decimal" placeholder="0"></label><div class="acts"><button class="b" data-act="caddok">Salva conto</button><button class="b s" data-act="caddc">Annulla</button></div></div>` : '';
   const out = `<div class="card"><div class="lbl bd">Liquidità totale${aname ? ' · ' + esc(aname) : ''}</div><div class="big">${eur(tot(liq))}</div>${bar}</div>${form}${secs || (S.addConto ? '' : '<div class="card">Nessun conto di liquidità. Aggiungine uno.</div>')}${wide && liq.length ? `<div class="prow one">${portPieCard('sp_all', 'Liquidità aggregata', contiRoot(liq), 'per conto')}</div>` : ''}`;
-  return wide ? `<div class="con">${out}</div>` : accBar(fa) + out;
+  return wide ? `<div class="con">${accBar(fa)}${out}</div>` : accBar(fa) + out;
 }
 /* Beni e Passivi: stessa pagina, due elenchi (immobili, beni, altro / mutui, prestiti, debiti) */
 const VOCI_CFG = {
@@ -298,7 +298,7 @@ function pageVoci(kind) {
   const xm = kind === 'pas' ? (S.xmod || 'piano') : 'manuale';
   const form = S.addX === kind && !fm ? `<div class="card"><h2>${C.nuovo}</h2><label class="lbl">Account<select id="xnacc">${opt}</select></label><label class="lbl">Tipo<select id="xncat">${C.cats().map(c => `<option>${esc(c)}</option>`).join('')}</select></label><label class="lbl">Nome<input id="xnn" maxlength="40" placeholder="${C.ph}" value="${esc(S.xnn || '')}"></label>${kind === 'pas' ? `<label class="lbl">Come vuoi inserire il debito?<select id="xmod" data-act="xmod"><option value="piano" ${xm === 'piano' ? 'selected' : ''}>Nuovo debito: piano di rimborso (inizio e fine)</option><option value="incorso" ${xm === 'incorso' ? 'selected' : ''}>Debito già in corso: parte dal mese prossimo</option><option value="manuale" ${xm === 'manuale' ? 'selected' : ''}>Importo a mano</option></select></label>` : ''}${kind === 'pas' && xm === 'incorso' ? `<label class="lbl">Debito residuo oggi (€)<input id="xr" inputmode="decimal" placeholder="es. 150000"></label><label class="lbl">Data dell'ultima rata<input id="xf" type="date"></label><p class="note">I mesi già registrati non cambiano: oggi il debito vale quanto scrivi, poi scende da solo ogni mese a partire dal prossimo, fino a zero all'ultima rata.</p>` : kind === 'pas' && xm === 'piano' ? `<label class="lbl">Importo preso a prestito (€)<input id="xk" inputmode="decimal" placeholder="es. 200000"></label><label class="lbl">Data di inizio<input id="xi" type="date"></label><label class="lbl">Data di fine<input id="xf" type="date"></label><p class="note">L'app calcola la rata del solo capitale (importo diviso numero di mesi): ogni mese il debito scende da solo fino a zero all'ultima rata.</p>` : `<label class="lbl">${C.imp}<input id="xnv" inputmode="decimal" placeholder="0"></label>`}<div class="acts"><button class="b" data-act="xaddok">${C.ok}</button><button class="b s" data-act="xaddc">Annulla</button></div></div>` : '';
   const out = `<div class="card"><div class="lbl bd">${C.tot}${aname ? ' · ' + esc(aname) : ''}</div><div class="big ${C.cls}">${eur(tot(lst))}</div>${bar}</div>${form}${secs || (S.addX === kind ? '' : `<div class="card">${C.vuoto}</div>`)}${wide && lst.length ? `<div class="prow one">${portPieCard(C.pre + 'all', C.agg, contiRoot(lst, C.tone), C.sub)}</div>` : ''}`;
-  return wide ? `<div class="con">${out}</div>` : accBar(fa) + out;
+  return wide ? `<div class="con">${accBar(fa)}${out}</div>` : accBar(fa) + out;
 }
 const pagePassivi = () => pageVoci('pas'), pageBeni = () => pageVoci('ben');
 /* Portafogli: solo lettura (si modificano dalla versione per computer) */
@@ -548,9 +548,9 @@ function pagePan() {
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>
     ${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${left}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${all.length ? deltaCard(vis, cur, prev, all[0], all) : pr.pie}</div></div>`}${row2}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
 }
-/* Telefono: riga per scegliere l'account nelle pagine Saldi, Portafogli, Beni, Passivi */
+/* Riga per scegliere l'account nelle pagine Saldi, Portafogli, Beni, Passivi */
 function accBar(fa) {
-  const D = S.data; if (innerWidth >= 1000 || !D.accounts.length) return '';
+  const D = S.data; if (!D.accounts.length) return '';
   return `<div class="accs">${[['all', 'Aggregato'], ['main', D.nome], ...D.accounts.map(a => [a.id, a.nome])].map(([k, n]) => `<div class="acard${fa === k ? ' on' : ''}" data-act="facc" data-v="${esc(k)}"${k !== 'all' ? ` style="--at:${accTint(k)}"` : ''}><div class="lbl bd">${esc(n)}${k !== 'all' && isEsc(k) ? ' <small>(fuori)</small>' : ''}</div></div>`).join('')}</div>`;
 }
 /* Storico mese per mese di un singolo account */

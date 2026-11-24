@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.61';
+const VER = '1.62';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -279,6 +279,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.62','24 nov 2026',['Computer: anche nelle pagine Saldi, Portafogli, Beni e Passivi c\'è la riga per scegliere l\'account (Aggregato, il tuo, gli altri), uguale a quella del telefono']],
   ['1.61','24 nov 2026',['Telefono: le pagine Saldi, Portafogli, Beni e Passivi hanno la scelta dell\'account (anche quelli fuori dall\'aggregato) e ricordano quello selezionato; nella vista di un account senza voci una nota spiega perché il patrimonio è 0']],
   ['1.60','24 nov 2026',['Account escludibili dall\'aggregato: toccando un account (anche il principale) compare il tasto « Escludi dall\'aggregato »; l\'account escluso resta consultabile da solo ma non entra in totali, grafici, albero, report e storico aggregato','Lo storico mensile salva anche i totali di ogni account; in Importazioni lo storico CSV si può caricare per un singolo account, e nella vista del singolo account compare il suo storico mese per mese']],
   ['1.59','24 nov 2026',['Home: quando è selezionato un account compare il tasto « Aggregato » per tornare al patrimonio totale; toccando di nuovo lo stesso account si torna all\'aggregato']],
