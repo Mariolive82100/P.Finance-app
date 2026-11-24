@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.58';
+const VER = '1.59';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -257,6 +257,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.59','24 nov 2026',['Home: quando è selezionato un account compare il tasto « Aggregato » per tornare al patrimonio totale; toccando di nuovo lo stesso account si torna all\'aggregato']],
   ['1.58','24 nov 2026',['Variazioni assolute: accanto al titolo la variazione del patrimonio netto nel periodo scelto (stesso filtro di Andamento del patrimonio)','Toccando il riquadro si apre un unico grafico con Liquidità, Portafoglio, Beni e Passivi, con il filtro per periodo']],
   ['1.57','24 nov 2026',['Schermata iniziale: tasto Installa l\'app (con istruzioni per iPhone) prima dell\'accesso; animazione di apertura con l\'euro che si ingrandisce e poi la P di P.Finance']],
   ['1.56','23 nov 2026',['Portafogli: tasti Compra e Vendi accanto ad Aggiungi portafoglio (quote, prezzo medio di carico e, se vuoi, liquidità del conto con lo stesso nome)']],
