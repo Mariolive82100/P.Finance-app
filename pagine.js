@@ -256,7 +256,7 @@ function pageMob0() {
   const lst = homeList().filter(k => !HOME_BLK[k].pc), hasPer = all.length && lst.some(k => k === 'and' || k === 'var');
   const body = lst.map(k => homeBlk(k, c)).join('');
   S.hanim = false; S.panim = false; S.tcan = false;
-  return `<div class="mob">${head}${homeBar()}${hasPer ? perBar() : ''}${body || (S.hedit ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>')}</div>`;
+  return `<div class="mob">${head}${S.ro ? '' : `<div class="hmbar">${homeBtn()}</div>`}${homeBar()}${hasPer ? perBar() : ''}${body || (S.hedit ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>')}</div>`;
 }
 /* Saldi: i conti di liquidità di ogni account */
 function pageSaldi() {
@@ -424,10 +424,10 @@ function disParts(Dz0, single, noTree) {
 }
 /* Panoramica: solo su schermi larghi (computer) */
 /* Riquadro grafici della Panoramica: un selettore sceglie quale grafico vedere */
-function hubBody(key, all, r1) {
-  const hist = all.length >= 2, mob = innerWidth < 1000, W = mob ? Math.max(300, innerWidth - 62) : Math.max(380, Math.round((innerWidth - 200 - 56 - 28) * 5 / 12 - 40)), H = Math.max(80, r1 - 110);
+function hubBody(key, all, r1, cols) {
+  const hist = all.length >= 2, mob = innerWidth < 1000, W = mob ? Math.max(300, innerWidth - 62) : Math.max(300, Math.round((innerWidth - 200 - 56 - 28) * (cols || 5) / 12 - 40)), H = Math.max(80, r1 - 110);
   const no = t => `<div class="card"><div class="chh"><h2>${t}</h2><span class="chb"><button class="b s sm" data-act="hclose">← Indietro</button></span></div><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>`;
-  if (key === 'main') return panMain(all, r1 + 70);
+  if (key === 'main') return panMain(all, r1 + 70, cols);
   if (key === 'bar') {
     if (!hist) return no('Variazione mensile del patrimonio netto');
     const A = aggOf('bar', all);
@@ -547,24 +547,24 @@ function pagePan0() {
   const kpis = `<div class="kpis">${kp('Patrimonio netto', eur(t.netto), dsub, cls(t.netto), eye + rfsBtn())}${accChips()}</div>`;
   if (!all.length) {
     S.hanim = false; S.panim = false; S.tcan = false;
-    return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}${kpis}${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${hubGrid(all, allF)}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${pr.pie}</div></div>`}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+    return `<div class="pan" style="--r1:${r1}px">${panTop(aname, null, homeBtn())}${kpis}${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${hubGrid(all, allF)}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${pr.pie}</div></div>`}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
   }
   const c = { all, allF, hv, r1, t, vis, Dz, single, cur, prev, pr, D: single ? Dz : aggD() };
   const ed = !!S.hedit, nm = k => HOME_BLK[k].n, lst = homeList();
   let items = homeLayout(r1), htm = {};
-  items.forEach(i => { htm[i.k] = homeBlk(i.k, { ...c, r1: i.h * 10 - 14 }); });
+  items.forEach(i => { htm[i.k] = homeBlk(i.k, { ...c, r1: i.h * 10 - 14, cols: i.w }); });
   items = hlFix(items.filter(i => htm[i.k]), null);
   S.hmItems = items;
   S.hanim = false; S.panim = false; S.tcan = false;
   const H = Math.max(0, ...items.map(i => i.r + i.h)) * 10;
   const grid = items.length ? `<div class="hmf${ed ? ' ed' : ''}" style="height:${H}px">${items.map(i => { const px = i.h * 10 - 14; return `<div class="hf" data-k="${i.k}" style="${hmStyle(i)};--r1:${px}px">${i.k === 'and' ? htm.and.replace('height:var(--r1)', '') : htm[i.k]}${ed ? `<div class="hmov" data-hm="move"><span>✥ ${esc(nm(i.k))}</span></div><div class="hrs" data-hm="size" title="Ridimensiona"></div>` : ''}</div>`; }).join('')}</div>` : (ed ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>');
-  return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}${kpis}${homeBar()}${lst.some(k => k === 'and' || k === 'var') ? `<div class="g12 pfrow"><div class="s5">${perBar()}</div></div>` : ''}${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
+  return `<div class="pan" style="--r1:${r1}px">${panTop(aname, null, homeBtn())}${kpis}${homeBar()}${lst.some(k => k === 'and' || k === 'var') ? `<div class="g12 pfrow"><div class="s5">${perBar()}</div></div>` : ''}${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
 }
 const hmStyle = i => `left:calc((100% + 14px) * ${i.c} / 12);width:calc((100% + 14px) * ${i.w} / 12 - 14px);top:${i.r * 10}px;height:${i.h * 10 - 14}px`;
 /* ---------- Home modificabile: riquadri, ordine e pannello di scelta ---------- */
 function homeBlk(k, c) {
   const has = c.all.length > 0;
-  if (k === 'and') return has ? (c.hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, c.r1)}</div>` : hubGrid(c.all, c.allF)) : '';
+  if (k === 'and') return has ? (c.hv ? `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, c.r1, c.cols)}</div>` : hubGrid(c.all, c.allF)) : '';
   if (k === 'col') return colCard(c.t, c.vis);
   if (k === 'var') return has ? deltaCard(c.vis, c.cur, c.prev, c.all[0], c.all) : '';
   if (k === 'ind') return has && c.D ? indicatori(c.D, c.all) : '';
@@ -574,11 +574,9 @@ function homeBlk(k, c) {
   return '';
 }
 /* Tasto "Modifica home" e, quando è aperto, l'elenco dei riquadri con frecce, Togli e Aggiungi */
+function homeBtn() { return S.ro ? '' : `<button class="b sm" data-act="hedit">${S.hedit ? 'Fine modifica' : 'Modifica home'}</button>`; }
 function homeBar() {
-  if (S.ro) return '';
-  const ed = !!S.hedit;
-  const btn = `<div class="hmbar"><button class="b ${ed ? '' : 's'} sm" data-act="hedit">${ed ? 'Fine modifica' : 'Modifica home'}</button></div>`;
-  if (!ed) return btn;
+  if (S.ro || !S.hedit) return '';
   const mob = innerWidth < 1000, ok = k => !(mob && HOME_BLK[k].pc), lst = homeList().filter(ok), off = Object.keys(HOME_BLK).filter(k => ok(k) && !homeList().includes(k));
   const rows = lst.map((k, i) => `<div class="hrow"><b class="grow">${esc(HOME_BLK[k].n)}</b>${mob ? `<button class="b s sm" data-act="hup" data-v="${k}"${i ? '' : ' disabled'} aria-label="Sposta su">↑</button><button class="b s sm" data-act="hdn" data-v="${k}"${i < lst.length - 1 ? '' : ' disabled'} aria-label="Sposta giù">↓</button>` : ''}<button class="b s sm r" data-act="hrm" data-v="${k}">Togli</button></div>`).join('');
   return `<div class="card hed"><div class="chh"><h2>Modifica home</h2></div>${mob ? '' : '<p class="note" style="margin:0 0 8px">Trascina un riquadro per spostarlo; trascina l\'angolo in basso a destra per ridimensionarlo.</p>'}${rows || '<p class="note">Nessun riquadro: aggiungine uno.</p>'}${off.length ? `<div class="lbl" style="margin:10px 0 6px">Riquadri disponibili</div><div class="hadd">${off.map(k => `<button class="b s sm" data-act="hadd" data-v="${k}">＋ ${esc(HOME_BLK[k].n)}</button>`).join('')}</div>` : ''}<div class="acts" style="margin-top:10px"><button class="b s sm" data-act="hrip">Ripristina l'ordine iniziale</button><button class="b sm" data-act="hedit">Fine</button></div>${mob ? '<p class="note">Su telefono non compaiono Indicatori e Albero: restano nella home del computer.</p>' : ''}</div>`;
@@ -603,7 +601,7 @@ function histCard(k) {
   const noV = !D.voci.some(v => (v.account || 'main') === k);
   return `<div class="card"><h2 style="margin-top:0">Storico dell'account</h2>${noV ? `<p class="note" style="margin-top:0">Il patrimonio attuale è 0 perché non ci sono ancora conti, portafogli o beni: aggiungili dalle pagine Saldi, Portafogli e Beni. Lo storico qui sotto resta separato.</p>` : ''}${rows}</div>`;
 }
-const panTop = (name, title) => `<div class="ptop"><h2>${title || 'Panoramica'} · ${esc(name)}</h2><div class="pbtn"><button class="b sm" data-act="nv">Nuova voce</button></div></div>`;
+const panTop = (name, title, btn) => `<div class="ptop"><h2>${title || 'Panoramica'} · ${esc(name)}</h2><div class="pbtn">${btn !== undefined ? btn : '<button class="b sm" data-act="nv">Nuova voce</button>'}</div></div>`;
 
 const compact = v => hideAmt() ? '•••' : new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 const shortM = k => { const [y, m] = k.split('-'); return MESI[+m - 1].slice(0, 3) + ' ' + y.slice(2); };

@@ -375,9 +375,9 @@ document.addEventListener('mouseout', e => {
   const v = e.target.closest && e.target.closest('.cfsv');
   if (v && !(e.relatedTarget && v.contains(e.relatedTarget))) colHover(null);
 });
-function panMain(all, r1) {
+function panMain(all, r1, cols) {
   if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
-  const A = aggOf('main', all), W = innerWidth < 1000 ? Math.max(300, innerWidth - 62) : Math.max(380, Math.round((innerWidth - 200 - 56 - 28) * 5 / 12 - 40));
+  const A = aggOf('main', all), W = innerWidth < 1000 ? Math.max(300, innerWidth - 62) : Math.max(300, Math.round((innerWidth - 200 - 56 - 28) * (cols || 5) / 12 - 40));
   return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150));
 }
 function pageAnd() {

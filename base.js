@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.66';
+const VER = '1.67';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -323,6 +323,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.67','24 nov 2026',['Panoramica: "Modifica home" prende il posto di "Nuova voce"; i grafici ingranditi si adattano alla larghezza reale del riquadro (niente più scritte giganti)']],
   ['1.66','24 nov 2026',['Home libera sul computer: in modalità modifica i riquadri si spostano trascinandoli e si ridimensionano trascinando l\'angolo in basso a destra; non possono sovrapporsi e la disposizione è salvata nel tuo account']],
   ['1.65','24 nov 2026',['Home modificabile: il tasto "Modifica home" permette di scegliere quali riquadri mostrare e in che ordine (frecce su/giù, Aggiungi, Togli, Ripristina); la disposizione è salvata nel tuo account e vale per tutti gli account e per telefono e computer']],
   ['1.50','23 nov 2026',['Variazioni assolute: ogni riquadro mostra il valore, la variazione sul mese precedente e quella totale dall\'inizio delle registrazioni']],
