@@ -550,11 +550,17 @@ function pagePan0() {
     return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}${kpis}${single ? `<div class="g12 r1"><div class="s4">${colCard(t, vis)}</div><div class="s8">${pr.pie}</div></div>${histCard(fa)}` : `<div class="g12 r1"><div class="s5">${hubGrid(all, allF)}</div><div class="s3">${colCard(t, vis)}</div><div class="s4">${pr.pie}</div></div>`}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
   }
   const c = { all, allF, hv, r1, t, vis, Dz, single, cur, prev, pr, D: single ? Dz : aggD() };
-  const lst = homeList(), items = homePack(lst.map(k => ({ k, h: HOME_BLK[k].h, w: HOME_BLK[k].w, html: homeBlk(k, c) })).filter(x => x.html));
+  const ed = !!S.hedit, nm = k => HOME_BLK[k].n, lst = homeList();
+  let items = homeLayout(r1), htm = {};
+  items.forEach(i => { htm[i.k] = homeBlk(i.k, { ...c, r1: i.h * 10 - 14 }); });
+  items = hlFix(items.filter(i => htm[i.k]), null);
+  S.hmItems = items;
   S.hanim = false; S.panim = false; S.tcan = false;
-  const grid = items.length ? `<div class="g12 hm">${items.map(x => `<div class="hb h${x.h}" style="grid-column:span ${x.w}">${x.html}</div>`).join('')}</div>` : (S.hedit ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>');
+  const H = Math.max(0, ...items.map(i => i.r + i.h)) * 10;
+  const grid = items.length ? `<div class="hmf${ed ? ' ed' : ''}" style="height:${H}px">${items.map(i => { const px = i.h * 10 - 14; return `<div class="hf" data-k="${i.k}" style="${hmStyle(i)};--r1:${px}px">${i.k === 'and' ? htm.and.replace('height:var(--r1)', '') : htm[i.k]}${ed ? `<div class="hmov" data-hm="move"><span>✥ ${esc(nm(i.k))}</span></div><div class="hrs" data-hm="size" title="Ridimensiona"></div>` : ''}</div>`; }).join('')}</div>` : (ed ? '' : '<div class="card">Nessun riquadro nella home. Usa "Modifica home" per aggiungerne.</div>');
   return `<div class="pan" style="--r1:${r1}px">${panTop(aname)}${kpis}${homeBar()}${lst.some(k => k === 'and' || k === 'var') ? `<div class="g12 pfrow"><div class="s5">${perBar()}</div></div>` : ''}${grid}</div>${pr.over}${S.cx ? colBig(t, vis) : ''}`;
 }
+const hmStyle = i => `left:calc((100% + 14px) * ${i.c} / 12);width:calc((100% + 14px) * ${i.w} / 12 - 14px);top:${i.r * 10}px;height:${i.h * 10 - 14}px`;
 /* ---------- Home modificabile: riquadri, ordine e pannello di scelta ---------- */
 function homeBlk(k, c) {
   const has = c.all.length > 0;
@@ -567,13 +573,6 @@ function homeBlk(k, c) {
   if (k === 'tor') return c.pr ? c.pr.pie : quadCard(c.Dz, c.single);
   return '';
 }
-/* Riempie le righe da 12 colonne senza buchi: l'ultimo riquadro di ogni riga prende lo spazio che resta */
-function homePack(items) {
-  const out = []; let row = [], s = 0;
-  const close = () => { if (row.length) { row[row.length - 1].w += 12 - s; out.push(...row); } row = []; s = 0; };
-  items.forEach(it => { if (s + it.w > 12) close(); row.push({ ...it }); s += it.w; });
-  close(); return out;
-}
 /* Tasto "Modifica home" e, quando è aperto, l'elenco dei riquadri con frecce, Togli e Aggiungi */
 function homeBar() {
   if (S.ro) return '';
@@ -581,8 +580,8 @@ function homeBar() {
   const btn = `<div class="hmbar"><button class="b ${ed ? '' : 's'} sm" data-act="hedit">${ed ? 'Fine modifica' : 'Modifica home'}</button></div>`;
   if (!ed) return btn;
   const mob = innerWidth < 1000, ok = k => !(mob && HOME_BLK[k].pc), lst = homeList().filter(ok), off = Object.keys(HOME_BLK).filter(k => ok(k) && !homeList().includes(k));
-  const rows = lst.map((k, i) => `<div class="hrow"><b class="grow">${esc(HOME_BLK[k].n)}</b><button class="b s sm" data-act="hup" data-v="${k}"${i ? '' : ' disabled'} aria-label="Sposta su">↑</button><button class="b s sm" data-act="hdn" data-v="${k}"${i < lst.length - 1 ? '' : ' disabled'} aria-label="Sposta giù">↓</button><button class="b s sm r" data-act="hrm" data-v="${k}">Togli</button></div>`).join('');
-  return `<div class="card hed"><div class="chh"><h2>Modifica home</h2></div>${rows || '<p class="note">Nessun riquadro: aggiungine uno.</p>'}${off.length ? `<div class="lbl" style="margin:10px 0 6px">Riquadri disponibili</div><div class="hadd">${off.map(k => `<button class="b s sm" data-act="hadd" data-v="${k}">＋ ${esc(HOME_BLK[k].n)}</button>`).join('')}</div>` : ''}<div class="acts" style="margin-top:10px"><button class="b s sm" data-act="hrip">Ripristina l'ordine iniziale</button><button class="b sm" data-act="hedit">Fine</button></div>${mob ? '<p class="note">Su telefono non compaiono Indicatori e Albero: restano nella home del computer.</p>' : ''}</div>`;
+  const rows = lst.map((k, i) => `<div class="hrow"><b class="grow">${esc(HOME_BLK[k].n)}</b>${mob ? `<button class="b s sm" data-act="hup" data-v="${k}"${i ? '' : ' disabled'} aria-label="Sposta su">↑</button><button class="b s sm" data-act="hdn" data-v="${k}"${i < lst.length - 1 ? '' : ' disabled'} aria-label="Sposta giù">↓</button>` : ''}<button class="b s sm r" data-act="hrm" data-v="${k}">Togli</button></div>`).join('');
+  return `<div class="card hed"><div class="chh"><h2>Modifica home</h2></div>${mob ? '' : '<p class="note" style="margin:0 0 8px">Trascina un riquadro per spostarlo; trascina l\'angolo in basso a destra per ridimensionarlo.</p>'}${rows || '<p class="note">Nessun riquadro: aggiungine uno.</p>'}${off.length ? `<div class="lbl" style="margin:10px 0 6px">Riquadri disponibili</div><div class="hadd">${off.map(k => `<button class="b s sm" data-act="hadd" data-v="${k}">＋ ${esc(HOME_BLK[k].n)}</button>`).join('')}</div>` : ''}<div class="acts" style="margin-top:10px"><button class="b s sm" data-act="hrip">Ripristina l'ordine iniziale</button><button class="b sm" data-act="hedit">Fine</button></div>${mob ? '<p class="note">Su telefono non compaiono Indicatori e Albero: restano nella home del computer.</p>' : ''}</div>`;
 }
 /* Riga per scegliere l'account nelle pagine Saldi, Portafogli, Beni, Passivi */
 function accBar(fa) {

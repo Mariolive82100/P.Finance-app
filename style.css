@@ -358,3 +358,16 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .g12.hm .hb.h2>.tcol h2{flex:0 0 auto}
 .g12.hm .hb.h0>.card{height:auto}.g12.hm .hb.h0>.vcard{height:auto;min-height:0}
 .g12.hm .hb.h0{align-self:start}
+
+/* Home libera (computer): ogni riquadro ha posizione e misura proprie */
+.hmf{position:relative;margin-bottom:14px}
+.hf{position:absolute;box-sizing:border-box;min-width:0}
+.hf>.card,.hf>.hubc,.hf>.qcard,.hf>.vcard{height:100%!important;min-height:0!important;margin:0;box-sizing:border-box;overflow:auto}
+.hf>.hubc{display:flex;flex-direction:column}.hf>.hubc>.card{flex:1;min-height:0;height:auto!important}
+.hf>.tcol{position:absolute;inset:0;height:auto!important;display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;overflow:hidden}
+.hf>.tcol h2{flex:0 0 auto}
+.hmf.ed .hf{outline:2px dashed #14b8a6;outline-offset:2px;border-radius:12px}
+.hmf.ed .hf.drag{outline-color:#0f766e;box-shadow:0 8px 24px rgba(15,118,110,.25);z-index:5}
+.hmov{position:absolute;inset:0;z-index:3;cursor:move;touch-action:none;background:rgba(240,253,250,.55);border-radius:12px;display:flex;align-items:flex-start;justify-content:flex-start}
+.hmov span{margin:8px;padding:4px 10px;background:#0f766e;color:#fff;border-radius:8px;font-size:13px;font-weight:600;pointer-events:none}
+.hrs{position:absolute;right:0;bottom:0;width:26px;height:26px;z-index:4;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 50%,#0f766e 50%);border-radius:0 0 12px 0}

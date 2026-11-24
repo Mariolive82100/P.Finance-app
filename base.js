@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.65';
+const VER = '1.66';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -48,7 +48,33 @@ const catTot = voci => { const at = voci.filter(v => v.tipo === 'attivo'), s = f
 /* Home modificabile: elenco dei riquadri disponibili (nome, larghezza su 12 colonne, altezza: 1 = come il grafico, 2 = alta, 0 = libera, solo computer) e ordine di partenza */
 const HOME_BLK = { and: { n: 'Andamento del patrimonio', w: 5, h: 1 }, col: { n: 'Attivi, passivi e netto', w: 3, h: 1 }, var: { n: 'Variazioni assolute', w: 4, h: 1 }, ind: { n: 'Indicatori', w: 5, h: 0, pc: 1 }, val: { n: 'Valori per categoria', w: 7, h: 0 }, alb: { n: 'Albero del patrimonio', w: 5, h: 2, pc: 1 }, tor: { n: 'Torte', w: 7, h: 2 } };
 const HOME_DEF = ['and', 'col', 'var', 'ind', 'val', 'alb', 'tor'];
-const homeList = () => { const h = S.data && Array.isArray(S.data.home) ? S.data.home.filter(k => HOME_BLK[k]) : null; return h || HOME_DEF.slice(); };
+/* Ogni voce salvata è "id" oppure "id:colonna,riga,larghezza,altezza" (riga e altezza in passi da 10 px) */
+const hmParse = s => { const [k, g] = String(s).split(':'); if (!HOME_BLK[k]) return null; const a = g ? g.split(',').map(Number) : null; return { k, g: a && a.length === 4 && a.every(Number.isFinite) ? { c: a[0], r: a[1], w: a[2], h: a[3] } : null }; };
+const homeRaw = () => { const h = S.data && Array.isArray(S.data.home) ? S.data.home.map(hmParse).filter(Boolean) : null; return h || HOME_DEF.map(k => ({ k, g: null })); };
+const homeList = () => homeRaw().map(x => x.k);
+const homeStr = raw => raw.map(x => x.g ? `${x.k}:${x.g.c},${x.g.r},${x.g.w},${x.g.h}` : x.k);
+/* Dopo ogni spostamento: nessuna sovrapposizione; i riquadri che si scontrano scendono, poi tutto risale verso l'alto */
+function hlFix(items, fixedK) {
+  const hit = (a, b) => a.c < b.c + b.w && b.c < a.c + a.w && a.r < b.r + b.h && b.r < a.r + a.h;
+  const src = items.map(x => ({ ...x })), placed = [], fx = src.find(x => x.k === fixedK);
+  if (fx) placed.push(fx);
+  src.filter(x => x !== fx).sort((a, b) => a.r - b.r || a.c - b.c).forEach(x => { x.r = 0; while (placed.some(p => hit(x, p))) x.r++; placed.push(x); });
+  return src;
+}
+/* Disposizione dei riquadri sul computer: dalla memoria, oppure quella di partenza (righe da 12 colonne) */
+function homeLayout(r1, ok) {
+  const raw = homeRaw().filter(x => !ok || ok(x.k)), dh = k => k === 'val' ? 18 : k === 'ind' ? 30 : HOME_BLK[k].h === 1 ? Math.ceil((r1 + 14) / 10) : 40;
+  if (!raw.some(x => x.g)) {
+    const out = []; let y = 0, row = [], s = 0;
+    const flush = () => { if (!row.length) return; let c = 0; row.forEach((i, j) => { if (j === row.length - 1) i.w += 12 - s; i.c = c; i.r = y; c += i.w; out.push(i); }); y += Math.max(...row.map(i => i.h)); row = []; s = 0; };
+    raw.forEach(x => { const it = { k: x.k, w: HOME_BLK[x.k].w, h: dh(x.k) }; if (s + it.w > 12) flush(); row.push(it); s += it.w; });
+    flush(); return out;
+  }
+  const items = raw.filter(x => x.g).map(x => { const w = Math.min(12, Math.max(2, Math.round(x.g.w))), h = Math.max(8, Math.round(x.g.h)); return { k: x.k, w, h, c: Math.min(12 - w, Math.max(0, Math.round(x.g.c))), r: Math.max(0, Math.round(x.g.r)) }; });
+  let bot = Math.max(0, ...items.map(i => i.r + i.h));
+  raw.filter(x => !x.g).forEach(x => { const it = { k: x.k, w: HOME_BLK[x.k].w, h: dh(x.k), c: 0, r: bot }; bot += it.h; items.push(it); });
+  return hlFix(items, null);
+}
 /* Account esclusi dall'aggregato: elenco di chiavi ('main' = account principale) salvato nel profilo */
 const isEsc = k => !!(S.data && S.data.esclusi && S.data.esclusi.includes(k));
 const inSc = (v, fa) => fa === 'all' ? !isEsc(v.account || 'main') : (v.account || 'main') === fa;
@@ -229,7 +255,7 @@ async function loadData(uid, nome) {
   /* mesi con soli totali di un account (importati per account) non fanno parte dello storico aggregato */
   const storico = stAll.filter(x => typeof x.netto === 'number'), accOnly = stAll.filter(x => typeof x.netto !== 'number' && x.acc);
   let esclusi = [], home = null;
-  try { const ps = await getDoc(doc(db, 'users', uid)); const pd = ps.exists() ? ps.data() : {}, e = pd.esclusi; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); if (Array.isArray(pd.home)) home = pd.home.filter(k => HOME_BLK[k]); } catch (e) {}
+  try { const ps = await getDoc(doc(db, 'users', uid)); const pd = ps.exists() ? ps.data() : {}, e = pd.esclusi; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); if (Array.isArray(pd.home)) home = pd.home.filter(s => HOME_BLK[String(s).split(':')[0]]).map(String); } catch (e) {}
   S.data = { uid, nome, voci, arch, storico, accOnly, accounts, esclusi, home };
   await syncStorico();
 }
@@ -297,6 +323,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.66','24 nov 2026',['Home libera sul computer: in modalità modifica i riquadri si spostano trascinandoli e si ridimensionano trascinando l\'angolo in basso a destra; non possono sovrapporsi e la disposizione è salvata nel tuo account']],
   ['1.65','24 nov 2026',['Home modificabile: il tasto "Modifica home" permette di scegliere quali riquadri mostrare e in che ordine (frecce su/giù, Aggiungi, Togli, Ripristina); la disposizione è salvata nel tuo account e vale per tutti gli account e per telefono e computer']],
   ['1.50','23 nov 2026',['Variazioni assolute: ogni riquadro mostra il valore, la variazione sul mese precedente e quella totale dall\'inizio delle registrazioni']],
   ['1.49','23 nov 2026',['Modalità demo: nella schermata di accesso "Prova la demo" apre l\'app con dati inventati (10 anni, da 50.000 a 500.000 euro); nulla viene salvato e non si vedono dati reali']],

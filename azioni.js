@@ -198,14 +198,12 @@ async function act(el) {
     if (a === 'hedit') { S.hedit = !S.hedit; return render(); }
     if (a === 'hup' || a === 'hdn' || a === 'hrm' || a === 'hadd' || a === 'hrip') {
       const D = S.data; if (S.ro || !D) return;
-      let l = homeList(); const mob = innerWidth < 1000, vis = l.filter(k => !(mob && HOME_BLK[k].pc));
-      if (a === 'hrip') l = HOME_DEF.slice();
-      else if (a === 'hrm') l = l.filter(k => k !== v);
-      else if (a === 'hadd') { if (HOME_BLK[v] && !l.includes(v)) l.push(v); }
-      else { const i = vis.indexOf(v), j = i + (a === 'hup' ? -1 : 1); if (i < 0 || j < 0 || j >= vis.length) return; const x = l.indexOf(vis[i]), y = l.indexOf(vis[j]); [l[x], l[y]] = [l[y], l[x]]; }
-      D.home = l; if (S.own) S.own.home = l; render();
-      if (!S.demo) { try { await updateDoc(doc(db, 'users', D.uid), { home: l }); } catch (e) { S.msg = 'Disposizione non salvata: controlla le regole di sicurezza e riprova.'; render(); } }
-      return;
+      let raw = homeRaw(); const mob = innerWidth < 1000, vis = raw.filter(x => !(mob && HOME_BLK[x.k].pc));
+      if (a === 'hrip') raw = HOME_DEF.map(k => ({ k, g: null }));
+      else if (a === 'hrm') raw = raw.filter(x => x.k !== v);
+      else if (a === 'hadd') { if (HOME_BLK[v] && !raw.some(x => x.k === v)) raw.push({ k: v, g: null }); }
+      else { const i = vis.findIndex(x => x.k === v), j = i + (a === 'hup' ? -1 : 1); if (i < 0 || j < 0 || j >= vis.length) return; const x = raw.indexOf(vis[i]), y = raw.indexOf(vis[j]); [raw[x], raw[y]] = [raw[y], raw[x]]; }
+      return homeSalva(homeStr(raw));
     }
     if (a === 'hper') { S.hper = v; return render(); }
     if (a === 'hopen') { S.hq = v; S.hanim = 'in'; return render(); }
@@ -924,3 +922,37 @@ document.addEventListener('change', async e => {
   n.placeholder = 'Cerco il nome…'; const nm = await nomeDaIsin(isin); n.placeholder = nm ? 'Nome' : 'Nome non trovato: ' + (window._nomeInfo || ''); if (nm && !n.value.trim()) n.value = nm;
 });
 
+
+/* Home modificabile: salvataggio e movimento/ridimensionamento libero dei riquadri (solo computer) */
+async function homeSalva(l) {
+  const D = S.data; if (!D || S.ro) return;
+  D.home = l; if (S.own) S.own.home = l; render();
+  if (!S.demo) { try { await updateDoc(doc(db, 'users', D.uid), { home: l }); } catch (e) { S.msg = 'Disposizione non salvata: controlla le regole di sicurezza e riprova.'; render(); } }
+}
+let HMD = null;
+document.addEventListener('pointerdown', e => {
+  const h = e.target.closest && e.target.closest('[data-hm]'); if (!h || !S.hedit || S.ro || !S.hmItems || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const el = h.closest('.hf'), box = el && el.parentElement, it = el && S.hmItems.find(x => x.k === el.dataset.k); if (!it) return;
+  e.preventDefault();
+  const step = (box.offsetWidth + 14) / 12;
+  HMD = { k: it.k, mode: h.dataset.hm, x: e.clientX, y: e.clientY, step, base: S.hmItems.map(x => ({ ...x })), box, cur: null };
+  el.classList.add('drag');
+});
+document.addEventListener('pointermove', e => {
+  if (!HMD) return; e.preventDefault();
+  const d = HMD, dc = Math.round((e.clientX - d.x) / d.step), dr = Math.round((e.clientY - d.y) / 10);
+  const its = d.base.map(x => ({ ...x })), me = its.find(x => x.k === d.k), o = d.base.find(x => x.k === d.k);
+  if (d.mode === 'move') { me.c = Math.min(12 - o.w, Math.max(0, o.c + dc)); me.r = Math.max(0, o.r + dr); }
+  else { me.w = Math.min(12 - o.c, Math.max(2, o.w + dc)); me.h = Math.max(8, o.h + dr); }
+  const res = hlFix(its, d.k); d.cur = res;
+  res.forEach(i => { const n = d.box.querySelector(`.hf[data-k="${i.k}"]`); if (n) n.style.cssText = hmStyle(i) + `;--r1:${i.h * 10 - 14}px`; });
+  d.box.style.height = Math.max(0, ...res.map(i => i.r + i.h)) * 10 + 'px';
+}, { passive: false });
+const hmFine = () => {
+  if (!HMD) return; const d = HMD; HMD = null;
+  if (!d.cur) { render(); return; }
+  const fin = hlFix(d.cur, null).sort((a, b) => a.r - b.r || a.c - b.c);
+  homeSalva(fin.map(i => `${i.k}:${i.c},${i.r},${i.w},${i.h}`));
+};
+document.addEventListener('pointerup', hmFine);
+document.addEventListener('pointercancel', hmFine);
