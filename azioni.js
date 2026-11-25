@@ -381,7 +381,7 @@ async function act(el) {
     if (a === 'tradec') { S.trade = null; S.msg = ''; return render(); }
     if (a === 'tradeok') {
       const buy = S.trade === 'buy', err = m => { S.msg = m; render(); };
-      const v = D.voci.find(x => x.id === $('tpf').value), isin = $('tis').value.trim().toUpperCase(), q = pnum($('tq').value), pr = pnum($('tp').value), fee = $('tf').value.trim() ? pnum($('tf').value) : 0;
+      const v = D.voci.find(x => x.id === $('tpf').value), isin = $('tis').value.trim().toUpperCase(), q = pnum($('tq').value), pr = numPrezzo($('tp').value), fee = $('tf').value.trim() ? pnum($('tf').value) : 0;
       if (!v) return err('Scegli il portafoglio.');
       if (!/^[A-Z0-9]{12}$/.test(isin)) return err('L\'ISIN deve avere 12 caratteri.');
       if (!isFinite(q) || q <= 0) return err('Scrivi quante quote (o il nominale).');
@@ -627,7 +627,7 @@ async function portSalva0() {
     const m = ms ? pnum(ms) : 0; if (!isFinite(m) || m < 0) return err('Il valore manuale deve essere zero o più.');
     if (isin) {
       const q = pnum(qs); if (!/^[A-Z0-9]{12}$/.test(isin) || !(q > 0)) return err('Ogni prodotto con ISIN ha bisogno di 12 caratteri e di quote maggiori di zero.');
-      const pm = r.pmc.trim() ? pnum(r.pmc) : 0, al = r.aliq.trim() ? pnum(r.aliq) : null;
+      const pm = r.pmc.trim() ? numPrezzo(r.pmc) : 0, al = r.aliq.trim() ? pnum(r.aliq) : null;
       if (!isFinite(pm) || pm < 0) return err('Il prezzo medio di carico deve essere zero o più.');
       if (al !== null && (!isFinite(al) || al < 0 || al > 100)) return err('L\'aliquota va da 0 a 100.');
       prod.push({ isin, nome, classe: r.classe, quote: Math.round(q * 1e6) / 1e6, manuale: r2(m), ...(r.nom ? { nom: true } : {}), ...(pm > 0 ? { pmc: Math.round(pm * 1e6) / 1e6 } : {}), ...(al !== null ? { aliq: al } : {}) });

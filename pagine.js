@@ -358,7 +358,7 @@ function portDraft(v) {
 }
 function portTot(rows) {
   const n = x => { const y = pnum(String(x || '').trim()); return isFinite(y) && y > 0 ? y : 0; };
-  return valoreProd({ prodotti: rows.filter(r => String(r.isin || '').trim() || n(r.manuale)).map(r => ({ isin: String(r.isin || '').trim().toUpperCase(), quote: n(r.quote), manuale: n(r.manuale), pmc: n(r.pmc), nom: !!r.nom })) });
+  return valoreProd({ prodotti: rows.filter(r => String(r.isin || '').trim() || n(r.manuale)).map(r => ({ isin: String(r.isin || '').trim().toUpperCase(), quote: n(r.quote), manuale: n(r.manuale), pmc: numPrezzo(r.pmc) > 0 ? numPrezzo(r.pmc) : 0, nom: !!r.nom })) });
 }
 function portEditMob(v) {
   const L = portDraft(v), cur = S.pcur != null && S.pcur < L.length ? S.pcur : null, opts = sel => `<option value="">Scegli…</option>${ASSET.map(o => `<option ${sel === o ? 'selected' : ''}>${o}</option>`).join('')}`;
@@ -642,7 +642,7 @@ function bilCalc() {
       let isin, price, nom, port, nome = '';
       if (ch) { isin = ch.isin; price = ch.price; nom = ch.nom; port = ch.port; nome = ch.nome; }
       else {
-        const n = (S.bnew || {})[r.c] || {}; isin = String(n.isin || '').trim().toUpperCase(); const sp = S.prezzi && S.prezzi.map[isin], pp = pnum(n.price || '');
+        const n = (S.bnew || {})[r.c] || {}; isin = String(n.isin || '').trim().toUpperCase(); const sp = S.prezzi && S.prezzi.map[isin], pp = numPrezzo(n.price || '');
         price = sp > 0 ? sp : (isFinite(pp) && pp > 0 ? pp : 0); nom = !!n.nom; port = ports.find(v => v.id === n.port) || ports[0]; r.nw = { isin, sheet: sp > 0, price, nom, port: port && port.id };
       }
       r.ok = !!(isin && /^[A-Z0-9]{12}$/.test(isin) && price > 0 && port);
