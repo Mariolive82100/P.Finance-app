@@ -514,10 +514,6 @@ function pageRep() {
     <p class="note">Informazioni generali a scopo educativo, non consulenza finanziaria.</p></div>`;
 }
 
-function richCard() {
-  const r = (S.rich || []).filter(x => !(S.prezzi && S.prezzi.map[x.isin] > 0));
-  return `<div class="card"><h2>ISIN senza prezzo (${r.length})</h2><p class="lbl" style="margin-top:0">Prodotti inseriti dagli utenti e non ancora nel foglio dei prezzi.</p>${S.richErr ? '<p class="note">Elenco non leggibile: pubblica le nuove regole di Firestore.</p>' : r.length ? r.map(x => `<div class="row"><div class="n">${esc(x.nome || x.isin)}<small>${esc(x.isin)}${x.classe ? ' · ' + esc(x.classe) : ''}</small></div><button class="b r sm" data-act="richno" data-v="${esc(x.isin)}" aria-label="Scarta">✕</button></div>`).join('') + `<div class="acts"><button class="b" data-act="richok">${S.richBusy ? 'Aggiungo…' : 'Aggiungi tutti al foglio'}</button></div>` : '<p class="note">Nessun ISIN da aggiungere.</p>'}</div>`;
-}
 function pageAdm() {
   const u = S.users, pend = u.filter(x => !x.approved), ok = u.filter(x => x.approved);
   const row = (x, p) => `<div class="row"><div class="n">${esc(x.nome)}</div>
@@ -525,7 +521,6 @@ function pageAdm() {
         : `<button class="b r sm" data-act="rev" data-v="${x.uid}">Revoca</button>`}</div>`;
   return `<div class="card"><h2>In attesa di approvazione (${pend.length})</h2>${pend.length ? pend.map(x => row(x, true)).join('') : '<p class="note">Nessuna richiesta.</p>'}</div>
     <div class="card"><h2>Utenti approvati (${ok.length})</h2>${ok.length ? ok.map(x => row(x, false)).join('') : '<p class="note">Nessun utente.</p>'}</div>
-    ${richCard()}
     <div class="card"><button class="b s" data-act="reload-users">Aggiorna elenco</button></div>`;
 }
 

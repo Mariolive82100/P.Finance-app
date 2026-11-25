@@ -420,3 +420,10 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 @media(max-width:999px){.bil .bk{grid-template-columns:1fr}.bil .bamt{margin-left:0}}
 
 .bil table.bt2{table-layout:fixed}.bil table.bops{min-width:560px}.bil table.bmain{min-width:640px}.bil table.bmain th:first-child,.bil table.bmain td:first-child{width:17%}.bil table.bcls{min-width:380px}.bil .bt2 td.bsel{min-width:0;overflow-wrap:anywhere}
+
+/* Pagina Prezzi: tabella su computer, riquadri sul telefono */
+.przr{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.3fr) 150px 140px;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #eef3f2}
+.przn{min-width:0;overflow-wrap:anywhere}.przn small{display:block}
+.przl a{display:inline-block;margin-right:12px;font-weight:600;color:#0f766e}.przl summary{cursor:pointer;font-size:12px;color:#5b7370;margin-top:4px}
+.przp input{width:100%;box-sizing:border-box;margin:2px 0 0;text-align:right}
+@media(max-width:999px){.przr{grid-template-columns:1fr;gap:6px}.przp input{text-align:left}.przl a{padding:6px 0}}

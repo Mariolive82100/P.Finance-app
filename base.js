@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.80';
+const VER = '1.81';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -108,9 +108,39 @@ function piano(v, oggi = new Date()) {
   const k = Math.min(N, cnt(a, t));
   return { N, k, rata, residuo: r2(v.capitale * (N - k) / N), partito: true };
 }
-/* ---------- Prezzi: CSV pubblicato dal foglio "Lista prodotti quotati" (ticker, ISIN, valuta, prezzo + righe dei cambi EURUSD, EURCHF…) ---------- */
-const PREZZI_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSf5Jzc_Y30pFBidAh_M8rYM-9J30iyC67mtfWRZVhk0NEAFACjweMNc7gF7BYlpz4V7mOasY3IKtGN/pub?gid=0&single=true&output=csv';
-const leggiPrezzi = () => { try { const x = JSON.parse(localStorage.getItem('pf_prezzi')); return x && x.map ? x : null; } catch (e) { return null; } };
+/* ---------- Prezzi: li scrive l'utente (pagina Prezzi). Sono salvati nei prodotti dei suoi portafogli: nessuna lettura da siti o fogli esterni ---------- */
+const prezziVuoti = () => ({ map: {}, meta: {}, quando: 0 });
+/* Raccoglie prezzo, data e link corretto di ogni ISIN dai portafogli (anche archiviati): vale il prezzo con la data piu' recente */
+function prezziDaDati(D) {
+  const out = prezziVuoti(); if (!D) return out;
+  [...(D.voci || []), ...(D.arch || [])].forEach(v => (v.prodotti || []).forEach(p => {
+    const k = String(p.isin || '').toUpperCase(); if (!k) return;
+    const m = out.meta[k] || (out.meta[k] = { il: 0, link: '' });
+    if (p.link && !m.link) m.link = p.link;
+    if (p.prezzo > 0 && (!out.map[k] || (p.prezzoIl || 0) > m.il)) { out.map[k] = p.prezzo; m.il = p.prezzoIl || 0; if (m.il > out.quando) out.quando = m.il; }
+  }));
+  return out;
+}
+/* Da usare prima di riscrivere un elenco di prodotti: ricopia prezzo, data e link gia' inseriti */
+const conPrezzi = prod => (prod || []).map(p => {
+  const k = String(p.isin || '').toUpperCase(), P = S.prezzi, m = P.meta && P.meta[k], o = { ...p };
+  if (k && P.map[k] > 0 && !(o.prezzo > 0)) { o.prezzo = P.map[k]; if (m && m.il) o.prezzoIl = m.il; }
+  if (k && m && m.link && !o.link) o.link = m.link;
+  return o;
+});
+/* ISIN dei portafogli attivi ancora senza prezzo */
+const isinSenzaPrezzo = D => [...new Set((D.voci || []).flatMap(v => v.prodotti || []).map(p => String(p.isin || '').toUpperCase()).filter(k => k && !(S.prezzi.map[k] > 0)))];
+/* Indirizzo proposto per la pagina del prodotto: l'app crea solo il link, non legge la pagina */
+function linkProposti(p) {
+  const k = String(p.isin || '').toUpperCase(), B = 'https://www.borsaitaliana.it/borsa/', u = x => B + x + '.html?lang=it';
+  const fondo = /^(IE|LU)/.test(k) || /\b(etf|ucits)\b/i.test(p.nome || '');
+  if (p.classe === 'Oro e materie prime' || p.classe === 'Criptovalute') return [u('etc-etn/scheda/' + k + '-ETFP')];
+  if (p.nom || (p.classe === 'Obbligazioni' && !fondo)) return /^IT/.test(k) ? [u('obbligazioni/mot/btp/scheda/' + k)] : [u('obbligazioni/mot/euro-obbligazioni/scheda/' + k), u('obbligazioni/mot/obbligazioni-in-euro/scheda/' + k)];
+  if (p.classe === 'Azioni' && !fondo) return [u('azioni/scheda/' + k + '-MTAA')];
+  return [u('etf/scheda/' + k + '-ETFP')];
+}
+/* Pulizia dei vecchi collegamenti rimasti sul dispositivo (prezzi letti dal foglio, indirizzo e chiave dello script) */
+try { localStorage.removeItem('pf_prezzi'); localStorage.removeItem('pf_sheet'); } catch (e) {}
 /* Accetta sia 159,39 sia 159.39 sia 1.234,56 */
 const numPrezzo = s => {
   s = String(s ?? '').replace(/[\s€]/g, ''); if (!s) return NaN;
@@ -119,19 +149,6 @@ const numPrezzo = s => {
   else if (c >= 0) s = s.replace(',', '.');
   return /^\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
 };
-function parsePrezzi(txt) {
-  const map = {}, cambi = {}, R = csvRighe(txt);
-  const h = (R[0] || []).map(x => String(x || '').trim().toUpperCase()), ci = n => { const i = h.indexOf(n); return i; };
-  const iT = Math.max(ci('TICKER'), 0), iI = ci('ISIN') >= 0 ? ci('ISIN') : 1, iV = ci('VALUTA') >= 0 ? ci('VALUTA') : 2, iP = ci('PREZZO') >= 0 ? ci('PREZZO') : 3;
-  R.forEach(r => {
-    const t = String(r[iT] || '').trim().toUpperCase(), k = String(r[iI] || '').trim().toUpperCase(), p = numPrezzo(r[iP]);
-    if (/^EUR[A-Z]{3}$/.test(t) && !k) { if (p > 0) cambi[t.slice(3)] = p; return; }
-    if (/^[A-Z0-9]{12}$/.test(k) && p > 0) map[k] = { p, v: String(r[iV] || 'EUR').trim().toUpperCase() };
-  });
-  const out = {};
-  for (const k in map) { const { p, v } = map[k]; if (v === 'EUR' || !v) out[k] = p; else if (cambi[v]) out[k] = Math.round(p / cambi[v] * 1e6) / 1e6; }
-  return out;
-}
 const hasProd = v => !!(v && v.prodotti && v.prodotti.length);
 const isPort = v => !!(v && v.portafoglio);
 const nfm = x => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 4 }).format(x);
@@ -169,35 +186,6 @@ function portProposta(D) {
   return out;
 }
 const applyPiano = v => { if (v.piano) v.valore = piano(v).residuo; else if (hasProd(v) && S.prezzi) v.valore = valoreProd(v); return v; };
-const prezziStato = () => {
-  if (S.prezziBusy) return 'Aggiorno i prezzi…';
-  if (!S.prezzi) return S.prezziErr || 'Prezzi non ancora letti';
-  const d = new Date(S.prezzi.quando), oggi = d.toDateString() === new Date().toDateString();
-  return 'Prezzi delle ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + (oggi ? '' : ' del ' + d.toLocaleDateString('it-IT')) + (S.prezziN ? ' · ' + S.prezziN + ' prodotti' : '') + (S.prezziErr ? ' · ' + S.prezziErr : '');
-};
-/* Legge i prezzi (all'apertura e con il tasto) e ricalcola le voci con prodotti. Nulla viene salvato per i prezzi; lo storico del mese segue i totali. */
-async function aggiornaPrezzi(manuale) {
-  if (S.demo) { if (manuale) { S.msg = 'Nella demo i prezzi sono fissi.'; render(); } return; }
-  const D = S.data; if (!D || S.prezziBusy) return;
-  const tutte = () => [...D.voci, ...(D.arch || [])];
-  if (!manuale && !tutte().some(hasProd)) return;
-  S.prezziBusy = true; if (manuale) render();
-  try {
-    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 12000);
-    let r; try { r = await fetch(PREZZI_URL + '&_=' + Date.now(), { cache: 'no-store', signal: ac.signal }); } finally { clearTimeout(tm); }
-    if (!r.ok) throw new Error('errore ' + r.status);
-    const map = parsePrezzi(await r.text());
-    if (!Object.keys(map).length) throw new Error('nessun prezzo nel file ricevuto');
-    const vecchi = (S.prezzi && S.prezzi.map) || {}; S.prezzi = { map: { ...vecchi, ...map }, quando: Date.now() }; S.prezziErr = ''; S.prezziN = Object.keys(map).length;
-    try { localStorage.setItem('pf_prezzi', JSON.stringify(S.prezzi)); } catch (e) {}
-    if (manuale) S.msg = 'Prezzi aggiornati.';
-  } catch (e) { const why = e && e.name === 'AbortError' ? 'tempo scaduto' : e instanceof TypeError ? 'il link non risponde o è bloccato dal browser' : (e && e.message) || 'errore'; S.prezziErr = 'Prezzi non aggiornati (' + why + '): uso gli ultimi disponibili.'; if (manuale) S.msg = S.prezziErr; }
-  S.prezziBusy = false;
-  if (S.data !== D) return;
-  tutte().forEach(applyPiano);
-  try { await syncStorico(); } catch (e) {}
-  if (manuale || !(S.cfm || S.edit || S.pop || S.popm || (S.exp && S.exp.form))) render();
-}
 const RENAME = { 'Conto corrente': 'Liquidità', 'Immobile': 'Immobili', 'Altro attivo': 'Altro' };
 /* Porta i vecchi dati alle nuove categorie: Liquidità, Investimenti, Immobili, Beni, Altro */
 async function migraCategorie(uid, voci) {
@@ -222,7 +210,7 @@ async function migraCategorie(uid, voci) {
 }
 const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
 
-const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, loading: true, msg: '', prezzi: leggiPrezzi() };
+const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, loading: true, msg: '', prezzi: prezziVuoti() };
 
 function errText(e) {
   const c = e && e.code || '';
@@ -248,6 +236,7 @@ async function loadData(uid, nome) {
   const accounts = as.docs.map(d => ({ id: d.id, nome: d.data().nome })).sort((a, b) => a.nome.localeCompare(b.nome));
   const voci = vs.docs.map(d => ({ id: d.id, ...d.data() }));
   if (!S.ro) await migraCategorie(uid, voci);
+  S.prezzi = prezziDaDati({ voci }); S.pz = {};
   voci.forEach(applyPiano);
   const arch = voci.filter(v => v.archiviata);
   for (let i = voci.length - 1; i >= 0; i--) if (voci[i].archiviata) voci.splice(i, 1);
@@ -267,6 +256,9 @@ async function syncStorico() {
   const mk = monthKey();
   const cur = D.storico.find(x => x.mese === mk);
   if (!D.voci.length && !cur) return;
+  /* finche' mancano prezzi lo storico del mese non si tocca */
+  S.prezzi = prezziDaDati(D);
+  if (isinSenzaPrezzo(D).length) return;
   if (cur && cur.attivi === t.attivi && cur.passivi === t.passivi && cur.liq === t.liq && cur.port === t.port && cur.beni === t.beni && JSON.stringify(cur.acc || null) === JSON.stringify(acc)) return;
   await setDoc(doc(db, 'users', D.uid, 'storico', mk), { ...t, acc, aggiornato: serverTimestamp() });
   if (cur) Object.assign(cur, t, { acc }); else { D.storico.push({ mese: mk, ...t, acc }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
@@ -276,18 +268,8 @@ async function loadUsers() {
   const q = await getDocs(collection(db, 'users'));
   S.users = q.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== S.user.uid)
     .sort((a, b) => (a.approved === b.approved ? (a.nome || '').localeCompare(b.nome || '') : a.approved ? 1 : -1));
-  try { S.rich = (await getDocs(collection(db, 'richiesteIsin'))).docs.map(d => ({ isin: d.id, ...d.data() })).sort((a, b) => a.isin.localeCompare(b.isin)); } catch (e) { S.rich = []; S.richErr = true; }
-}
-/* Segnala all'amministratore gli ISIN senza prezzo nel foglio (solo ISIN, nome e classe: niente quote) */
-async function segnalaIsin(prodotti) {
-  if (!S.prezzi || !S.prezzi.map) return;
-  for (const p of prodotti) {
-    const isin = String(p.isin || '').toUpperCase();
-    if (!/^[A-Z0-9]{12}$/.test(isin) || S.prezzi.map[isin] > 0) continue;
-    try { await setDoc(doc(db, 'richiesteIsin', isin), { isin, nome: String(p.nome || '').slice(0, 80), classe: String(p.classe || '').slice(0, 40), creato: serverTimestamp() }); } catch (e) {}
-  }
-}
 
+}
 const isAdmin = () => !!S.user && S.user.uid === ADMIN_UID;
 
 const TERMS_V = 2;
@@ -323,6 +305,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.81','25 nov 2026',['Nuova pagina Prezzi: elenco dei prodotti in portafoglio con il link alla pagina di ciascuno e il prezzo da scrivere a mano','Tolta la lettura automatica dei prezzi e il collegamento al foglio Google; i prezzi letti in passato non vengono piu\' usati','Finche\' manca un prezzo lo storico del mese in corso non viene aggiornato']],
   ['1.80','24 nov 2026',['Anno in corso: il filtro parte ora dall\'ultimo mese dell\'anno scorso, come l\'indicatore "Crescita da inizio anno": variazioni, categorie e grafici coincidono']],
   ['1.79','24 nov 2026',['Andamenti e confronti: al posto del grafico dei passivi c\'è l\'andamento delle categorie (liquidità, investimenti, beni e passivi), con ingrandimento al clic']],
   ['1.78','24 nov 2026',['Portafogli: tolto "Registra le operazioni" dal Bilanciamento (non modifica più nulla); nuova scheda Resoconto in sola lettura con il piano da fare (cosa comprare e vendere, quote, importi, imposte stimate); le colonne delle tabelle del bilanciamento sono allineate tra loro']],
@@ -437,42 +420,6 @@ const CHANGELOG = [
   ['0.35 – 0.43', '18 nov 2026', ['Tasto indietro del telefono per schede, menu e finestre', 'Barra di navigazione in basso con icone', 'Grafico del patrimonio netto interattivo nella pagina Andamento']],
   ['0.30 – 0.34', '17 nov 2026', ['Grafici con zoom, schermo intero e valori al tocco', 'Confronto tra periodi e indicatori nel report', 'Importazione dello storico da file']]
 ];
-/* Collegamento al foglio Google dei prezzi: l'indirizzo dello script e la chiave restano solo su questo dispositivo */
-const sheetCfg = () => { try { const c = JSON.parse(localStorage.getItem('pf_sheet') || 'null'); return c && c.url && c.token ? c : null; } catch (e) { return null; } };
-const sheetCard = () => { const c = sheetCfg() || {}; return `<div class="card"><h2>Foglio dei prezzi</h2><p class="lbl" style="margin-top:0">Quando salvi un portafoglio con un ISIN nuovo, l'app lo aggiunge al foglio "Lista prodotti quotati" e il prezzo arriva da Borsa Italiana. Serve lo script Google (file script_isin_foglio.txt): incolla qui l'indirizzo e la chiave.</p>
-  <label class="lbl">Indirizzo dello script</label><input id="shu" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(c.url || '')}">
-  <label class="lbl">Chiave</label><input id="sht" placeholder="La chiave scelta nello script" value="${esc(c.token || '')}">
-  <div class="acts"><button class="b sm" data-act="shsave">Salva</button>${c.url ? '<button class="b s sm" data-act="shtest">Prova collegamento</button><button class="b s sm r" data-act="shdel">Scollega</button>' : ''}</div></div>`; };
-/* Aggiunge al foglio gli ISIN senza prezzo (solo amministratore); restituisce un messaggio */
-/* Chiamata allo script del foglio: la chiave viaggia nel corpo della richiesta (non nell'indirizzo); se lo script e' ancora la versione vecchia, ripiega sul metodo precedente */
-const pulisciTesto = (s, n) => String(s || '').replace(/^[\s=+\-@]+/, '').slice(0, n);
-async function chiamaFoglio(c, par) {
-  const corpo = JSON.stringify({ token: c.token, ...par });
-  try {
-    const r = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: corpo, cache: 'no-store' });
-    return await r.json();
-  } catch (e) {
-    const q = new URLSearchParams({ token: c.token, ...par });
-    return await (await fetch(c.url + (c.url.includes('?') ? '&' : '?') + q, { cache: 'no-store' })).json();
-  }
-}
-async function nomeDaIsin(isin) {
-  const c = sheetCfg(); if (!c) return '';
-  try { const j = await chiamaFoglio(c, { isin, solonome: '1' }); window._nomeInfo = j.ok ? (j.info || 'nome non trovato') : (j.errore || 'errore'); return j.ok && j.nome ? String(j.nome) : ''; } catch (e) { window._nomeInfo = 'foglio non raggiungibile'; return ''; }
-}
-async function sheetAggiungi(prodotti) {
-  const c = sheetCfg(), mancanti = prodotti.filter(p => p.isin && S.prezzi && !S.prezzi.map[p.isin]);
-  if (!mancanti.length) return '';
-  if (!c) return ' Per prendere il prezzo di ' + mancanti.map(p => p.isin).join(', ') + ' collega il foglio dalla pagina Info.';
-  const out = [];
-  for (const p of mancanti) {
-    try {
-      const j = await chiamaFoglio(c, { isin: p.isin, nome: pulisciTesto(p.nome, 60), classe: pulisciTesto(p.classe, 40) });
-      out.push(j.ok ? (j.esito === 'presente' ? p.isin + ' è già nel foglio' : p.isin + ' aggiunto al foglio' + (j.prezzo ? ' (prezzo ' + nfm(j.prezzo) + ')' : '')) : p.isin + ': ' + (j.errore || 'errore'));
-    } catch (e) { out.push(p.isin + ': foglio non raggiungibile'); }
-  }
-  return ' ' + out.join('; ') + '. Il prezzo compare in app quando il foglio pubblicato si aggiorna.';
-}
 function pageInfo() {
   return `<div class="card"><h2>P.Finance</h2><p class="lbl">Versione ${VER} beta</p>
     <p>App per tenere traccia del proprio patrimonio, della situazione mese per mese e per imparare le basi della finanza personale.</p>
@@ -481,6 +428,5 @@ function pageInfo() {
     <div class="row"><div class="n">Funziona anche offline</div><div class="v">Sì</div></div>
     <p class="note">Strumento educativo, non consulenza finanziaria. I tuoi dati restano visibili solo a te.</p>
     <button class="b s sm" data-act="terms">Termini e condizioni</button></div>
-    ${isAdmin() ? sheetCard() : ''}
     <div class="card"><h2>Novità</h2>${CHANGELOG.map(([v, d, l]) => `<h3 style="margin:12px 0 2px;font-size:15px">Versione ${v}</h3><div class="lbl">${d}</div><ul class="c">${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')}</div>`;
 }

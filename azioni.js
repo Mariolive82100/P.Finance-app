@@ -32,9 +32,6 @@ async function act(el) {
   let a = el.dataset.act; const v = el.dataset.v, D = S.data;
   S.msg = '';
   try {
-    if (a === 'shsave') { const u = $('shu').value.trim(), t = $('sht').value.trim(); if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u) || !t) { S.msg = 'Servono l\'indirizzo dello script (finisce con /exec) e la chiave.'; return render(); } try { localStorage.setItem('pf_sheet', JSON.stringify({ url: u, token: t })); } catch (e) {} S.msg = 'Collegamento salvato.'; return render(); }
-    if (a === 'shdel') { try { localStorage.removeItem('pf_sheet'); } catch (e) {} S.msg = 'Foglio scollegato.'; return render(); }
-    if (a === 'shtest') { const c = sheetCfg(); if (!c) return; try { const j = await chiamaFoglio(c, { prova: '1' }); S.msg = j.ok ? 'Collegamento riuscito.' : 'Lo script risponde ma: ' + (j.errore || 'errore') + '.'; } catch (e) { S.msg = 'Lo script non risponde: controlla indirizzo e pubblicazione.'; } return render(); }
     if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
     if (a === 'demo') return avviaDemo();
@@ -95,7 +92,6 @@ async function act(el) {
     if (a === 'hide') { S.hide = !hideAmt(); try { localStorage.setItem('pf_hide', S.hide ? '1' : '0'); } catch (e) {} return render(); }
     if (a === 'tab') { S.tab = v; return render(); }
     if (a === 'bil') { S.tab = 'por'; S.psub = 'bil'; S.menu = false; window.scrollTo(0, 0); return render(); }
-    if (a === 'rfs') return aggiornaPrezzi(true);
     if (a === 'accsel') { S.cx = false; S.thl = null; S.tab = S.tab === 'alb' || S.tab === 'con' || S.tab === 'por' || S.tab === 'ben' || S.tab === 'pas' ? S.tab : 'pan'; S.cfm = false; S.fAcc = S.fAcc === v && v !== 'all' && !['alb','con','por','ben','pas'].includes(S.tab) ? 'all' : v; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'pano') { S.cx = false; S.thl = null; S.tab = 'pan'; S.cfm = false; S.fAcc = 'all'; S.edit = null; S.fd = null; S.addAcc = false; S.pp = ['r']; S.pieSel = null; window.scrollTo(0, 0); return render(); }
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
@@ -330,7 +326,8 @@ async function act(el) {
     if (a === 'edit') { S.edit = v; return render(); }
     if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } return render(); }
     if (a === 'export') return exportCsv();
-    if (a === 'prezzi') return aggiornaPrezzi(true);
+    if (a === 'prezzi') { S.tab = 'prz'; S.menu = false; window.scrollTo(0, 0); return render(); }
+    if (a === 'przsave') return prezziSalva();
     if (a === 'pedit') { S.pe = v; S.pd = null; S.pcur = null; S.msg = ''; return render(); }
     if (a === 'pcancel') { S.pe = null; S.pd = null; S.pcur = null; return render(); }
     if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', nom: false, pmc: '', aliq: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
@@ -408,7 +405,7 @@ async function act(el) {
         const r = Math.round((q0 - q) * 1e6) / 1e6;
         if (r <= 1e-9) prod.splice(i, 1); else p.quote = r;
       }
-      const { id, assetClass, ...rest } = v, dati = { ...rest, prodotti: prod };
+      const { id, assetClass, ...rest } = v, dati = { ...rest, prodotti: conPrezzi(prod) };
       dati.valore = prod.length ? valoreProd(dati) : 0;
       await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
       let liq = '';
@@ -418,7 +415,6 @@ async function act(el) {
         else liq = ' Nessun conto di liquidità con lo stesso nome: la liquidità non è cambiata.';
       }
       await syncStorico(); S.trade = null; S.msg = (buy ? 'Acquisto' : 'Vendita') + ' registrato: ' + eur(costo) + '.' + liq; render();
-      if (nuovo) { if (!isAdmin()) segnalaIsin([nuovo]); else { const extra = await sheetAggiungi([nuovo]); if (extra) { S.msg += extra; render(); } } }
       return;
     }
     if (a === 'paddo') { S.addPort = true; S.msg = ''; return render(); }
@@ -462,7 +458,7 @@ async function act(el) {
             const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
           }
           if (isFinite(ob) && ob > 0) dati.obiettivo = r2(ob);
-          if (conProd) { dati.prodotti = prod; dati.valore = S.prezzi || !ed0 ? valoreProd(dati) : ed0.valore; }
+          if (conProd) { dati.prodotti = conPrezzi(prod); dati.valore = valoreProd(dati); }
         }
       }
       if (S.edit) { await setDoc(doc(db, 'users', D.uid, 'voci', S.edit), dati); const i = D.voci.findIndex(x => x.id === S.edit); D.voci[i] = { id: S.edit, ...dati }; }
@@ -490,24 +486,60 @@ async function act(el) {
     if (a === 'appr' || a === 'rev') { await updateDoc(doc(db, 'users', v), { approved: a === 'appr' }); await loadUsers(); return render(); }
     if (a === 'rej') { if (!confirm('Rifiutare questa richiesta?')) return; await deleteDoc(doc(db, 'users', v)); await loadUsers(); return render(); }
     if (a === 'reload-users') { await loadUsers(); return render(); }
-    if (a === 'richno') { try { await deleteDoc(doc(db, 'richiesteIsin', v)); S.rich = (S.rich || []).filter(x => x.isin !== v); } catch (e) { S.msg = errText(e); } return render(); }
-    if (a === 'richok') {
-      const c = sheetCfg(), lista = (S.rich || []).filter(x => !(S.prezzi && S.prezzi.map[x.isin] > 0));
-      if (!c) { S.msg = 'Collega prima il foglio dalla pagina Info.'; return render(); }
-      if (S.richBusy) return;
-      S.richBusy = true; const out = [];
-      for (let i = 0; i < lista.length; i++) {
-        const x = lista[i]; S.msg = 'Aggiungo al foglio ' + (i + 1) + ' di ' + lista.length + ': ' + x.isin + '…'; render();
-        try {
-          const j = await chiamaFoglio(c, { isin: x.isin, nome: pulisciTesto(x.nome, 60), classe: pulisciTesto(x.classe, 40) });
-          if (j.ok) { out.push(x.isin + (j.esito === 'presente' ? ' già nel foglio' : ' aggiunto')); try { await deleteDoc(doc(db, 'richiesteIsin', x.isin)); } catch (e) {} S.rich = S.rich.filter(z => z.isin !== x.isin); }
-          else out.push(x.isin + ': ' + (j.errore || 'errore'));
-        } catch (e) { out.push(x.isin + ': foglio non raggiungibile'); }
-      }
-      S.richBusy = false; S.msg = out.length ? out.join('; ') + '. I prezzi arrivano quando il foglio pubblicato si aggiorna.' : 'Nessun ISIN da aggiungere.'; return render();
-    }
   } catch (e) { S.msg = errText(e); render(); }
 }
+
+/* Pagina Prezzi: salva prezzo, data e link corretto in tutti i portafogli che contengono l'ISIN */
+async function prezziSalva() {
+  const D = S.data; if (!D || S.ro || S.demo) return;
+  const B = S.pz || {}, nuovi = {};
+  for (const k in B) {
+    const d = B[k], o = {};
+    if (d.p !== undefined) {
+      const t = d.p.trim(), x = t ? numPrezzo(t) : 0;
+      if (t && !(x > 0)) { S.msg = 'Prezzo non valido per ' + k + ': scrivi un numero maggiore di zero, ad esempio 125,40.'; return render(); }
+      o.p = x;
+    }
+    if (d.l !== undefined) {
+      const l = d.l.trim();
+      if (l && !/^https:\/\/\S+$/i.test(l)) { S.msg = 'Il link per ' + k + ' deve iniziare con https://'; return render(); }
+      o.l = l.slice(0, 300);
+    }
+    nuovi[k] = o;
+  }
+  const ora = Date.now();
+  const applica = p => {
+    const o = nuovi[String(p.isin || '').toUpperCase()]; if (!o) return p;
+    const q = { ...p };
+    if (o.p !== undefined) { if (o.p > 0) { q.prezzo = o.p; q.prezzoIl = ora; } else { delete q.prezzo; delete q.prezzoIl; } }
+    if (o.l !== undefined) { if (o.l) q.link = o.l; else delete q.link; }
+    return q;
+  };
+  const tocca = v => (v.prodotti || []).some(p => nuovi[String(p.isin || '').toUpperCase()]);
+  const attivi = D.voci.filter(v => isPort(v) && tocca(v)).map(v => ({ v, prod: v.prodotti.map(applica) }));
+  /* un prezzo o un link cancellato va tolto anche dalle copie archiviate, altrimenti ricompare */
+  const toglie = Object.values(nuovi).some(o => o.p === 0 || o.l === '');
+  const vecchi = toglie ? (D.arch || []).filter(tocca).map(v => ({ v, prod: v.prodotti.map(applica) })) : [];
+  const mappa = new Map([...attivi, ...vecchi].map(x => [x.v, x.prod]));
+  const dopo = l => (l || []).map(v => mappa.has(v) ? { ...v, prodotti: mappa.get(v) } : v);
+  const prima = S.prezzi;
+  S.prezzi = prezziDaDati({ voci: dopo(D.voci), arch: dopo(D.arch) });
+  try {
+    for (const { v, prod } of [...attivi, ...vecchi]) {
+      const { id, assetClass, ...rest } = v, dati = { ...rest, prodotti: prod };
+      if (D.voci.includes(v)) dati.valore = prod.length ? valoreProd(dati) : 0;
+      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
+    }
+  } catch (e) { S.prezzi = prima; throw e; }
+  S.prezzi = prezziDaDati(D); D.voci.forEach(applyPiano);
+  await syncStorico(); S.pz = {};
+  S.msg = attivi.length ? 'Prezzi salvati.' : 'Nessuna modifica da salvare.'; render();
+}
+document.addEventListener('input', e => {
+  const t = e.target, k = t.dataset && t.dataset.isin; if (!k) return;
+  const campo = t.classList.contains('przi') ? 'p' : t.classList.contains('przu') ? 'l' : ''; if (!campo) return;
+  S.pz = S.pz || {}; (S.pz[k] = S.pz[k] || {})[campo] = t.value;
+});
 
 const tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
 const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
@@ -563,14 +595,14 @@ async function titoliApplica() {
   for (const x of P.righe) {
     if (x.exId) {
       const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
-      const { id, assetClass, ...rest } = v; const keep = p => { const o = (v.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.pmc > 0 ? { pmc: o.pmc } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; }; const dati = { ...rest, valore: x.valore, prodotti: x.prodotti.map(keep), portafoglio: true };
+      const { id, assetClass, ...rest } = v; const keep = p => { const o = (v.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.pmc > 0 ? { pmc: o.pmc } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; }; const dati = { ...rest, valore: x.valore, prodotti: conPrezzi(x.prodotti.map(keep)), portafoglio: true }; dati.valore = valoreProd(dati);
       await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
     } else {
       if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
         const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: x.dove, account: P.acc, valore: 0 };
         const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
       }
-      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, account: P.acc, valore: x.valore, prodotti: x.prodotti, portafoglio: true };
+      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, account: P.acc, valore: x.valore, prodotti: conPrezzi(x.prodotti), portafoglio: true }; dati.valore = valoreProd(dati);
       const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
     }
   }
@@ -589,7 +621,7 @@ async function portSalva0() {
   const prod = [], err = m => { S.pd = grabPort(); S.msg = m; render(); };
   for (const r of grabPort()) {
     const isin = r.isin.trim().toUpperCase(), qs = r.quote.trim(), ms = r.manuale.trim();
-    let nome = r.nome.trim(); if (isin && !nome && isAdmin()) nome = await nomeDaIsin(isin);
+    let nome = r.nome.trim();
     if (!isin && !nome && !qs && !ms) continue;
     if (!r.classe) return err('Scegli la classe di investimento di ogni prodotto.');
     const m = ms ? pnum(ms) : 0; if (!isFinite(m) || m < 0) return err('Il valore manuale deve essere zero o più.');
@@ -613,12 +645,10 @@ async function portSalva0() {
     const lq = D.voci.find(y => y.categoria === 'Liquidità' && y.nome === vecchio && (y.account || '') === (v.account || ''));
     if (lq) { const { id: lid, ...lr } = lq; await setDoc(doc(db, 'users', D.uid, 'voci', lid), { ...lr, nome: nn, account: na }); lq.nome = nn; lq.account = na; }
   }
-  const { id, assetClass, ...rest } = v, dati = { ...rest, nome: nn, account: na, ...(rest.dove === vecchio || !rest.dove ? { dove: nn } : {}), portafoglio: true, prodotti: prod };
+  const { id, assetClass, ...rest } = v, dati = { ...rest, nome: nn, account: na, ...(rest.dove === vecchio || !rest.dove ? { dove: nn } : {}), portafoglio: true, prodotti: conPrezzi(prod) };
   dati.valore = prod.length ? valoreProd(dati) : 0;
   await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
   await syncStorico(); S.pe = null; S.pd = null; S.msg = 'Portafoglio salvato.'; render();
-  if (!isAdmin()) segnalaIsin(prod);
-  if (isAdmin()) { const extra = await sheetAggiungi(prod); if (extra) { S.msg = 'Portafoglio salvato.' + extra; render(); } }
 }
 async function portNuovo(acc, nome) {
   const D = S.data, inp = $('pnn_' + acc), nm = nome != null ? String(nome).trim() : inp ? inp.value.trim() : '', account = acc === 'main' ? '' : acc;
@@ -639,7 +669,7 @@ async function portConverti() {
     const { id, assetClass, ...rest } = tgt;
     const dati = ex ? { ...rest, portafoglio: true, prodotti: [...(ex.prodotti || []), ...G.prodotti] }
       : { tipo: 'attivo', categoria: 'Investimenti', nome: G.dove, dove: G.dove, account: G.account, valore: 0, portafoglio: true, prodotti: G.prodotti, ...(G.obiettivo ? { obiettivo: G.obiettivo } : {}) };
-    dati.valore = valoreProd(dati);
+    dati.prodotti = conPrezzi(dati.prodotti); dati.valore = valoreProd(dati);
     await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete tgt.assetClass; Object.assign(tgt, dati);
     for (const o of G.voci) if (o !== tgt) { await deleteDoc(doc(db, 'users', D.uid, 'voci', o.id)); D.voci = D.voci.filter(z => z !== o); }
   }
@@ -746,20 +776,18 @@ async function impPortApplica() {
     const keep = p => { const o = ex && (ex.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; };
     const prod = P.righe.map(r => keep({ isin: r.isin, nome: r.ticker, classe: r.classe, quote: r.quote, manuale: r2(r.quote * r.pmc), ...(r.pmc > 0 ? { pmc: r.pmc } : {}) }));
     if (ex) {
-      const { id, assetClass, ...rest } = ex, dati = { ...rest, portafoglio: true, prodotti: prod }; dati.valore = valoreProd(dati);
+      const { id, assetClass, ...rest } = ex, dati = { ...rest, portafoglio: true, prodotti: conPrezzi(prod) }; dati.valore = valoreProd(dati);
       await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete ex.assetClass; Object.assign(ex, dati);
     } else {
       if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === nm.toLowerCase() && (y.account || '') === account)) {
         const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: nm, account, valore: 0 };
         const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
       }
-      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: nm, dove: nm, account, valore: 0, portafoglio: true, prodotti: prod }; dati.valore = valoreProd(dati);
+      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: nm, dove: nm, account, valore: 0, portafoglio: true, prodotti: conPrezzi(prod) }; dati.valore = valoreProd(dati);
       const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
     }
     D.voci.forEach(applyPiano); await syncStorico();
     S.imp = null; S.impErr = null; S.impNome = ''; S.msg = `Portafoglio importato: ${prod.length} prodotti.` + (vecchi.length ? ` Sostituito l'investimento inserito a valore (${vecchi.length}).` : ''); render();
-    if (!isAdmin()) segnalaIsin(prod);
-    else { const extra = await sheetAggiungi(prod); if (extra) { S.msg += extra; render(); } }
   } catch (e) { S.msg = 'Importazione non riuscita' + (e && e.code === 'network-offline' ? ': sei offline.' : ': ' + errText(e)); render(); }
 }
 document.addEventListener('change', async e => {
@@ -827,7 +855,7 @@ const SCRIVI_ORIG = { setDoc, updateDoc, deleteDoc, addDoc };
 const bloccaScritture = on => Object.assign(window, on ? { setDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), updateDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), deleteDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), addDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })) } : SCRIVI_ORIG);
 async function vediDi(uid, nome) {
   const prec = S.data, precRo = S.ro; if (!S.own) S.own = prec;
-  S.ro = { uid, nome }; bloccaScritture(true);
+  S.ro = { uid, nome }; S.pz = {}; bloccaScritture(true);
   try {
     S.msg = ''; await loadData(uid, nome);
     S.fAcc = 'all'; S.edit = null; S.fd = null; S.pop = null; S.popm = null; S.tab = innerWidth >= 1000 ? 'pan' : 'pat'; window.scrollTo(0, 0); render();
@@ -846,8 +874,8 @@ function generaDemo() {
   const oggi = new Date(), N = 120, ACQ = 40, YM = (y, m) => y + '-' + String(m + 1).padStart(2, '0');
   const dAcq = new Date(oggi.getFullYear(), oggi.getMonth() - (N - ACQ), 1), inizio = YM(dAcq.getFullYear(), dAcq.getMonth()) + '-01', fine = YM(dAcq.getFullYear() + 25, dAcq.getMonth()) + '-01';
   const prezzi = { IE00DEMO0001: 128.6, IE00DEMO0002: 34.2, IE00DEMO0003: 47.8, IE00DEMO0004: 232, IE00DEMO0005: 171, IE00DEMO0006: 74 };
-  S.prezzi = { map: prezzi, quando: Date.now() };
-  const P = (n, isin, nome, classe, quote, pmc) => ({ isin, nome, classe, quote, pmc, manuale: 0 });
+  S.prezzi = { map: prezzi, meta: {}, quando: Date.now() };
+  const P = (n, isin, nome, classe, quote, pmc) => ({ isin, nome, classe, quote, pmc, manuale: 0, prezzo: prezzi[isin], prezzoIl: Date.now() });
   const casaVal = i => i < ACQ ? 0 : Math.round(260000 * Math.pow(1.014, (i - ACQ) / 12));
   const voci = [
     { id: 'demo1', tipo: 'attivo', categoria: 'Liquidità', nome: 'Conto corrente', account: '', valore: 0 },
@@ -908,7 +936,6 @@ onAuthStateChanged(auth, async user => {
     if (S.profile.approved) {
       await loadData(user.uid, S.profile.nome, false);
       if (isAdmin()) await loadUsers();
-      aggiornaPrezzi(false);
     }
   } catch (e) { S.msg = errText(e); }
   S.loading = false; render();
@@ -929,14 +956,6 @@ document.addEventListener('mouseout', e => {
   const c = e.target.closest && e.target.closest('#pie .pbody'); if (!c || (e.relatedTarget && c.contains(e.relatedTarget) && e.relatedTarget.closest && e.relatedTarget.closest('[data-act="qs"]'))) return;
   if (S.qd && S.qsel && S.qsel[S.qd] != null) { S.qsel[S.qd] = null; render(); }
 });
-
-document.addEventListener('change', async e => {
-  if (!e.target.classList || !e.target.classList.contains('pi') || !isAdmin()) return;
-  const isin = e.target.value.trim().toUpperCase(), row = e.target.closest('.ppr'), n = row && row.querySelector('.pn');
-  if (!n || n.value.trim() || !/^[A-Z0-9]{12}$/.test(isin)) return;
-  n.placeholder = 'Cerco il nome…'; const nm = await nomeDaIsin(isin); n.placeholder = nm ? 'Nome' : 'Nome non trovato: ' + (window._nomeInfo || ''); if (nm && !n.value.trim()) n.value = nm;
-});
-
 
 /* Home modificabile: salvataggio e movimento/ridimensionamento libero dei riquadri (solo computer) */
 async function homeSalva(l) {
