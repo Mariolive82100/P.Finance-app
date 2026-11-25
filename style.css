@@ -429,3 +429,6 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 @media(max-width:999px){.przr{grid-template-columns:1fr;gap:6px}.przp input{text-align:left}.przl a{padding:6px 0}}
 .bprev{border:1px solid #cfe3e0;border-radius:12px;padding:12px;margin:10px 0}
 .bpr{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #eef3f2}.bpr input{width:auto;margin-top:3px}.bpr span{min-width:0;overflow-wrap:anywhere}.bpr small{display:block}
+label.bondb{display:inline-flex;align-items:center;justify-content:center;gap:10px;margin:0;padding:13px 22px;border-radius:12px;background:#0f766e;color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(15,118,110,.35)}
+label.bondb svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:999px){label.bondb{width:100%;box-sizing:border-box}}

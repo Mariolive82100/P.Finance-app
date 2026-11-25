@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.83';
+const VER = '1.84';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -305,6 +305,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.84','25 nov 2026',['Prezzi: il tasto "Carica prezzi bond" è più evidente']],
   ['1.83','25 nov 2026',['Prezzi: si possono caricare i prezzi delle obbligazioni singole in euro da un file CSV scelto sul dispositivo, con anteprima e conferma']],
   ['1.82','25 nov 2026',['Prezzi: anche in acquisto e vendita, prezzo medio di carico e Ribilanciamento il punto vale come la virgola']],
   ['1.81','25 nov 2026',['Nuova pagina Prezzi: elenco dei prodotti in portafoglio con il link alla pagina di ciascuno e il prezzo da scrivere a mano','Tolta la lettura automatica dei prezzi e il collegamento al foglio Google; i prezzi letti in passato non vengono piu\' usati','Finche\' manca un prezzo lo storico del mese in corso non viene aggiornato']],
