@@ -752,6 +752,17 @@ function pagePrezzi() {
   const salva = ro || !L.length ? '' : '<div class="acts"><button class="b" data-act="przsave">Salva prezzi</button></div>';
   return `<div class="con"><div class="card"><h2>Prezzi</h2><p class="note" style="margin-top:0">Apri la pagina del prodotto, controlla nome e ISIN e scrivi il prezzo in euro. Per le obbligazioni scrivi il prezzo come è quotato (es. 98,50). I link sono proposti dall'app: se uno è sbagliato, correggilo.</p>
     ${mancano ? `<div class="msg">${mancano === 1 ? 'Manca 1 prezzo' : 'Mancano ' + mancano + ' prezzi'}: dove il prezzo manca vale il prezzo medio di carico o il valore manuale, e lo storico del mese in corso non viene aggiornato.</div>` : ''}
+    ${!ro && L.some(x => x.nom) && !S.bondImp ? '<div class="acts" style="margin-bottom:6px"><label class="b s" style="cursor:pointer">Carica prezzi bond<input type="file" id="bondf" accept=".csv,text/csv" hidden></label></div><p class="note" style="margin-top:0">Scegli un file CSV scaricato da te. Aggiorna solo le obbligazioni singole in euro e prima di salvare mostra un\'anteprima. Il file resta sul dispositivo; controlla di poterne usare i dati.</p>' : ''}
+    ${S.bondImp && !ro ? bondPrev(S.bondImp) : ''}
     ${righe || '<p class="note">Nessun prodotto con ISIN nei portafogli.</p>'}${salva}</div>
     ${senza.length ? `<div class="card"><h2>Prodotti senza ISIN</h2><p class="note" style="margin-top:0">Il valore si modifica nel portafoglio.</p>${senza.map(({ p, v }) => `<div class="row"><div class="n">${esc(p.nome || 'Valore manuale')}<small>${esc(accName(v) + ' · ' + v.nome)}</small></div><div class="v">${eur(prodVal(p))}</div></div>`).join('')}</div>` : ''}</div>`;
+}
+/* Anteprima dei prezzi letti dal file: si salva solo cio' che resta selezionato */
+function bondPrev(B) {
+  const gg = t => t ? new Date(t).toLocaleDateString('it-IT') : '', num = x => String(x).replace('.', ',');
+  const lista = (t, l) => l.length ? `<p class="note"><b>${t}:</b> ${l.map(x => esc(x.nome + ' (' + x.isin + (x.val ? ', ' + x.val : '') + ')')).join('; ')}</p>` : '';
+  const righe = B.righe.map((r, i) => `<label class="bpr"><input type="checkbox" data-bsel="${i}" ${r.si ? 'checked' : ''}><span><b>${esc(r.nome)}</b><small class="lbl">${esc(r.isin)}</small><small class="lbl">Ora: ${r.att ? num(r.att) + (r.attIl ? ' del ' + gg(r.attIl) : '') : 'da inserire'} → File: <b>${num(r.pr)}</b> del ${gg(r.il)}</small>${r.piuRecente ? '<small class="neg">Il tuo prezzo è più recente di quello del file</small>' : ''}${r.vecchio ? '<small class="neg">Prezzo del file vecchio di oltre 7 giorni</small>' : ''}${r.lontano ? '<small class="neg">Differenza oltre il 10%: controlla</small>' : ''}</span></label>`).join('');
+  return `<div class="bprev"><h2>Anteprima prezzi bond</h2>${righe || '<p class="note">Nel file non ci sono prezzi utilizzabili per le tue obbligazioni.</p>'}
+    ${lista('Non presenti nel file', B.mancanti)}${lista('In valuta estera, da scrivere a mano', B.estera)}${lista('Ignorati perché nel portafoglio non sono segnati come obbligazione con prezzo in %', B.nonBond)}
+    <div class="acts">${B.righe.length ? '<button class="b" data-act="bondok">Salva i prezzi selezionati</button>' : ''}<button class="b s" data-act="bondno">Annulla</button></div></div>`;
 }

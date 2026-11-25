@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.82';
+const VER = '1.83';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -236,7 +236,7 @@ async function loadData(uid, nome) {
   const accounts = as.docs.map(d => ({ id: d.id, nome: d.data().nome })).sort((a, b) => a.nome.localeCompare(b.nome));
   const voci = vs.docs.map(d => ({ id: d.id, ...d.data() }));
   if (!S.ro) await migraCategorie(uid, voci);
-  S.prezzi = prezziDaDati({ voci }); S.pz = {};
+  S.prezzi = prezziDaDati({ voci }); S.pz = {}; S.bondImp = null;
   voci.forEach(applyPiano);
   const arch = voci.filter(v => v.archiviata);
   for (let i = voci.length - 1; i >= 0; i--) if (voci[i].archiviata) voci.splice(i, 1);
@@ -305,6 +305,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.83','25 nov 2026',['Prezzi: si possono caricare i prezzi delle obbligazioni singole in euro da un file CSV scelto sul dispositivo, con anteprima e conferma']],
   ['1.82','25 nov 2026',['Prezzi: anche in acquisto e vendita, prezzo medio di carico e Ribilanciamento il punto vale come la virgola']],
   ['1.81','25 nov 2026',['Nuova pagina Prezzi: elenco dei prodotti in portafoglio con il link alla pagina di ciascuno e il prezzo da scrivere a mano','Tolta la lettura automatica dei prezzi e il collegamento al foglio Google; i prezzi letti in passato non vengono piu\' usati','Finche\' manca un prezzo lo storico del mese in corso non viene aggiornato']],
   ['1.80','24 nov 2026',['Anno in corso: il filtro parte ora dall\'ultimo mese dell\'anno scorso, come l\'indicatore "Crescita da inizio anno": variazioni, categorie e grafici coincidono']],

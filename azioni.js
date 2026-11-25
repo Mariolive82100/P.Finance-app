@@ -328,6 +328,8 @@ async function act(el) {
     if (a === 'export') return exportCsv();
     if (a === 'prezzi') { S.tab = 'prz'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'przsave') return prezziSalva();
+    if (a === 'bondok') return await bondApplica();
+    if (a === 'bondno') { S.bondImp = null; S.msg = ''; return render(); }
     if (a === 'pedit') { S.pe = v; S.pd = null; S.pcur = null; S.msg = ''; return render(); }
     if (a === 'pcancel') { S.pe = null; S.pd = null; S.pcur = null; return render(); }
     if (a === 'pradd' || a === 'prrm') { const L = grabPort(); if (a === 'pradd') L.push({ isin: '', nome: '', classe: '', quote: '', manuale: '', nom: false, pmc: '', aliq: '' }); else L.splice(+v, 1); S.pd = L; return render(); }
@@ -507,18 +509,24 @@ async function prezziSalva() {
     }
     nuovi[k] = o;
   }
+  if (await scriviPrezzi(nuovi)) S.pz = {};
+  render();
+}
+/* nuovi: { ISIN: { p: prezzo (0 = cancella), il: data del prezzo (se manca vale adesso), l: link corretto } } */
+async function scriviPrezzi(nuovi) {
+  const D = S.data; if (!D || S.ro || S.demo) return false;
   const ora = Date.now();
   const applica = p => {
     const o = nuovi[String(p.isin || '').toUpperCase()]; if (!o) return p;
     const q = { ...p };
-    if (o.p !== undefined) { if (o.p > 0) { q.prezzo = o.p; q.prezzoIl = ora; } else { delete q.prezzo; delete q.prezzoIl; } }
+    if (o.p !== undefined) { if (o.p > 0) { q.prezzo = o.p; q.prezzoIl = o.il || ora; } else { delete q.prezzo; delete q.prezzoIl; } }
     if (o.l !== undefined) { if (o.l) q.link = o.l; else delete q.link; }
     return q;
   };
   const tocca = v => (v.prodotti || []).some(p => nuovi[String(p.isin || '').toUpperCase()]);
   const attivi = D.voci.filter(v => isPort(v) && tocca(v)).map(v => ({ v, prod: v.prodotti.map(applica) }));
   /* un prezzo o un link cancellato va tolto anche dalle copie archiviate, altrimenti ricompare */
-  const toglie = Object.values(nuovi).some(o => o.p === 0 || o.l === '');
+  const toglie = Object.values(nuovi).some(o => o.p === 0 || o.l === '' || o.il);
   const vecchi = toglie ? (D.arch || []).filter(tocca).map(v => ({ v, prod: v.prodotti.map(applica) })) : [];
   const mappa = new Map([...attivi, ...vecchi].map(x => [x.v, x.prod]));
   const dopo = l => (l || []).map(v => mappa.has(v) ? { ...v, prodotti: mappa.get(v) } : v);
@@ -532,9 +540,52 @@ async function prezziSalva() {
     }
   } catch (e) { S.prezzi = prima; throw e; }
   S.prezzi = prezziDaDati(D); D.voci.forEach(applyPiano);
-  await syncStorico(); S.pz = {};
-  S.msg = attivi.length ? 'Prezzi salvati.' : 'Nessuna modifica da salvare.'; render();
+  await syncStorico();
+  S.msg = attivi.length ? 'Prezzi salvati.' : 'Nessuna modifica da salvare.'; return true;
 }
+/* Prezzi dei bond da un file CSV scelto dall'utente: letto sul dispositivo, non viene inviato ne' conservato.
+   Solo obbligazioni singole (segnate come tali nel portafoglio) quotate in euro. */
+function leggiBondCsv(testo, D) {
+  const celle = r => { const out = []; let c = '', q = false; for (const ch of r) { if (ch === '"') q = !q; else if (ch === ';' && !q) { out.push(c.trim()); c = ''; } else c += ch; } out.push(c.trim()); return out; };
+  const R = String(testo).replace(/^\uFEFF/, '').split(/\r?\n/).filter(r => r.trim()), H = celle(R[0] || '').map(h => h.toLowerCase());
+  const iI = H.indexOf('isincode'), iP = H.indexOf('price'), iD = H.indexOf('referencedate'), iV = H.indexOf('currencycode');
+  if (iI < 0 || iP < 0 || iD < 0 || iV < 0) throw new Error('File non riconosciuto: servono le colonne isincode, currencycode, referencedate e price, separate da punto e virgola.');
+  const file = new Map();
+  R.slice(1).forEach(r => {
+    const c = celle(r), k = String(c[iI] || '').toUpperCase(), pr = numPrezzo(c[iP]), m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(c[iD] || '');
+    if (!k || !(pr > 0) || !m) return;
+    const il = new Date(+m[3], +m[2] - 1, +m[1], 12).getTime(); if (il > Date.now() + 864e5) return;
+    const o = file.get(k); if (!o || il > o.il) file.set(k, { pr, il, val: String(c[iV] || '').toUpperCase() });
+  });
+  const out = { righe: [], mancanti: [], estera: [], nonBond: [] };
+  righePrezzi(D).forEach(x => {
+    const f = file.get(x.isin), et = { isin: x.isin, nome: x.nome || x.isin };
+    if (!x.nom) { if (f && x.classe === 'Obbligazioni') out.nonBond.push(et); return; }
+    if (!f) return out.mancanti.push(et);
+    if (f.val !== 'EUR') return out.estera.push({ ...et, val: f.val });
+    const att = S.prezzi.map[x.isin] || 0, attIl = (S.prezzi.meta[x.isin] || {}).il || 0;
+    const piuRecente = att > 0 && new Date(attIl).setHours(12, 0, 0, 0) > f.il;
+    out.righe.push({ ...et, pr: f.pr, il: f.il, att, attIl, piuRecente, vecchio: Date.now() - f.il > 7 * 864e5, lontano: att > 0 && Math.abs(f.pr / att - 1) > .1, si: !piuRecente });
+  });
+  return out;
+}
+async function bondApplica() {
+  const B = S.bondImp; if (!B) return;
+  const nuovi = {}; B.righe.filter(r => r.si).forEach(r => { nuovi[r.isin] = { p: r.pr, il: r.il }; });
+  if (!Object.keys(nuovi).length) { S.msg = 'Nessun prezzo selezionato.'; return render(); }
+  if (await scriviPrezzi(nuovi)) { Object.keys(nuovi).forEach(k => { if (S.pz && S.pz[k]) delete S.pz[k].p; }); S.bondImp = null; }
+  render();
+}
+document.addEventListener('change', async e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.bsel !== undefined && S.bondImp) { S.bondImp.righe[+t.dataset.bsel].si = t.checked; return; }
+  if (t.id !== 'bondf' || !t.files[0] || !S.data || S.ro || S.demo) return;
+  try {
+    if (t.files[0].size > 5e6) throw new Error('File troppo grande.');
+    S.bondImp = leggiBondCsv(await t.files[0].text(), S.data); S.msg = '';
+  } catch (x) { S.bondImp = null; S.msg = x.message || 'File non valido.'; }
+  render();
+});
 document.addEventListener('input', e => {
   const t = e.target, k = t.dataset && t.dataset.isin; if (!k) return;
   const campo = t.classList.contains('przi') ? 'p' : t.classList.contains('przu') ? 'l' : ''; if (!campo) return;
