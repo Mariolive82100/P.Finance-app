@@ -204,7 +204,7 @@ async function act(el) {
     if (a === 'hper') { S.hper = v; return render(); }
     if (a === 'hperA') { S.hperA = v; return render(); }
     if (a === 'psub') { S.psub = v === 'bil' ? 'bil' : v === 'res' ? 'res' : 'elenco'; return render(); }
-    if (a === 'bacc') { S.bacc = v; S.btg = null; S.bpick = {}; S.bnew = {}; return render(); }
+    if (a === 'bacc') { S.bacc = v; S.btg = null; return render(); }
     if (a === 'bmode') { S.bmode = v === 'full' ? 'full' : 'buy'; return render(); }
     if (a === 'bdel') { const t = bilDraft(); delete t[v]; S.btg = t; return render(); }
     if (a === 'baddc') { if (!el.value || !ASSET.includes(el.value)) return; const t = bilDraft(); t[el.value] = 0; S.btg = t; return render(); }
@@ -1046,13 +1046,8 @@ document.addEventListener('pointercancel', hmFine);
 /* Bilanciamento: campi di testo e scelte (si applicano quando si esce dal campo) */
 document.addEventListener('change', e => {
   const t = e.target, k = t.dataset && t.dataset.bil; if (!k || !S.data) return;
-  const c = t.dataset.c, nw = () => { S.bnew = S.bnew || {}; return S.bnew[c] = S.bnew[c] || {}; };
+  const c = t.dataset.c;
   if (k === 'amt') S.bamt = t.value;
   else if (k === 'tg') { const d = bilDraft(), x = pnum(t.value); d[c] = isFinite(x) && x > 0 ? x : 0; S.btg = d; }
-  else if (k === 'pick') { S.bpick = S.bpick || {}; S.bpick[c] = t.value; }
-  else if (k === 'nisin') nw().isin = t.value.trim().toUpperCase();
-  else if (k === 'nprice') nw().price = t.value;
-  else if (k === 'nnom') nw().nom = t.checked;
-  else if (k === 'nport') nw().port = t.value;
   render();
 });
