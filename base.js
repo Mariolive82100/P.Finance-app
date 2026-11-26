@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.86';
+const VER = '1.87';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -291,6 +291,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.87','26 nov 2026',['Bilanciamento: colori delle barre più distinti, stacco tra le sezioni e percentuale scritta dentro la barra']],
   ['1.86','26 nov 2026',['Portafogli: tolte le "Operazioni suggerite" dal Bilanciamento e le "Operazioni da fare" dal Resoconto; restano gli importi per classe, calcolati dagli obiettivi']],
   ['1.64','24 nov 2026',['Panoramica: i filtri di periodo (6 mesi, anno in corso, 12 mesi, da sempre) sono tasti più grandi sopra il riquadro Andamento del patrimonio; Variazioni assolute mostra solo la variazione di ogni categoria nel periodo scelto; nuovo riquadro Valori per categoria al posto delle torte, che scendono in basso al posto di Ricostruisci lo storico (il modulo resta nella pagina Storico)']],
   ['1.63','24 nov 2026',['Scegliendo un account la Panoramica e la pagina Patrimonio mantengono la stessa struttura dell\'aggregato, con grafici e indicatori calcolati sullo storico di quell\'account (se ne ha uno); il modulo per ricostruire lo storico compare solo nell\'aggregato']],

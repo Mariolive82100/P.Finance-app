@@ -412,8 +412,8 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .bil .bt2 th{font-weight:500;color:#5b7370;font-size:12px;text-align:right;padding:5px 6px}.bil .bt2 td{text-align:right;padding:8px 6px;border-top:1px solid #e3ecea;vertical-align:middle}
 .bil .bt2 th:first-child,.bil .bt2 td:first-child{text-align:left}.bil .bt2 tr.tt td{font-weight:600}
 .bil .bfoot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}.bil .bfoot .grow{flex:1}
-.bil .bbar{display:flex;height:18px;border-radius:5px;overflow:hidden;margin:3px 0}.bil .bbar>div{min-width:0}
-.bil .blg{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#5b7370;margin-top:8px}.bil .blg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.bil .bbar{display:flex;gap:2px;height:24px;border-radius:5px;overflow:hidden;margin:3px 0}.bil .bbar>div{min-width:0;overflow:hidden;font-size:11px;font-weight:700;line-height:24px;text-align:center;white-space:nowrap}
+.bil .blg{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#5b7370;margin-top:8px}.bil .blg i{display:inline-block;width:14px;height:14px;vertical-align:-2px;border-radius:2px;margin-right:5px}
 .bil .card h3{margin:0 0 8px;font-size:15px}.bil .pos{color:#15803d}.bil .neg{color:#b91c1c}
 .bil .b[disabled]{opacity:.4;pointer-events:none}
 @media(max-width:999px){.bil .bk{grid-template-columns:1fr}.bil .bamt{margin-left:0}}
