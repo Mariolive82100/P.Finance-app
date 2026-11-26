@@ -328,6 +328,7 @@ async function act(el) {
     if (a === 'export') return exportCsv();
     if (a === 'prezzi') { S.tab = 'prz'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'przsave') return prezziSalva();
+    if (a === 'przsolo') { S.przSolo = !S.przSolo; return render(); }
     if (a === 'bondok') return await bondApplica();
     if (a === 'bondno') { S.bondImp = null; S.msg = ''; return render(); }
     if (a === 'pedit') { S.pe = v; S.pd = null; S.pcur = null; S.msg = ''; return render(); }
@@ -519,7 +520,7 @@ async function scriviPrezzi(nuovi) {
   const applica = p => {
     const o = nuovi[String(p.isin || '').toUpperCase()]; if (!o) return p;
     const q = { ...p };
-    if (o.p !== undefined) { if (o.p > 0) { q.prezzo = o.p; q.prezzoIl = o.il || ora; } else { delete q.prezzo; delete q.prezzoIl; } }
+    if (o.p !== undefined) { if (o.p > 0) { q.prezzo = o.p; q.prezzoIl = o.il || ora; q.prezzoAgg = ora; } else { delete q.prezzo; delete q.prezzoIl; delete q.prezzoAgg; } }
     if (o.l !== undefined) { if (o.l) q.link = o.l; else delete q.link; }
     return q;
   };

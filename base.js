@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.84';
+const VER = '1.85';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -115,16 +115,16 @@ function prezziDaDati(D) {
   const out = prezziVuoti(); if (!D) return out;
   [...(D.voci || []), ...(D.arch || [])].forEach(v => (v.prodotti || []).forEach(p => {
     const k = String(p.isin || '').toUpperCase(); if (!k) return;
-    const m = out.meta[k] || (out.meta[k] = { il: 0, link: '' });
+    const m = out.meta[k] || (out.meta[k] = { il: 0, ag: 0, link: '' });
     if (p.link && !m.link) m.link = p.link;
-    if (p.prezzo > 0 && (!out.map[k] || (p.prezzoIl || 0) > m.il)) { out.map[k] = p.prezzo; m.il = p.prezzoIl || 0; if (m.il > out.quando) out.quando = m.il; }
+    if (p.prezzo > 0 && (!out.map[k] || (p.prezzoIl || 0) > m.il)) { out.map[k] = p.prezzo; m.il = p.prezzoIl || 0; m.ag = p.prezzoAgg || m.il; if (m.il > out.quando) out.quando = m.il; }
   }));
   return out;
 }
 /* Da usare prima di riscrivere un elenco di prodotti: ricopia prezzo, data e link gia' inseriti */
 const conPrezzi = prod => (prod || []).map(p => {
   const k = String(p.isin || '').toUpperCase(), P = S.prezzi, m = P.meta && P.meta[k], o = { ...p };
-  if (k && P.map[k] > 0 && !(o.prezzo > 0)) { o.prezzo = P.map[k]; if (m && m.il) o.prezzoIl = m.il; }
+  if (k && P.map[k] > 0 && !(o.prezzo > 0)) { o.prezzo = P.map[k]; if (m && m.il) o.prezzoIl = m.il; if (m && m.ag) o.prezzoAgg = m.ag; }
   if (k && m && m.link && !o.link) o.link = m.link;
   return o;
 });
@@ -305,6 +305,7 @@ const CHANGELOG = [
   ['1.53','23 nov 2026',['Nuova pagina Beni (immobili, beni, altro) dopo i Portafogli e prima dei Passivi, con la stessa grafica di Saldi e Passivi']],
   ['1.52','23 nov 2026',['Nuova pagina Passivi (computer e telefono): totale in alto, passivi di ogni account con Modifica, Aggiorna valori e Aggiungi passivo, torte per passivo']],
   ['1.51','23 nov 2026',['Aggiornamento dell\'app più affidabile: i file nuovi vengono sempre scaricati dal sito (evita versioni miste dopo un aggiornamento)']],
+  ['1.85','26 nov 2026',['Prezzi: quelli non aggiornati oggi sono evidenziati in rosso, con conteggio in cima e tasto per vedere solo quelli; in giallo i prezzi caricati oggi ma con data precedente']],
   ['1.84','25 nov 2026',['Prezzi: il tasto "Carica prezzi bond" è più evidente']],
   ['1.83','25 nov 2026',['Prezzi: si possono caricare i prezzi delle obbligazioni singole in euro da un file CSV scelto sul dispositivo, con anteprima e conferma']],
   ['1.82','25 nov 2026',['Prezzi: anche in acquisto e vendita, prezzo medio di carico e Ribilanciamento il punto vale come la virgola']],

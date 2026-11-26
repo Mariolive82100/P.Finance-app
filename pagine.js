@@ -726,6 +726,11 @@ function pageResoc() {
 }
 const bilDraft = () => S.btg || { ...(((S.data.bil || {})[S.bacc]) || {}) };
 
+/* Stato di un prezzo: 'ok' = data di oggi; 'old' = caricato oggi ma con data precedente; 'no' = non aggiornato oggi o mancante */
+const statoPrezzo = isin => {
+  const m = S.prezzi.meta[isin] || {}, oggi = t => !!t && new Date(t).toDateString() === new Date().toDateString();
+  return !(S.prezzi.map[isin] > 0) ? 'no' : oggi(m.il) ? 'ok' : oggi(m.ag) ? 'old' : 'no';
+};
 /* ---------- Prezzi: una riga per ISIN, con il link alla pagina del prodotto e il prezzo scritto a mano ---------- */
 function righePrezzi(D) {
   const m = new Map();
@@ -740,20 +745,23 @@ function righePrezzi(D) {
 function pagePrezzi() {
   const D = S.data, L = righePrezzi(D), ro = !!S.ro || !!S.demo, mancano = isinSenzaPrezzo(D).length, B = S.pz || {};
   const senza = D.voci.filter(isPort).flatMap(v => (v.prodotti || []).filter(p => !p.isin).map(p => ({ p, v })));
-  const righe = L.map(x => {
-    const m = S.prezzi.meta[x.isin] || {}, pr = S.prezzi.map[x.isin], d = B[x.isin] || {}, prop = linkProposti(x);
+  const stati = L.map(x => statoPrezzo(x.isin)), conta = k => stati.filter(s => s === k).length, daAgg = conta('no'), solo = !!S.przSolo && daAgg > 0;
+  const riepilogo = !L.length ? '' : `<div class="przsum"><span class="przb ${daAgg ? 'no' : 'ok'}">${daAgg ? 'Da aggiornare: ' + daAgg + ' su ' + L.length : 'Nessun prezzo da aggiornare'}</span>${conta('old') ? `<span class="przb old">Caricati oggi con data precedente: ${conta('old')}</span>` : ''}${daAgg ? `<button class="b s sm" data-act="przsolo">${solo ? 'Mostra tutti' : 'Mostra solo da aggiornare'}</button>` : ''}</div>`;
+  const righe = L.filter(x => !solo || statoPrezzo(x.isin) === 'no').map(x => {
+    const st = statoPrezzo(x.isin), m = S.prezzi.meta[x.isin] || {}, pr = S.prezzi.map[x.isin], d = B[x.isin] || {}, prop = linkProposti(x);
     const url = /^https:\/\//i.test(m.link || '') ? m.link : prop[0];
     const a = (h, t) => `<a href="${esc(h)}" target="_blank" rel="noopener noreferrer">${t}</a>`;
-    return `<div class="przr"><div class="przn"><b>${esc(x.nome || x.isin)}</b><small class="lbl">${esc([x.isin, x.classe].filter(Boolean).join(' · '))}</small><small class="lbl">${esc([...x.dove].join(', '))}</small></div>
+    return `<div class="przr ${st}"><div class="przn"><b>${esc(x.nome || x.isin)}</b><small class="lbl">${esc([x.isin, x.classe].filter(Boolean).join(' · '))}</small><small class="lbl">${esc([...x.dove].join(', '))}</small></div>
       <div class="przl">${a(url, 'Apri pagina ↗')}${!m.link && prop[1] ? a(prop[1], 'Prova 2 ↗') : ''}${ro ? '' : `<details><summary>Correggi link</summary><input class="przu" data-isin="${x.isin}" placeholder="https://…" value="${esc(d.l !== undefined ? d.l : m.link || '')}"></details>`}</div>
       <label class="przp"><span class="lbl">${x.nom ? 'Prezzo (es. 98,50)' : 'Prezzo €'}</span><input class="przi" data-isin="${x.isin}" inputmode="decimal" placeholder="da inserire" value="${esc(d.p !== undefined ? d.p : pr > 0 ? String(pr).replace('.', ',') : '')}" ${ro ? 'disabled' : ''}></label>
-      <div class="przd lbl">${pr > 0 ? (m.il ? 'Aggiornato il ' + new Date(m.il).toLocaleDateString('it-IT') : '') : '<span class="neg">Da inserire</span>'}</div></div>`;
+      <div class="przd"><span class="przb ${st}">${st === 'ok' ? '✓ Aggiornato oggi' : !(pr > 0) ? 'Da inserire' : st === 'old' ? 'Caricato oggi' : 'Non aggiornato'}</span>${pr > 0 && st !== 'ok' && m.il ? `<small class="lbl">Prezzo del ${new Date(m.il).toLocaleDateString('it-IT')}</small>` : ''}</div></div>`;
   }).join('');
   const salva = ro || !L.length ? '' : '<div class="acts"><button class="b" data-act="przsave">Salva prezzi</button></div>';
   return `<div class="con"><div class="card"><h2>Prezzi</h2><p class="note" style="margin-top:0">Apri la pagina del prodotto, controlla nome e ISIN e scrivi il prezzo in euro. Per le obbligazioni scrivi il prezzo come è quotato (es. 98,50). I link sono proposti dall'app: se uno è sbagliato, correggilo.</p>
     ${mancano ? `<div class="msg">${mancano === 1 ? 'Manca 1 prezzo' : 'Mancano ' + mancano + ' prezzi'}: dove il prezzo manca vale il prezzo medio di carico o il valore manuale, e lo storico del mese in corso non viene aggiornato.</div>` : ''}
     ${!ro && L.some(x => x.nom) && !S.bondImp ? '<div class="acts" style="margin-bottom:6px"><label class="b bondb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>Carica prezzi bond<input type="file" id="bondf" accept=".csv,text/csv" hidden></label></div><p class="note" style="margin-top:0">Scegli un file CSV scaricato da te. Aggiorna solo le obbligazioni singole in euro e prima di salvare mostra un\'anteprima. Il file resta sul dispositivo; controlla di poterne usare i dati.</p>' : ''}
     ${S.bondImp && !ro ? bondPrev(S.bondImp) : ''}
+    ${riepilogo}
     ${righe || '<p class="note">Nessun prodotto con ISIN nei portafogli.</p>'}${salva}</div>
     ${senza.length ? `<div class="card"><h2>Prodotti senza ISIN</h2><p class="note" style="margin-top:0">Il valore si modifica nel portafoglio.</p>${senza.map(({ p, v }) => `<div class="row"><div class="n">${esc(p.nome || 'Valore manuale')}<small>${esc(accName(v) + ' · ' + v.nome)}</small></div><div class="v">${eur(prodVal(p))}</div></div>`).join('')}</div>` : ''}</div>`;
 }

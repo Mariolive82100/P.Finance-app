@@ -427,6 +427,13 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 .przl a{display:inline-block;margin-right:12px;font-weight:600;color:#0f766e}.przl summary{cursor:pointer;font-size:12px;color:#5b7370;margin-top:4px}
 .przp input{width:100%;box-sizing:border-box;margin:2px 0 0;text-align:right}
 @media(max-width:999px){.przr{grid-template-columns:1fr;gap:6px}.przp input{text-align:left}.przl a{padding:6px 0}}
+/* Evidenza dei prezzi non aggiornati oggi */
+.przr{padding-left:10px;padding-right:10px;border-left:5px solid transparent}
+.przr.no{background:#fef2f2;border-left-color:#dc2626}.przr.old{background:#fffbeb;border-left-color:#d97706}
+.przb{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.przb.ok{background:#dcfce7;color:#166534}.przb.old{background:#fef3c7;color:#92400e}.przb.no{background:#fee2e2;color:#b91c1c}
+.przd small{display:block;margin-top:3px}
+.przsum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
 .bprev{border:1px solid #cfe3e0;border-radius:12px;padding:12px;margin:10px 0}
 .bpr{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #eef3f2}.bpr input{width:auto;margin-top:3px}.bpr span{min-width:0;overflow-wrap:anywhere}.bpr small{display:block}
 label.bondb{display:inline-flex;align-items:center;justify-content:center;gap:10px;margin:0;padding:13px 22px;border-radius:12px;background:#0f766e;color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(15,118,110,.35)}
