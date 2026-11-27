@@ -1,5 +1,7 @@
 'use strict';
-const VER = '1.88';
+const VER = '1.89';
+/* Cancella dal dispositivo i dati lasciati dalle vecchie versioni di prova e dalla condivisione */
+try { Object.keys(localStorage).filter(k => /^(pfdc?_|provaDrive_|pf_lbl$|pf_visti$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -268,6 +270,7 @@ async function syncStorico() {
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.89','27 nov 2026',['Cancellati dal dispositivo i dati lasciati dalle versioni di prova']],
   ['1.88','27 nov 2026',['App privata a uso personale: tolti approvazione, amministrazione, condivisione, termini da accettare e importazione titoli riservata','Pagina Report: copia completa dei dati da scaricare e ripristino']],
   ['1.87','26 nov 2026',['Bilanciamento: colori delle barre più distinti, stacco tra le sezioni e percentuale scritta dentro la barra']],
   ['1.86','26 nov 2026',['Portafogli: tolte le "Operazioni suggerite" dal Bilanciamento e le "Operazioni da fare" dal Resoconto; restano gli importi per classe, calcolati dagli obiettivi']],
