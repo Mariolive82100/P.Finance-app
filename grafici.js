@@ -22,7 +22,8 @@ function lcSvg(id) {
   let o = `<defs><clipPath id="cp${id}"><rect x="${L}" y="${T - 4}" width="${W - L - R}" height="${H - T - B + 8}"/></clipPath></defs>`;
   for (let k = 0; k < 4; k++) { const t = mn + (mx - mn) * k / 3; o += `<line x1="${L}" x2="${W - R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="#e2eceb"/><text x="${L - 6}" y="${(y(t) + 4).toFixed(1)}" font-size="11" fill="#5b7370" text-anchor="end">${compact(t)}</text>`; }
   const vc = hi - lo + 1, step = Math.max(1, Math.ceil(vc / Math.max(2, Math.floor((W - L - R) / 62))));
-  for (let i = lo; i <= hi; i++) if (!isBar && (vc <= 40 || (i - lo) % step === 0)) { const yr = i > 0 && pts[i].lab.slice(-2) !== pts[i - 1].lab.slice(-2); o += `<line x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}" y1="${T}" y2="${H - B}" stroke="${yr ? '#b7c7c4' : '#e9f0ef'}" stroke-width="${yr ? 1.4 : 1}"/>`; }
+  const isStep = c.series.some(q => q.step);
+  for (let i = lo; i <= hi; i++) if (!isBar && ((vc <= 40 && !isStep) || (i - lo) % step === 0)) { const yr = !isStep && i > 0 && pts[i].lab.slice(-2) !== pts[i - 1].lab.slice(-2); o += `<line x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}" y1="${T}" y2="${H - B}" stroke="${yr ? '#b7c7c4' : '#e9f0ef'}" stroke-width="${yr ? 1.4 : 1}"/>`; }
   for (let i = lo; i <= hi; i++) if ((i - lo) % step === 0) o += `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="11" fill="#5b7370" text-anchor="${x(i) > W - R - 22 ? 'end' : 'middle'}">${esc(pts[i].lab)}</text>`;
   const i0 = Math.max(0, lo - 1), i1 = Math.min(n - 1, hi + 1);
   if (mn <= 0 && mx >= 0) {
@@ -38,13 +39,13 @@ function lcSvg(id) {
       return;
     }
     let seg = [];
-    for (let i = i0; i <= i1; i++) if (pts[i][se.k] != null) seg.push(x(i).toFixed(1) + ',' + y(pts[i][se.k]).toFixed(1));
+    for (let i = i0; i <= i1; i++) if (pts[i][se.k] != null) { if (se.step && i > i0 && pts[i - 1][se.k] != null) seg.push(x(i).toFixed(1) + ',' + y(pts[i - 1][se.k]).toFixed(1)); seg.push(x(i).toFixed(1) + ',' + y(pts[i][se.k]).toFixed(1)); }
     const pl = col => `<polyline points="${seg.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" ${se.dash ? 'stroke-dasharray="6 4"' : ''} stroke-linejoin="round"/>`;
     if (se.zero) {
       o += `<defs><clipPath id="cu${id}"><rect x="${L}" y="${T - 4}" width="${W - L - R}" height="${(y0c - (T - 4)).toFixed(1)}"/></clipPath><clipPath id="cd${id}"><rect x="${L}" y="${y0c.toFixed(1)}" width="${W - L - R}" height="${(H - B + 4 - y0c).toFixed(1)}"/></clipPath></defs><g clip-path="url(#cu${id})">${pl(se.c)}</g><g clip-path="url(#cd${id})">${pl('#b91c1c')}</g>`;
     } else o += `<g clip-path="url(#cp${id})">${pl(se.c)}</g>`;
     o += `<g clip-path="url(#cp${id})">`;
-    if (vc <= 18) for (let i = lo; i <= hi; i++) if (pts[i][se.k] != null) o += `<circle cx="${x(i).toFixed(1)}" cy="${y(pts[i][se.k]).toFixed(1)}" r="3.5" fill="${se.zero && pts[i][se.k] < 0 ? '#b91c1c' : se.c}"/>`;
+    if (se.step || vc <= 18) for (let i = lo; i <= hi; i++) if (pts[i][se.k] != null && (!se.step || pts[i].rec)) o += `<circle cx="${x(i).toFixed(1)}" cy="${y(pts[i][se.k]).toFixed(1)}" r="3.5" fill="${se.zero && pts[i][se.k] < 0 ? '#b91c1c' : se.c}"/>`;
     if (!se.nm && hi > lo) {
       let iMin = -1, iMax = -1;
       for (let i = lo; i <= hi; i++) { const v = pts[i][se.k]; if (v == null) continue; if (iMin < 0 || v < pts[iMin][se.k]) iMin = i; if (iMax < 0 || v > pts[iMax][se.k]) iMax = i; }
@@ -111,11 +112,12 @@ function lcCross(w, clientX, tap) {
   if (tap && w._sel === idx && xh.innerHTML) { xh.innerHTML = ''; w._sel = null; w._hid = idx; return; }
   if (!tap && w._hid === idx) return;
   w._hid = null; w._sel = idx;
-  const rows = c.series.filter(s => !s.off && !s.ghost && pt[s.k] != null), bw = 178, bh = 22 + rows.length * 15, bx = Math.max(4, Math.min(c.W - bw - 4, xs + 10 + bw > c.W - 4 ? xs - 10 - bw : xs + 10));
+  const rows = c.series.filter(s => !s.off && !s.ghost && pt[s.k] != null), bw = 178, extra = pt.note || [], bh = 22 + (rows.length + extra.length) * 15, bx = Math.max(4, Math.min(c.W - bw - 4, xs + 10 + bw > c.W - 4 ? xs - 10 - bw : xs + 10));
   xh.innerHTML = `<line x1="${xs.toFixed(1)}" x2="${xs.toFixed(1)}" y1="${g.T}" y2="${c.H - g.B}" stroke="#5b7370" stroke-dasharray="3 3"/>`
     + rows.map(s => `<circle cx="${xs.toFixed(1)}" cy="${g.y(pt[s.k]).toFixed(1)}" r="4.5" fill="#fff" stroke="${s.c}" stroke-width="2.5"/>`).join('')
     + `<rect x="${bx.toFixed(1)}" y="${g.T + 2}" width="${bw}" height="${bh}" rx="6" fill="#16302d" opacity=".93"/><text x="${(bx + 8).toFixed(1)}" y="${g.T + 16}" font-size="11.5" font-weight="700" fill="#fff">${esc(pt.long || pt.lab)}</text>`
-    + rows.map((s, j) => `<text x="${(bx + 8).toFixed(1)}" y="${g.T + 31 + j * 15}" font-size="11" fill="${s.c === '#0f766e' ? '#5eead4' : s.c === '#b91c1c' ? '#fca5a5' : s.c === '#1d4ed8' ? '#93c5fd' : '#e2e8f0'}">${esc(s.l)}: ${eur(pt[s.k])}</text>`).join('');
+    + rows.map((s, j) => `<text x="${(bx + 8).toFixed(1)}" y="${g.T + 31 + j * 15}" font-size="11" fill="${s.c === '#0f766e' ? '#5eead4' : s.c === '#b91c1c' ? '#fca5a5' : s.c === '#1d4ed8' ? '#93c5fd' : '#e2e8f0'}">${esc(s.l)}: ${eur(pt[s.k])}</text>`).join('')
+    + extra.map((t, j) => `<text x="${(bx + 8).toFixed(1)}" y="${g.T + 31 + (rows.length + j) * 15}" font-size="11" fill="#e2e8f0">${esc(hideAmt() ? t.replace(/[+−][^ ]+ €/, '••••') : t)}</text>`).join('');
 }
 const PT = new Map(); let PINCH = null;
 let PTYPE = '';
@@ -398,9 +400,10 @@ document.addEventListener('mouseout', e => {
   if (v && !(e.relatedTarget && v.contains(e.relatedTarget))) colHover(null);
 });
 function panMain(all, r1, cols) {
-  if (all.length < 2) return '<div class="card"><h2>Andamento del patrimonio</h2><p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
+  if (S.vistaG === 'g') return panDay(r1, cols);
+  if (all.length < 2) return '<div class="card"><div class="chh"><h2>Andamento del patrimonio</h2><span class="chb"><button class="b s sm" data-act="hclose">← Indietro</button></span></div>' + vistaBar() + '<p class="note">Il grafico comparirà quando ci saranno almeno 2 mesi di dati.</p></div>';
   const A = aggOf('main', all), W = innerWidth < 1000 ? Math.max(300, innerWidth - 62) : Math.max(300, Math.round((innerWidth - 200 - 56 - 28) * (cols || 5) / 12 - 40));
-  return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - 150));
+  return lcCard('main', 'Andamento del patrimonio netto', aggSeries(all, A).pts, [{ k: 'netto', c: '#1d4ed8', l: 'Patrimonio netto', fit: 1, nolg: 1, ck: 1 }], W, Math.max(130, r1 - (innerWidth < 1000 ? 150 : 250))).replace('<div class="lcw"', vistaBar() + '<div class="lcw"');
 }
 function pageAnd() {
   const all = S.data.storico, rg = String(S.range || '12');

@@ -438,3 +438,7 @@ table.ct{border:1px solid #c9d6d4}.ct th,.ct td{border:1px solid #d3dedc}.ct th{
 label.bondb{display:inline-flex;align-items:center;justify-content:center;gap:10px;margin:0;padding:13px 22px;border-radius:12px;background:#0f766e;color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(15,118,110,.35)}
 label.bondb svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:999px){label.bondb{width:100%;box-sizing:border-box}}
+/* andamento giornaliero */
+.perbar.vistag,.perbar.gper{margin:6px 0}.mob .perbar.vistag .b,.mob .perbar.gper .b{padding:8px 12px;font-size:13px}
+.gsint{margin:6px 0}.gsint b{font-size:20px;margin-right:8px}.gsint span{font-weight:700;font-size:14px}
+.gvuoto{font-size:15px;line-height:1.5;color:#4b6460}

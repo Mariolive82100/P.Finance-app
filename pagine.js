@@ -539,7 +539,8 @@ function homeBlk(k, c) {
     if (!has) return '';
     if (!c.hv) return hubGrid(c.all, c.allF, perBarA());
     const h = hubBody(c.hv, c.hv === 'cmp2' ? c.all : c.allF, c.r1, c.cols);
-    return `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${h.replace('</h2>', '</h2>' + perBarA())}</div>`;
+    /* la vista giornaliera ha i suoi periodi */
+    return `<div class="hubc${S.hanim === 'in' ? ' anim-in' : ''}">${c.hv === 'main' && S.vistaG === 'g' ? h : h.replace('</h2>', '</h2>' + perBarA())}</div>`;
   }
   if (k === 'col') return colCard(c.t, c.vis);
   if (k === 'ind') return has && c.D ? indicatori(c.D, c.all) : '';

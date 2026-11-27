@@ -28,7 +28,7 @@ function copiaFile(c, prefisso) {
   a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
   return nome;
 }
-const copiaConta = c => `${Object.keys(c.voci).length} voci (comprese le archiviate), ${Object.keys(c.storico).length} mesi di storico, ${Object.keys(c.account).length} account aggiuntivi`;
+const copiaConta = c => `${Object.keys(c.voci).length} voci (comprese le archiviate), ${Object.values(c.storico).filter(m => typeof m.netto === 'number' || m.acc).length} mesi di storico, ${Object.values(c.storico).reduce((n, m) => n + Object.keys(m.g || {}).length, 0)} giorni registrati, ${Object.keys(c.account).length} account aggiuntivi`;
 
 /* Controlla che il file sia una copia di P.Finance, integra e di questo account */
 function copiaControlla(c) {
@@ -41,6 +41,7 @@ function copiaControlla(c) {
   if (!Object.keys(c.voci).length) no('La copia non contiene voci: ripristino fermato per sicurezza.');
   if (Object.values(c.voci).some(v => !['attivo', 'passivo'].includes(v.tipo) || typeof v.valore !== 'number')) no('Il file contiene voci non valide.');
   if (Object.keys(c.storico).some(k => !/^\d{4}-\d{2}$/.test(k))) no('Il file contiene mesi non validi.');
+  if (Object.values(c.storico).some(m => m.g !== undefined && !giorniValidi(m.g))) no('Il file contiene giorni non validi.');
   if (Object.values(c.account).some(v => Object.keys(v).join() !== 'nome' || typeof v.nome !== 'string' || v.nome.length > 60)) no('Il file contiene account non validi.');
   return c;
 }

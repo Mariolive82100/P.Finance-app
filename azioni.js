@@ -161,6 +161,8 @@ async function act(el) {
       return homeSalva(homeStr(raw));
     }
     if (a === 'hper') { S.hper = v; return render(); }
+    if (a === 'vistag') { S.vistaG = v; return render(); }
+    if (a === 'gper') { S.gper = v; delete ZM.day; return render(); }
     if (a === 'hperA') { S.hperA = v; return render(); }
     if (a === 'psub') { S.psub = v === 'bil' ? 'bil' : v === 'res' ? 'res' : 'elenco'; return render(); }
     if (a === 'bacc') { S.bacc = v; S.btg = null; return render(); }
@@ -254,12 +256,12 @@ async function act(el) {
     if (a === 'pmback') { S.popm.mode = 'menu'; return render(); }
     if (a === 'pmdel') { S.popm.mode = 'del'; return render(); }
     if (a === 'pmedit') { S.editM = S.popm.mese; S.draft = null; S.popm = null; render(); const fm = $('formm'); return fm ? fm.scrollIntoView({ behavior: 'smooth' }) : window.scrollTo(0, 0); }
-    if (a === 'pmdelok') { const m = S.popm.mese; await deleteDoc(doc(db, 'users', D.uid, 'storico', m)); D.storico = D.storico.filter(x => x.mese !== m); S.popm = null; return render(); }
+    if (a === 'pmdelok') { const m = S.popm.mese; await eliminaMese(m); D.storico = D.storico.filter(x => x.mese !== m); S.popm = null; return render(); }
     if (a === 'editm') { S.editM = v; S.draft = null; render(); return window.scrollTo(0, 0); }
     if (a === 'cancelm') { S.editM = null; return render(); }
     if (a === 'delm') {
       if (!confirm('Eliminare questo mese dallo storico?')) return;
-      await deleteDoc(doc(db, 'users', D.uid, 'storico', v));
+      await eliminaMese(v);
       D.storico = D.storico.filter(x => x.mese !== v); return render();
     }
     if (a === 'savem') {

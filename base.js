@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.89';
+const VER = '1.90';
 /* Cancella dal dispositivo i dati lasciati dalle vecchie versioni di prova e dalla condivisione */
 try { Object.keys(localStorage).filter(k => /^(pfdc?_|provaDrive_|pf_lbl$|pf_visti$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
@@ -244,32 +244,41 @@ async function loadData(uid, nome) {
   voci.forEach(applyPiano);
   const arch = voci.filter(v => v.archiviata);
   for (let i = voci.length - 1; i >= 0; i--) if (voci[i].archiviata) voci.splice(i, 1);
-  const stAll = ss.docs.map(d => ({ mese: d.id, ...d.data() })).sort((a, b) => a.mese.localeCompare(b.mese));
+  /* i giorni stanno nel campo g della scheda del mese: si tengono a parte dallo storico mensile */
+  const giorni = {};
+  const stAll = ss.docs.map(d => { const { g, ...x } = d.data(); if (g) giorni[d.id] = g; return { mese: d.id, ...x }; }).sort((a, b) => a.mese.localeCompare(b.mese));
   /* mesi con soli totali di un account (importati per account) non fanno parte dello storico aggregato */
   const storico = stAll.filter(x => typeof x.netto === 'number'), accOnly = stAll.filter(x => typeof x.netto !== 'number' && x.acc);
   let esclusi = [], home = null, bil = {};
   try { const ps = await getDoc(doc(db, 'users', uid)); const pd = ps.exists() ? ps.data() : {}, e = pd.esclusi; if (Array.isArray(e)) esclusi = e.filter(k => k === 'main' || accounts.some(a => a.id === k)); if (Array.isArray(pd.home)) home = pd.home.filter(s => HOME_BLK[String(s).split(':')[0]]).map(String); if (pd.bil && typeof pd.bil === 'object') for (const k in pd.bil) if ((k === 'main' || accounts.some(a => a.id === k)) && pd.bil[k] && typeof pd.bil[k] === 'object') { bil[k] = {}; for (const c in pd.bil[k]) if (ASSET.includes(c) && isFinite(+pd.bil[k][c])) bil[k][c] = +pd.bil[k][c]; } } catch (e) {}
-  S.data = { uid, nome, voci, arch, storico, accOnly, accounts, esclusi, home, bil };
-  await syncStorico();
+  S.data = { uid, nome, voci, arch, storico, accOnly, giorni, accounts, esclusi, home, bil };
+  await syncStorico(true);
 }
 
-async function syncStorico() {
+/* apertura = true quando l'app viene solo aperta; negli altri casi si sta salvando una modifica */
+async function syncStorico(apertura) {
   const D = S.data;
   if (!D || S.ro || S.demo) return;
   const inc = aggVoci(D), t = { ...totals(inc), ...catTot(inc) }, acc = totAcc(D);
-  const mk = monthKey();
+  const mk = monthKey(), dd = oggiKey().slice(8);
   const cur = D.storico.find(x => x.mese === mk);
   if (!D.voci.length && !cur) return;
-  /* finche' mancano prezzi lo storico del mese non si tocca */
+  /* finche' mancano prezzi non si toccano ne' il mese ne' il giorno */
   S.prezzi = prezziDaDati(D);
   if (isinSenzaPrezzo(D).length) return;
-  if (cur && cur.attivi === t.attivi && cur.passivi === t.passivi && cur.liq === t.liq && cur.port === t.port && cur.beni === t.beni && JSON.stringify(cur.acc || null) === JSON.stringify(acc)) return;
-  await setDoc(doc(db, 'users', D.uid, 'storico', mk), { ...t, acc, aggiornato: serverTimestamp() });
+  const ora = giornoDi(t, acc), cambiaMese = !cur || firmaGiorno(giornoDi(cur, cur.acc)) !== firmaGiorno(ora);
+  const g = giornoDaRegistrare(D, ora, cambiaMese, apertura === true);
+  if (!cambiaMese && !g) return;
+  /* si scrivono solo questi campi: i giorni gia' salvati (anche da un altro dispositivo) restano */
+  const dati = { ...t, acc, aggiornato: serverTimestamp() }, campi = Object.keys(dati);
+  if (g) { dati.g = { [dd]: ora }; campi.push('g.' + dd); }
+  await setDoc(doc(db, 'users', D.uid, 'storico', mk), dati, { mergeFields: campi });
+  if (g) { D.giorni = D.giorni || {}; D.giorni[mk] = { ...(D.giorni[mk] || {}), [dd]: ora }; }
   if (cur) Object.assign(cur, t, { acc }); else { D.storico.push({ mese: mk, ...t, acc }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
 }
 
-/* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.90','27 nov 2026',['Grafico giornaliero del patrimonio netto: in Panoramica apri Patrimonio netto e scegli Giornaliero','I giorni si registrano da soli quando salvi una modifica e sono compresi nella copia completa','Eliminando un mese dallo storico i suoi giorni restano']],
   ['1.89','27 nov 2026',['Cancellati dal dispositivo i dati lasciati dalle versioni di prova']],
   ['1.88','27 nov 2026',['App privata a uso personale: tolti approvazione, amministrazione, condivisione, termini da accettare e importazione titoli riservata','Pagina Report: copia completa dei dati da scaricare e ripristino']],
   ['1.87','26 nov 2026',['Bilanciamento: colori delle barre più distinti, stacco tra le sezioni e percentuale scritta dentro la barra']],
