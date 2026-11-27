@@ -1,11 +1,12 @@
 'use strict';
 /* ---------- Archivio su Google Drive (cartella riservata dell'app) ----------
-   Offre all'app gli stessi comandi usati finora con Firebase, ma salva tutto in un solo file.
-   NON ancora attivo: index.html non carica questo file. */
+   Offre all'app gli stessi comandi usati finora con Firebase, ma salva tutto in un solo file. */
 const Archivio = (() => {
   const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
   const API = 'https://www.googleapis.com/drive/v3', UP = 'https://www.googleapis.com/upload/drive/v3/files';
-  const NOME = 'pfinance-dati.json', PREFISSO = 'pfinance-copia-', PRIMA = 'pfinance-prima-del-ripristino.json';
+  /* La versione di prova usa file e memoria propri: non tocca l'archivio definitivo */
+  const P = window.PF_PROVA ? 'collaudo-' : '', MEM = window.PF_PROVA ? 'pfdc_' : 'pfd_';
+  const NOME = P + 'pfinance-dati.json', PREFISSO = P + 'pfinance-copia-', PRIMA = P + 'pfinance-prima-del-ripristino.json';
   const VERSIONE = 1, MAX_COPIE = 5, COLL = ['voci', 'storico', 'account'];
   let cid = '';
   let token = null, scadenza = 0;
@@ -18,9 +19,9 @@ const Archivio = (() => {
   const ascolti = [];
 
   const mem = {
-    get(k) { try { return localStorage.getItem('pfd_' + k); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem('pfd_' + k, v); return true; } catch (e) { return false; } },
-    del(k) { try { localStorage.removeItem('pfd_' + k); } catch (e) {} }
+    get(k) { try { return localStorage.getItem(MEM + k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(MEM + k, v); return true; } catch (e) { return false; } },
+    del(k) { try { localStorage.removeItem(MEM + k); } catch (e) {} }
   };
   const errore = (code, msg) => Object.assign(new Error(msg || code), { code });
   const copia = o => o === undefined ? undefined : JSON.parse(JSON.stringify(o));
@@ -132,7 +133,8 @@ const Archivio = (() => {
     const tutte = (await elenco("name contains '" + PREFISSO + "'")).filter(f => f.name.startsWith(PREFISSO)).sort((a, b) => b.name.localeCompare(a.name));
     for (const f of tutte.slice(MAX_COPIE)) await chiama(API + '/files/' + f.id, { method: 'DELETE' });
   }
-  async function conferma() {
+  const haDati = d => !!d && COLL.some(c => Object.keys(d[c]).length);
+  async function conferma(senzaCopia) {
     if (!bozza) return false;
     const nuovo = bozza;
     try {
@@ -140,7 +142,7 @@ const Archivio = (() => {
       const attuale = await trova(NOME);
       if ((attuale && (!file || attuale.id !== file.id || attuale.md5Checksum !== file.md5Checksum)) || (!attuale && file)) throw errore('drive-conflitto');
       /* La copia di sicurezza non deve mai impedire il salvataggio */
-      if (file && base) { try { await copiaGiornaliera(base); } catch (e) { console.warn('Copia giornaliera non riuscita', e.code); } }
+      if (file && !senzaCopia && haDati(base)) { try { await copiaGiornaliera(base); } catch (e) { console.warn('Copia giornaliera non riuscita', e.code); } }
       nuovo.salvato = new Date().toISOString();
       file = await carica(attuale && attuale.id, NOME, nuovo);
     } catch (e) {
@@ -160,7 +162,7 @@ const Archivio = (() => {
       const esito = await azione();
       if (gruppi === 1) {
         if (rifiutate !== r0) { bozza = null; throw errore(permessoValido() ? 'drive-sola-lettura' : 'drive-scaduto'); }
-        if (bozza) { if (durante) durante(true); try { await inCoda(conferma); } finally { if (durante) durante(false); } }
+        if (bozza) { if (durante) durante(true); try { await inCoda(() => conferma()); } finally { if (durante) durante(false); } }
       }
       return esito;
     } catch (e) { if (gruppi === 1) bozza = null; throw e; }
@@ -170,7 +172,7 @@ const Archivio = (() => {
     if (!scrivibile()) { rifiutate++; throw errore(permessoValido() ? 'drive-sola-lettura' : 'drive-scaduto'); }
     const lavoro = bozza || copia(base);
     cambia(lavoro); bozza = lavoro;
-    if (!gruppi) await inCoda(conferma);
+    if (!gruppi) await inCoda(() => conferma());
   }
 
   /* ----- stessi comandi usati dall'app con Firebase ----- */
@@ -222,7 +224,7 @@ const Archivio = (() => {
   /* ----- copie di sicurezza ----- */
   const esporta = () => JSON.stringify(lettura(), null, 2);
   async function copie() {
-    const l = await elenco("name contains 'pfinance-'");
+    const l = await elenco("name contains '" + P + "pfinance-'");
     return l.filter(f => f.name.startsWith(PREFISSO) || f.name === PRIMA).sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime))
       .map(f => ({ id: f.id, nome: f.name, quando: f.modifiedTime, prima: f.name === PRIMA }));
   }
@@ -238,7 +240,29 @@ const Archivio = (() => {
   }
   const ripristinaDaDrive = async id => ripristina(await scarica(id));
 
+  /* ----- trasferimento dalla versione precedente ----- */
+  /* Testo ordinato per confrontare due contenuti; i numeri non validi restano riconoscibili */
+  const firma = v => Array.isArray(v) ? '[' + v.map(firma).join(',') + ']' : mappa(v) ? '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + firma(v[k])).join(',') + '}' : typeof v === 'number' && !Number.isFinite(v) ? '!' + v : JSON.stringify(v);
+  /* Si può trasferire solo su un archivio senza dati, o su un trasferimento rimasto a metà */
+  const trasferibile = () => { const d = lettura(); return !haDati(d) || (d.profilo.trasferimento || {}).stato === 'da-verificare'; };
+  async function importa(nuovi) {
+    if (!scrivibile()) throw errore(permessoValido() ? 'drive-sola-lettura' : 'drive-scaduto');
+    await inCoda(async () => {
+      await rileggi();
+      if (!trasferibile()) throw errore('drive-gia-presente');
+      const prima = copia(base), tieni = {};
+      ['termini', 'terminiAt'].forEach(k => { if (prima.profilo[k] !== undefined) tieni[k] = prima.profilo[k]; });
+      const atteso = { profilo: { ...nuovi.profilo, ...tieni, trasferimento: { stato: 'da-verificare' } }, voci: nuovi.voci, storico: nuovi.storico, account: nuovi.account };
+      const parti = d => firma({ profilo: d.profilo, voci: d.voci, storico: d.storico, account: d.account });
+      bozza = controlla({ ...vuoto(), ...copia(atteso) }); await conferma(true);
+      await rileggi();
+      if (parti(base) !== parti(atteso)) { bozza = prima; await conferma(true); throw errore('trasferimento-diverso'); }
+      bozza = copia(base); bozza.profilo.trasferimento = { stato: 'ok', quando: new Date().toISOString() }; await conferma(true);
+    });
+  }
+
   return {
+    importa, trasferibile,
     configura: o => { cid = o.clientId || ''; },
     apri, collega, rileggi, esci, gruppo, esporta, copie, ripristina, ripristinaDaDrive,
     ascolta: f => ascolti.push(f),

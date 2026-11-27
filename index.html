@@ -31,12 +31,15 @@ window.addEventListener('appinstalled', function () { window.PF_INST = null; win
 <div id="splash" aria-hidden="true"><div class="e">€</div><div class="p">P</div><div class="n">P.Finance</div></div>
 <script>try{if(sessionStorage.getItem('pf_splash')){document.getElementById('splash').remove()}else{sessionStorage.setItem('pf_splash','1');setTimeout(function(){var s=document.getElementById('splash');if(s)s.remove()},3500)}}catch(e){setTimeout(function(){var s=document.getElementById('splash');if(s)s.remove()},3500)}</script>
 <div id="app"></div>
-<script type="module" src="firebase.js"></script>
+<script async src="https://accounts.google.com/gsi/client"></script>
+<script defer src="drive-archivio.js"></script>
 <script defer src="base.js"></script>
 <script defer src="pagine.js"></script>
 <script defer src="grafici.js"></script>
 <script defer src="albero.js"></script>
 <script defer src="report-pdf.js"></script>
 <script defer src="azioni.js"></script>
+<script defer src="drive-inizio.js"></script>
+<script defer src="drive-app.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.87';
+const VER = '2.0';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -23,7 +23,6 @@ const thS = (t, c, label, cls, off) => { if (off) return `<th class="${cls || ''
 const ACC_TINTS = ['#eaf2fb', '#fdf0e1', '#eaf6e8', '#f5ebf8', '#fff6d6', '#e4f5f4'];
 const accTintIdx = k => { const D = S.data, i = k === 'main' ? 0 : D.accounts.findIndex(a => a.id === k) + 1; return Math.max(0, i) % ACC_TINTS.length; };
 const accTint = k => ACC_TINTS[accTintIdx(k)];
-const ADMIN_UID = '29kFEZwmKPZvHFjQ9M65ERhIbhG3';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
   passivo: ['Mutuo', 'Prestito', 'Carta di credito', 'Altro debito']
@@ -210,7 +209,7 @@ async function migraCategorie(uid, voci) {
 }
 const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
 
-const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, loading: true, msg: '', prezzi: prezziVuoti() };
+const S = { user: null, profile: null, data: null, tab: 'pat', edit: null, loading: true, msg: '', prezzi: prezziVuoti() };
 
 function errText(e) {
   const c = e && e.code || '';
@@ -222,7 +221,7 @@ function errText(e) {
   if (c.includes('network')) return 'Connessione assente. Riprova.';
   if (c.includes('too-many-requests')) return 'Troppi tentativi. Riprova tra qualche minuto.';
   if (c.includes('read-only')) return S.demo ? 'Nella demo non si può modificare.' : 'Sei in sola visualizzazione: non puoi modificare.';
-  if (c.includes('permission-denied')) return 'Permesso negato. Chiedi all\'amministratore.';
+  if (c.includes('permission-denied')) return 'Operazione non permessa.';
   return 'Errore: ' + (c || (e && e.message) || 'sconosciuto');
 }
 
@@ -264,24 +263,20 @@ async function syncStorico() {
   if (cur) Object.assign(cur, t, { acc }); else { D.storico.push({ mese: mk, ...t, acc }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
 }
 
-async function loadUsers() {
-  const q = await getDocs(collection(db, 'users'));
-  S.users = q.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== S.user.uid)
-    .sort((a, b) => (a.approved === b.approved ? (a.nome || '').localeCompare(b.nome || '') : a.approved ? 1 : -1));
-
-}
-const isAdmin = () => !!S.user && S.user.uid === ADMIN_UID;
-
-const TERMS_V = 2;
+const TERMS_V = 3;
 const termsHtml = () => `<h2>Termini e condizioni</h2><p class="lbl">Versione ${TERMS_V} · P.Finance (beta)</p>
-<h3>1. Cos'è questa app</h3><p>Uno strumento per tenere traccia del proprio patrimonio e per imparare i concetti di base della finanza personale. Non è consulenza finanziaria, fiscale o legale: i commenti del report sono informazioni generali a scopo educativo.</p>
-<h3>2. Nessuna garanzia</h3><p>L'app è in versione di prova e può contenere errori o interruzioni. I calcoli dipendono dai dati che inserisci tu, di cui sei responsabile. Il titolare non risponde delle decisioni prese in base a ciò che l'app mostra.</p>
-<h3>3. Titolare e contatti</h3><p>Il titolare è Mario T. Per qualsiasi richiesta (informazioni, correzione o cancellazione dei dati) contattalo direttamente.</p>
-<h3>4. Quali dati vengono salvati</h3><p>Il nome del tuo account Google e la tua email (registrati dal servizio di accesso; la password resta a Google e il titolare non la vede), le voci di attivo e passivo, i sotto-account e lo storico mensile. Una copia dei dati può restare sul tuo telefono per l'uso senza connessione e viene cancellata quando esci dall'app. Non vengono raccolti altri dati e non vengono venduti né ceduti a terzi.</p>
-<h3>5. Chi può vedere i tuoi dati</h3><p>Ogni iscritto vede solo i propri dati. Nemmeno l'amministratore può consultarli tramite l'app. Resta un limite tecnico: i dati sono conservati sul servizio Firebase di Google e chi gestisce quel servizio potrebbe accedervi dal suo pannello di controllo. Il titolare si impegna a non farlo.</p>
-<h3>6. Accesso e sicurezza</h3><p>Proteggi il tuo account Google: chi vi accede può entrare anche qui. L'accesso è soggetto ad approvazione e il titolare può sospendere un account.</p>
-<h3>7. Cancellazione</h3><p>Puoi chiedere in qualsiasi momento la cancellazione del tuo account e di tutti i tuoi dati. Puoi anche scaricare i tuoi dati dalla funzione di esportazione.</p>
-<h3>8. Modifiche ai termini</h3><p>Se i termini cambiano, alla successiva apertura dell'app ti verrà chiesto di accettarli di nuovo per continuare a usarla.</p>`;
+<h3>1. Cos'è questa app</h3><p>Uno strumento per tenere traccia del proprio patrimonio e imparare i concetti di base della finanza personale. Non è consulenza finanziaria, fiscale o legale: i commenti del report sono informazioni generali a scopo educativo.</p>
+<h3>2. Nessuna garanzia</h3><p>L'app è in prova e può contenere errori, interrompersi o causare problemi nel salvataggio dei dati. I calcoli dipendono dai dati che inserisci, di cui sei responsabile. Il titolare non risponde delle decisioni prese in base a ciò che l'app mostra.</p>
+<h3>3. Titolare e contatti</h3><p>Il titolare è Mario T. Per informazioni o richieste contattalo direttamente.</p>
+<h3>4. Dove sono i tuoi dati</h3><p>I dati che inserisci o importi (tra cui voci, portafogli, prezzi, passivi, account, storico e preferenze) sono salvati nel tuo Google Drive, in una cartella nascosta riservata all'app. L'app chiede il permesso di gestire i propri dati in quella cartella, non di accedere ai tuoi altri file. I dati occupano parte del tuo spazio Google.</p>
+<h3>5. Dati sul dispositivo</h3><p>Sul dispositivo restano una copia dei dati, per consultarli anche a collegamento scaduto, e un permesso temporaneo di accesso a Drive. Chi usa il tuo dispositivo sbloccato potrebbe vedere i dati. Il tasto Esci rimuove la copia e il permesso dal dispositivo, ma non cancella i dati su Drive. Su un dispositivo non tuo, usa sempre Esci.</p>
+<h3>6. Chi può vedere i tuoi dati</h3><p>L'app non invia i tuoi dati al titolare, che non ha un archivio o un pannello da cui consultarli. Non può quindi correggerli o recuperarli per te. Il titolare però gestisce il codice dell'app, che con il tuo permesso può leggere i dati salvati: si impegna a non modificarlo per raccoglierli. Se gli invii copie, report o schermate, potrà vedere ciò che contengono.</p>
+<h3>7. Servizi esterni</h3><p>L'accesso e l'archivio sono forniti da Google; l'app è pubblicata tramite GitHub. Questi servizi trattano i dati tecnici necessari al funzionamento secondo le proprie condizioni. Google può mostrare al titolare statistiche tecniche sull'uso del collegamento. I link a siti esterni, per esempio per i prezzi, seguono le condizioni di quei siti.</p>
+<h3>8. Accesso e sicurezza</h3><p>Proteggi il tuo account Google e il tuo dispositivo. Non serve l'approvazione del titolare. Periodicamente l'app ti chiederà di ricollegarti per aggiornare o modificare i dati. Senza un salvataggio confermato, una modifica potrebbe non essere conservata.</p>
+<h3>9. Storico e copie di sicurezza</h3><p>L'archivio principale conserva tutto lo storico, senza limiti di mesi impostati dall'app. Per rimediare agli errori, l'app conserva inoltre su Drive le ultime 5 copie dell'intero archivio, create nei giorni in cui apporti modifiche, e una copia dei dati precedenti all'ultimo ripristino. Eliminando i dati dell'app da Drive perdi sia l'archivio sia queste copie. Conserva quindi in un luogo sicuro anche le copie che scarichi, perché non sono protette da password.</p>
+<h3>10. Cancellazione dei dati</h3><p>Puoi eliminare i dati dalle impostazioni di Google Drive, nella gestione delle applicazioni, scegliendo di eliminare i dati nascosti dell'app. Da lì o dal tuo account Google puoi anche rimuovere il collegamento. Poi usa Esci su ogni dispositivo. Le copie scaricate vanno eliminate separatamente. Prima di cancellare, scarica una copia se vuoi conservare i dati.</p>
+<h3>11. Modifiche ai termini</h3><p>Se i termini cambiano, ti verrà chiesto di accettare la nuova versione per continuare a usare l'app. Finché il collegamento a Drive non è attivo, potrebbe essere necessario ricollegarti per registrare l'accettazione.</p>
+<h3>Durante il trasferimento dalla versione precedente</h3><p>Durante il passaggio, i dati già presenti su Firebase restano lì e il gestore del servizio può accedervi dal pannello di controllo. Saranno cancellati dopo la verifica del trasferimento.</p>`;
 function termsGate() {
   $('app').innerHTML = `<div class="auth card" style="max-width:640px">${termsHtml()}<label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0"><input type="checkbox" id="tc" style="width:auto;margin-top:3px"><span>Ho letto e accetto i termini e condizioni.</span></label><div class="msg">${esc(S.msg)}</div>
     <div class="acts"><button class="b" data-act="accept">Accetto e continuo</button><button class="b s" data-act="logout">Esci</button></div></div>`;
@@ -291,6 +286,7 @@ function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="n
 
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['2.0','27 nov 2026',['I dati sono salvati nel tuo Google Drive, in una cartella riservata all\'app','Trasferimento dei dati dalla versione precedente, con controllo di quanto copiato','Copie di sicurezza nella pagina Report; a collegamento scaduto i dati restano consultabili in sola lettura','Non serve più l\'approvazione per entrare; tolte le pagine Amministrazione e Condivisione e la funzione Importa titoli','Nuovi termini e condizioni']],
   ['1.87','26 nov 2026',['Bilanciamento: colori delle barre più distinti, stacco tra le sezioni e percentuale scritta dentro la barra']],
   ['1.86','26 nov 2026',['Portafogli: tolte le "Operazioni suggerite" dal Bilanciamento e le "Operazioni da fare" dal Resoconto; restano gli importi per classe, calcolati dagli obiettivi']],
   ['1.64','24 nov 2026',['Panoramica: i filtri di periodo (6 mesi, anno in corso, 12 mesi, da sempre) sono tasti più grandi sopra il riquadro Andamento del patrimonio; Variazioni assolute mostra solo la variazione di ogni categoria nel periodo scelto; nuovo riquadro Valori per categoria al posto delle torte, che scendono in basso al posto di Ricostruisci lo storico (il modulo resta nella pagina Storico)']],

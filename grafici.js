@@ -514,13 +514,3 @@ function pageRep() {
     <p class="note">Informazioni generali a scopo educativo, non consulenza finanziaria.</p></div>`;
 }
 
-function pageAdm() {
-  const u = S.users, pend = u.filter(x => !x.approved), ok = u.filter(x => x.approved);
-  const row = (x, p) => `<div class="row"><div class="n">${esc(x.nome)}</div>
-    ${p ? `<button class="b sm" data-act="appr" data-v="${x.uid}">Approva</button><button class="b r sm" data-act="rej" data-v="${x.uid}">Rifiuta</button>`
-        : `<button class="b r sm" data-act="rev" data-v="${x.uid}">Revoca</button>`}</div>`;
-  return `<div class="card"><h2>In attesa di approvazione (${pend.length})</h2>${pend.length ? pend.map(x => row(x, true)).join('') : '<p class="note">Nessuna richiesta.</p>'}</div>
-    <div class="card"><h2>Utenti approvati (${ok.length})</h2>${ok.length ? ok.map(x => row(x, false)).join('') : '<p class="note">Nessun utente.</p>'}</div>
-    <div class="card"><button class="b s" data-act="reload-users">Aggiorna elenco</button></div>`;
-}
-
