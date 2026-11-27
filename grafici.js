@@ -477,8 +477,8 @@ function indicatori(D, st) {
 
 function pageRep() {
   const D = aggD(), st = D.storico;
-  if (!st.length) return '<div class="card">Nessun dato disponibile. Inserisci almeno una voce nella pagina Patrimonio.</div>';
-  if (innerWidth >= 1000) return pdfCard();
+  if (!st.length) return '<div class="card">Nessun dato disponibile. Inserisci almeno una voce nella pagina Patrimonio.</div>' + copiaCard();
+  if (innerWidth >= 1000) return pdfCard() + copiaCard();
   const cur = st[st.length - 1], prev = st.length > 1 ? st[st.length - 2] : null;
   const dN = prev ? cur.netto - prev.netto : null, dA = prev ? cur.attivi - prev.attivi : null, dP = prev ? cur.passivi - prev.passivi : null;
   const dpct = prev && prev.netto ? dN / Math.abs(prev.netto) : null;
@@ -508,19 +508,9 @@ function pageRep() {
     ${dN !== null ? `<div><div class="lbl">Rispetto a ${esc(monthName(prev.mese))}</div><div class="big ${cls(dN)}">${dN >= 0 ? '+' : ''}${eur(dN)}</div>${dpct !== null ? `<div class="lbl">${pct(dpct)}</div>` : ''}</div>` : ''}</div>
     ${dN !== null ? `<div style="margin-top:12px">${dl('Attivi', dA)}${dl('Passivi', dP)}</div>` : '<p class="note">Il confronto con il mese precedente sarà disponibile dal prossimo mese.</p>'}</div>
     ${pdfCard()}
+    ${copiaCard()}
     ${indicatori(D, st)}
     <div class="grid"><div class="card"><h2>Attivi per categoria</h2>${byCat('attivo')}</div><div class="card"><h2>Passivi per categoria</h2>${byCat('passivo')}</div></div>
     <div class="card"><h2>Lo sapevi?</h2><ul class="c">${c.map(x => `<li>${x}</li>`).join('')}</ul>
     <p class="note">Informazioni generali a scopo educativo, non consulenza finanziaria.</p></div>`;
 }
-
-function pageAdm() {
-  const u = S.users, pend = u.filter(x => !x.approved), ok = u.filter(x => x.approved);
-  const row = (x, p) => `<div class="row"><div class="n">${esc(x.nome)}</div>
-    ${p ? `<button class="b sm" data-act="appr" data-v="${x.uid}">Approva</button><button class="b r sm" data-act="rej" data-v="${x.uid}">Rifiuta</button>`
-        : `<button class="b r sm" data-act="rev" data-v="${x.uid}">Revoca</button>`}</div>`;
-  return `<div class="card"><h2>In attesa di approvazione (${pend.length})</h2>${pend.length ? pend.map(x => row(x, true)).join('') : '<p class="note">Nessuna richiesta.</p>'}</div>
-    <div class="card"><h2>Utenti approvati (${ok.length})</h2>${ok.length ? ok.map(x => row(x, false)).join('') : '<p class="note">Nessun utente.</p>'}</div>
-    <div class="card"><button class="b s" data-act="reload-users">Aggiorna elenco</button></div>`;
-}
-

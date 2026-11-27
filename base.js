@@ -1,5 +1,5 @@
 'use strict';
-const VER = '1.87';
+const VER = '1.88';
 /* Conti e voci a saldo zero: nascosti, salvo scelta dell'utente (ricordata su questo dispositivo) */
 const showZero = () => { if (S.showZero === undefined) { try { S.showZero = localStorage.getItem('pf_zero') === '1'; } catch (e) { S.showZero = false; } } return S.showZero; };
 const vz = arr => showZero() ? arr : arr.filter(v => v.valore !== 0);
@@ -23,7 +23,8 @@ const thS = (t, c, label, cls, off) => { if (off) return `<th class="${cls || ''
 const ACC_TINTS = ['#eaf2fb', '#fdf0e1', '#eaf6e8', '#f5ebf8', '#fff6d6', '#e4f5f4'];
 const accTintIdx = k => { const D = S.data, i = k === 'main' ? 0 : D.accounts.findIndex(a => a.id === k) + 1; return Math.max(0, i) % ACC_TINTS.length; };
 const accTint = k => ACC_TINTS[accTintIdx(k)];
-const ADMIN_UID = '29kFEZwmKPZvHFjQ9M65ERhIbhG3';
+/* App privata: entra solo questo account */
+const OWNER_UID = '29kFEZwmKPZvHFjQ9M65ERhIbhG3';
 const CATS = {
   attivo: ['Liquidità', 'Investimenti', 'Immobili', 'Beni', 'Altro'],
   passivo: ['Mutuo', 'Prestito', 'Carta di credito', 'Altro debito']
@@ -210,7 +211,7 @@ async function migraCategorie(uid, voci) {
 }
 const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
 
-const S = { user: null, profile: null, data: null, tab: 'pat', users: [], edit: null, loading: true, msg: '', prezzi: prezziVuoti() };
+const S = { user: null, profile: null, data: null, tab: 'pat', edit: null, loading: true, msg: '', prezzi: prezziVuoti() };
 
 function errText(e) {
   const c = e && e.code || '';
@@ -222,7 +223,8 @@ function errText(e) {
   if (c.includes('network')) return 'Connessione assente. Riprova.';
   if (c.includes('too-many-requests')) return 'Troppi tentativi. Riprova tra qualche minuto.';
   if (c.includes('read-only')) return S.demo ? 'Nella demo non si può modificare.' : 'Sei in sola visualizzazione: non puoi modificare.';
-  if (c.includes('permission-denied')) return 'Permesso negato. Chiedi all\'amministratore.';
+  if (c.includes('admin-restricted-operation')) return 'App privata: questo account non è autorizzato.';
+  if (c.includes('permission-denied')) return 'Operazione non permessa.';
   return 'Errore: ' + (c || (e && e.message) || 'sconosciuto');
 }
 
@@ -264,33 +266,9 @@ async function syncStorico() {
   if (cur) Object.assign(cur, t, { acc }); else { D.storico.push({ mese: mk, ...t, acc }); D.storico.sort((a, b) => a.mese.localeCompare(b.mese)); }
 }
 
-async function loadUsers() {
-  const q = await getDocs(collection(db, 'users'));
-  S.users = q.docs.map(d => ({ uid: d.id, ...d.data() })).filter(u => u.uid !== S.user.uid)
-    .sort((a, b) => (a.approved === b.approved ? (a.nome || '').localeCompare(b.nome || '') : a.approved ? 1 : -1));
-
-}
-const isAdmin = () => !!S.user && S.user.uid === ADMIN_UID;
-
-const TERMS_V = 2;
-const termsHtml = () => `<h2>Termini e condizioni</h2><p class="lbl">Versione ${TERMS_V} · P.Finance (beta)</p>
-<h3>1. Cos'è questa app</h3><p>Uno strumento per tenere traccia del proprio patrimonio e per imparare i concetti di base della finanza personale. Non è consulenza finanziaria, fiscale o legale: i commenti del report sono informazioni generali a scopo educativo.</p>
-<h3>2. Nessuna garanzia</h3><p>L'app è in versione di prova e può contenere errori o interruzioni. I calcoli dipendono dai dati che inserisci tu, di cui sei responsabile. Il titolare non risponde delle decisioni prese in base a ciò che l'app mostra.</p>
-<h3>3. Titolare e contatti</h3><p>Il titolare è Mario T. Per qualsiasi richiesta (informazioni, correzione o cancellazione dei dati) contattalo direttamente.</p>
-<h3>4. Quali dati vengono salvati</h3><p>Il nome del tuo account Google e la tua email (registrati dal servizio di accesso; la password resta a Google e il titolare non la vede), le voci di attivo e passivo, i sotto-account e lo storico mensile. Una copia dei dati può restare sul tuo telefono per l'uso senza connessione e viene cancellata quando esci dall'app. Non vengono raccolti altri dati e non vengono venduti né ceduti a terzi.</p>
-<h3>5. Chi può vedere i tuoi dati</h3><p>Ogni iscritto vede solo i propri dati. Nemmeno l'amministratore può consultarli tramite l'app. Resta un limite tecnico: i dati sono conservati sul servizio Firebase di Google e chi gestisce quel servizio potrebbe accedervi dal suo pannello di controllo. Il titolare si impegna a non farlo.</p>
-<h3>6. Accesso e sicurezza</h3><p>Proteggi il tuo account Google: chi vi accede può entrare anche qui. L'accesso è soggetto ad approvazione e il titolare può sospendere un account.</p>
-<h3>7. Cancellazione</h3><p>Puoi chiedere in qualsiasi momento la cancellazione del tuo account e di tutti i tuoi dati. Puoi anche scaricare i tuoi dati dalla funzione di esportazione.</p>
-<h3>8. Modifiche ai termini</h3><p>Se i termini cambiano, alla successiva apertura dell'app ti verrà chiesto di accettarli di nuovo per continuare a usarla.</p>`;
-function termsGate() {
-  $('app').innerHTML = `<div class="auth card" style="max-width:640px">${termsHtml()}<label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0"><input type="checkbox" id="tc" style="width:auto;margin-top:3px"><span>Ho letto e accetto i termini e condizioni.</span></label><div class="msg">${esc(S.msg)}</div>
-    <div class="acts"><button class="b" data-act="accept">Accetto e continuo</button><button class="b s" data-act="logout">Esci</button></div></div>`;
-}
-function pageTerms() { return `<div class="card terms">${termsHtml()}<p class="note">Hai accettato la versione ${S.profile && S.profile.termini ? S.profile.termini : TERMS_V}.</p></div>`; }
-
-
 /* ---------- Info app e novità ---------- */
 const CHANGELOG = [
+  ['1.88','27 nov 2026',['App privata a uso personale: tolti approvazione, amministrazione, condivisione, termini da accettare e importazione titoli riservata','Pagina Report: copia completa dei dati da scaricare e ripristino']],
   ['1.87','26 nov 2026',['Bilanciamento: colori delle barre più distinti, stacco tra le sezioni e percentuale scritta dentro la barra']],
   ['1.86','26 nov 2026',['Portafogli: tolte le "Operazioni suggerite" dal Bilanciamento e le "Operazioni da fare" dal Resoconto; restano gli importi per classe, calcolati dagli obiettivi']],
   ['1.64','24 nov 2026',['Panoramica: i filtri di periodo (6 mesi, anno in corso, 12 mesi, da sempre) sono tasti più grandi sopra il riquadro Andamento del patrimonio; Variazioni assolute mostra solo la variazione di ogni categoria nel periodo scelto; nuovo riquadro Valori per categoria al posto delle torte, che scendono in basso al posto di Ricostruisci lo storico (il modulo resta nella pagina Storico)']],
@@ -429,10 +407,8 @@ const CHANGELOG = [
 function pageInfo() {
   return `<div class="card"><h2>P.Finance</h2><p class="lbl">Versione ${VER} beta</p>
     <p>App per tenere traccia del proprio patrimonio, della situazione mese per mese e per imparare le basi della finanza personale.</p>
-    <div class="row"><div class="n">Titolare</div><div class="v">Mario T.</div></div>
     <div class="row"><div class="n">Accesso</div><div class="v">Google</div></div>
-    <div class="row"><div class="n">Funziona anche offline</div><div class="v">Sì</div></div>
-    <p class="note">Strumento educativo, non consulenza finanziaria. I tuoi dati restano visibili solo a te.</p>
-    <button class="b s sm" data-act="terms">Termini e condizioni</button></div>
+    <div class="row"><div class="n">Funziona anche offline</div><div class="v">Sì, in consultazione</div></div>
+    <p class="note">App privata a uso personale. Strumento educativo, non consulenza finanziaria.</p></div>
     <div class="card"><h2>Novità</h2>${CHANGELOG.map(([v, d, l]) => `<h3 style="margin:12px 0 2px;font-size:15px">Versione ${v}</h3><div class="lbl">${d}</div><ul class="c">${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')}</div>`;
 }

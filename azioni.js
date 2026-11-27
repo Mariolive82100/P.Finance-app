@@ -1,16 +1,5 @@
 'use strict';
 /* ---------- Azioni ---------- */
-function exportCsv() {
-  const D = S.data, n = v => String(v).replace('.', ',');
-  const q = s => '"' + String(s).replace(/"/g, '""') + '"';
-  let out = 'Tipo;Categoria;Account;Nome;Valore;Dove;Obiettivo;AssetClass\n' + D.voci.map(v => [v.tipo, q(v.categoria), q(accName(v)), q(v.nome), n(v.valore), q(v.dove || ''), v.obiettivo ? n(v.obiettivo) : '', q(v.assetClass || '')].join(';')).join('\n');
-  out += '\n\nMese;Attivi;Passivi;Netto\n' + D.storico.map(s => [s.mese, n(s.attivi), n(s.passivi), n(s.netto)].join(';')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['﻿' + out], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'pfinance_' + D.nome.replace(/[^a-z0-9]/gi, '') + '_' + new Date().toISOString().slice(0, 10) + '.csv';
-  a.click(); URL.revokeObjectURL(a.href);
-}
-
 const FIDS = ['ft', 'fm', 'fa', 'fc', 'fn', 'fv', 'fk', 'fi', 'ff', 'fw', 'fwn', 'fo', 'fac'];
 function grabForm() {
   const o = {}; FIDS.forEach(id => { const e = $(id); if (e) o[id] = e.value; });
@@ -33,32 +22,8 @@ async function act(el) {
   S.msg = '';
   try {
     if (a === 'info') { S.tab = 'info'; S.menu = false; window.scrollTo(0, 0); return render(); }
-    if (a === 'terms') { S.tab = 'terms'; S.menu = false; return render(); }
     if (a === 'demo') return avviaDemo();
     if (a === 'demoexit') return location.reload();
-    if (a === 'cnd') { S.tab = 'cnd'; S.menu = false; window.scrollTo(0, 0); return render(); }
-    if (a === 'cndcopy') { try { await navigator.clipboard.writeText(S.user.uid); S.msg = 'Codice copiato.'; } catch (e) { S.msg = 'Copia non riuscita: tieni premuto sul codice e copialo.'; } return render(); }
-    if (a === 'cndadd' || a === 'cnddel') {
-      const mio = S.user.uid, vw = [...((S.profile && S.profile.viewers) || [])];
-      let nv;
-      if (a === 'cnddel') nv = vw.filter(x => x !== v);
-      else {
-        const c = ($('cndu') ? $('cndu').value : '').trim(), n = ($('cndn') ? $('cndn').value : '').trim();
-        if (!/^[A-Za-z0-9]{20,40}$/.test(c) || c === mio) { S.msg = 'Il codice non è valido.'; return render(); }
-        if (vw.includes(c)) { S.msg = 'Questa persona ha già l\'accesso.'; return render(); }
-        if (vw.length >= 10) { S.msg = 'Puoi condividere al massimo con 10 persone.'; return render(); }
-        nv = [...vw, c]; if (n) { const l = lsJ('pf_lbl', {}); l[c] = n; try { localStorage.setItem('pf_lbl', JSON.stringify(l)); } catch (e) {} }
-      }
-      await updateDoc(doc(db, 'users', mio), { viewers: nv }); S.profile.viewers = nv; S.msg = 'Accesso aggiornato.'; return render();
-    }
-    if (a === 'cndaddv') {
-      const c = ($('cndv') ? $('cndv').value : '').trim(), n = ($('cndw') ? $('cndw').value : '').trim() || 'Persona';
-      if (!/^[A-Za-z0-9]{20,40}$/.test(c) || c === S.user.uid) { S.msg = 'Il codice non è valido.'; return render(); }
-      const l = lsJ('pf_visti', []).filter(x => x.uid !== c); l.push({ uid: c, nome: n }); try { localStorage.setItem('pf_visti', JSON.stringify(l)); } catch (e) {} S.msg = 'Persona aggiunta.'; return render();
-    }
-    if (a === 'cndrim') { try { localStorage.setItem('pf_visti', JSON.stringify(lsJ('pf_visti', []).filter(x => x.uid !== v))); } catch (e) {} return render(); }
-    if (a === 'cndvedi') { const x = lsJ('pf_visti', []).find(y => y.uid === v); if (x) return vediDi(x.uid, x.nome); return; }
-    if (a === 'tornaMio') return tornaMio();
     if (a === 'escl') {
       const D = S.data; if (S.ro || S.demo || !D) return;
       const nv = isEsc(v) ? D.esclusi.filter(x => x !== v) : [...D.esclusi, v];
@@ -70,11 +35,6 @@ async function act(el) {
     if (a === 'impno') { S.imp = null; S.impErr = null; return render(); }
     if (a === 'impsok') return impStoricoApplica();
     if (a === 'impPok') return impPortApplica();
-    if (a === 'accept') {
-      if (!$('tc') || !$('tc').checked) { S.msg = 'Per continuare devi spuntare la casella di accettazione.'; return render(); }
-      await updateDoc(doc(db, 'users', S.user.uid), { termini: TERMS_V, terminiAt: serverTimestamp() });
-      S.profile.termini = TERMS_V; S.msg = ''; return render();
-    }
     if (a === 'pg') {
       const i = ORD.indexOf(S.tab), n = i + (+v); if (i < 0 || n < 0 || n >= ORD.length) return;
       S.tab = ORD[n]; render(); window.scrollTo(0, 0);
@@ -97,7 +57,6 @@ async function act(el) {
     if (a === 'accT') { S.accOpen = !(S.accOpen || (S.tab === 'pan' && (S.fAcc || 'all') !== 'all')); S.addAcc = false; return render(); }
     if (a === 'nv') { S.tab = 'nv'; S.edit = null; S.fd = null; S.exp = { ...(S.exp || {}), form: true }; window.scrollTo(0, 0); return render(); }
     if (a === 'facc') { S.fAcc = S.fAcc === v && v !== 'all' ? 'all' : v; S.edit = null; S.menu = false; S.addAcc = false; return render(); }
-    if (a === 'admin') { S.tab = 'adm'; S.menu = false; S.addAcc = false; return render(); }
     if (a === 'exp') { S.exp = S.exp || {}; S.exp[v] = !S.exp[v]; return render(); }
     if (a === 'menu') { S.menu = !S.menu; S.addAcc = false; return render(); }
     if (a === 'addo') { S.addAcc = true; render(); const i = $('an'); if (i) i.focus(); return; }
@@ -315,17 +274,12 @@ async function act(el) {
       if (ex) Object.assign(ex, dati, { manuale: true }); else { D.storico.push({ mese: mm, ...dati, manuale: true }); D.storico.sort((x, y) => x.mese.localeCompare(y.mese)); }
       S.editM = null; S.draft = null; S.msg = 'Mese salvato.'; render(); const fm = $('formm'); return fm && fm.scrollIntoView({ block: 'center' });
     }
-    if (a === 'share') {
-      const url = location.href.split('#')[0];
-      const data = { title: 'P.Finance', text: 'Prova P.Finance: monitora il tuo patrimonio.', url };
-      if (navigator.share) { try { await navigator.share(data); } catch (_) {} return; }
-      try { await navigator.clipboard.writeText(url); S.msg = 'Link copiato negli appunti.'; } catch (_) { S.msg = 'Link: ' + url; }
-      return render();
-    }
     if (a === 'ftipo' || a === 'fmod' || a === 'fcat') { S.fd = grabForm(); return render(); }
     if (a === 'edit') { S.edit = v; return render(); }
     if (a === 'cancel') { S.edit = null; S.fd = null; if (S.exp) S.exp.form = false; if (innerWidth >= 1000 && S.tab === 'nv') { S.tab = S.back || 'pan'; S.back = null; } return render(); }
-    if (a === 'export') return exportCsv();
+    if (a === 'copiascarica') return await copiaEsporta();
+    if (a === 'copiaok') return await copiaRipristina();
+    if (a === 'copiano') { S.copia = null; S.copiaMsg = null; return render(); }
     if (a === 'prezzi') { S.tab = 'prz'; S.menu = false; window.scrollTo(0, 0); return render(); }
     if (a === 'przsave') return prezziSalva();
     if (a === 'przsolo') { S.przSolo = !S.przSolo; return render(); }
@@ -431,8 +385,6 @@ async function act(el) {
       await syncStorico(); S.msg = 'Portafoglio eliminato.'; return render();
     }
     if (a === 'pconv') return portConverti();
-    if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
-    if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;
     if (a === 'save') {
       S.fd = grabForm();
       const tipo = $('ft').value, categoria = $('fc').value; let nome = $('fn') ? $('fn').value.trim() : '', fm = $('fm'), fa2 = $('fa');
@@ -486,9 +438,6 @@ async function act(el) {
       try { await navigator.share({ files: [f], title: 'Report del patrimonio' }); } catch (e) { if (e.name !== 'AbortError') throw e; }
       return;
     }
-    if (a === 'appr' || a === 'rev') { await updateDoc(doc(db, 'users', v), { approved: a === 'appr' }); await loadUsers(); return render(); }
-    if (a === 'rej') { if (!confirm('Rifiutare questa richiesta?')) return; await deleteDoc(doc(db, 'users', v)); await loadUsers(); return render(); }
-    if (a === 'reload-users') { await loadUsers(); return render(); }
   } catch (e) { S.msg = errText(e); render(); }
 }
 
@@ -595,7 +544,7 @@ document.addEventListener('input', e => {
 
 const tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
 const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
-/* ---------- Importa titoli (CSV della scheda "Elenco titoli") ---------- */
+/* ---------- Lettura dei file CSV ---------- */
 function csvRighe(t) {
   t = t.replace(/^﻿/, ''); const d = (t.split('\n')[0].match(/;/g) || []).length > (t.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
   const rows = []; let r = [], c = '', q = false;
@@ -609,56 +558,6 @@ function csvRighe(t) {
   }
   if (c !== '' || r.length) { r.push(c); rows.push(r); }
   return rows.filter(x => x.some(y => y.trim() !== ''));
-}
-function titoliProposta(txt) {
-  const D = S.data, R = csvRighe(txt); if (R.length < 2) throw new Error('File vuoto.');
-  const H = R[0].map(x => x.trim().toLowerCase()), ix = n => H.indexOf(n);
-  const iC = ix('classe'), iI = ix('isin'), iN = ix('nome'), iV = ix('valore'), iQ = H.findIndex(h => h === 'quantità' || h === 'quantita');
-  const iCo = H.map((h, i) => /^quantit[àa] .+/.test(h) ? i : -1).filter(i => i >= 0);
-  if (iC < 0 || iI < 0 || iV < 0 || iQ < 0 || !iCo.length) throw new Error('Non trovo le colonne Classe, Isin, Valore, Quantità e le quantità per conto. Hai scaricato la scheda "Elenco titoli"?');
-  const acc = S.fAcc && S.fAcc !== 'all' && S.fAcc !== 'main' ? S.fAcc : '';
-  if (D.voci.some(v => isInvLegacy(v) && (v.account || '') === acc)) throw new Error('Prima riunisci le voci di investimento esistenti nei portafogli (riquadro in alto, pagina Portafogli).');
-  const mapC = c => { c = c.trim().toLowerCase(); return /^azion/.test(c) ? 'Azioni' : /^obblig/.test(c) ? 'Obbligazioni' : /^cript/.test(c) ? 'Criptovalute' : /^(commod|oro)/.test(c) ? 'Oro e materie prime' : 'Altro'; };
-  const g = new Map(); let letti = 0;
-  R.slice(1).forEach(r => {
-    const tot = pnum(r[iQ]), val = pnum(r[iV]); if (!(tot > 0) || !(val > 0)) return; letti++;
-    iCo.forEach(i => {
-      const qt = pnum(r[i]); if (!(qt > 0)) return;
-      const broker = H[i].replace(/^quantit[àa] /, '').trim().split(/\s+/)[0]; const dove = broker.charAt(0).toUpperCase() + broker.slice(1);
-      if (!g.has(dove.toLowerCase())) g.set(dove.toLowerCase(), { dove, valore: 0, prodotti: [] });
-      const G = g.get(dove.toLowerCase()), isin = String(r[iI] || '').trim().toUpperCase(), man = r2(val * qt / tot), cl = mapC(r[iC]), nm = String(r[iN] || '').trim();
-      G.valore += man;
-      const p = /^[A-Z0-9]{12}$/.test(isin) ? G.prodotti.find(z => z.isin === isin) : null;
-      if (p) { p.quote += qt; p.manuale = r2(p.manuale + man); }
-      else if (/^[A-Z0-9]{12}$/.test(isin)) G.prodotti.push({ isin, nome: nm, classe: cl, quote: qt, manuale: man });
-      else G.prodotti.push({ isin: '', nome: nm, classe: cl, quote: 0, manuale: man });
-    });
-  });
-  const righe = [...g.values()].map(x => {
-    x.valore = r2(x.valore);
-    const ex = D.voci.find(v => isPort(v) && (v.dove || '').trim().toLowerCase() === x.dove.toLowerCase() && (v.account || '') === acc);
-    return { ...x, exId: ex ? ex.id : '', prima: ex ? ex.valore : null, nPrima: ex ? (ex.prodotti || []).length : 0 };
-  }).sort((a, b) => a.dove.localeCompare(b.dove));
-  if (!righe.length) throw new Error('Nessun titolo con quantità trovato.');
-  return { righe, acc, letti };
-}
-async function titoliApplica() {
-  const D = S.data, P = S.timp; if (!P) return;
-  for (const x of P.righe) {
-    if (x.exId) {
-      const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
-      const { id, assetClass, ...rest } = v; const keep = p => { const o = (v.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.pmc > 0 ? { pmc: o.pmc } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; }; const dati = { ...rest, valore: x.valore, prodotti: conPrezzi(x.prodotti.map(keep)), portafoglio: true }; dati.valore = valoreProd(dati);
-      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
-    } else {
-      if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
-        const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: x.dove, account: P.acc, valore: 0 };
-        const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
-      }
-      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, account: P.acc, valore: x.valore, prodotti: conPrezzi(x.prodotti), portafoglio: true }; dati.valore = valoreProd(dati);
-      const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
-    }
-  }
-  D.voci.forEach(applyPiano); S.timp = null; await syncStorico(); S.msg = 'Titoli importati e aggiornati.'; render();
 }
 /* ---------- Portafogli: modifica prodotti, nuovo portafoglio, riunione delle voci vecchie ---------- */
 function grabPort() {
@@ -727,11 +626,6 @@ async function portConverti() {
   }
   D.voci.forEach(applyPiano); await syncStorico(); S.msg = 'Portafogli aggiornati.'; render();
 }
-document.addEventListener('change', async e => {
-  if (e.target.id !== 'titf' || !e.target.files[0] || !S.data || !isAdmin()) return;
-  try { S.timp = titoliProposta(await e.target.files[0].text()); S.timpErr = ''; } catch (x) { S.timp = null; S.timpErr = x.message || 'File non valido.'; }
-  render();
-});
 /* ---------- Pagina Importazioni: storico e portafoglio da CSV ---------- */
 const MESI_IT = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
 const meseIt = k => MESI_IT[+k.slice(5) - 1] + ' ' + k.slice(0, 4);
@@ -902,24 +796,8 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => { if (e.target.closest && e.target.closest('.pcm')) portAnteprima(); });
 
-/* ---------- Visualizzazione dei dati di un'altra persona (sola lettura) ---------- */
-const SCRIVI_ORIG = { setDoc, updateDoc, deleteDoc, addDoc };
-const bloccaScritture = on => Object.assign(window, on ? { setDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), updateDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), deleteDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })), addDoc: () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })) } : SCRIVI_ORIG);
-async function vediDi(uid, nome) {
-  const prec = S.data, precRo = S.ro; if (!S.own) S.own = prec;
-  S.ro = { uid, nome }; S.pz = {}; bloccaScritture(true);
-  try {
-    S.msg = ''; await loadData(uid, nome);
-    S.fAcc = 'all'; S.edit = null; S.fd = null; S.pop = null; S.popm = null; S.tab = innerWidth >= 1000 ? 'pan' : 'pat'; window.scrollTo(0, 0); render();
-  } catch (e) {
-    S.data = prec; S.ro = precRo; if (!precRo) { S.own = null; bloccaScritture(false); }
-    S.msg = e && e.code === 'permission-denied' ? nome + ' non ti ha (ancora) dato l\'accesso.' : errText(e); render();
-  }
-}
-function tornaMio() {
-  if (!S.own) return; S.data = S.own; S.own = null; S.ro = null; bloccaScritture(false);
-  S.fAcc = 'all'; S.edit = null; S.fd = null; S.pop = null; S.popm = null; S.tab = 'cnd'; S.msg = ''; window.scrollTo(0, 0); render();
-}
+/* Nella demo nessun comando di salvataggio deve funzionare */
+const bloccaScritture = () => { const no = () => Promise.reject(Object.assign(new Error('read-only'), { code: 'read-only' })); Object.assign(window, { setDoc: no, updateDoc: no, deleteDoc: no, addDoc: no }); };
 
 /* ---------- Demo: dati inventati (10 anni, da 50.000 a 500.000 euro), nulla viene salvato ---------- */
 function generaDemo() {
@@ -963,32 +841,26 @@ function generaDemo() {
 }
 function avviaDemo() {
   const D = generaDemo();
-  S.demo = true; S.user = { uid: 'demo', displayName: 'Demo', email: '' }; S.profile = { nome: D.nome, approved: true, termini: TERMS_V, viewers: [] }; S.users = [];
-  S.data = D; bloccaScritture(true); S.tab = innerWidth >= 1000 ? 'pan' : 'pat'; S.fAcc = 'all'; S.loading = false; S.msg = ''; window.scrollTo(0, 0); render();
+  S.demo = true; S.user = { uid: 'demo', displayName: 'Demo', email: '' }; S.profile = { nome: D.nome, approved: true };
+  S.data = D; bloccaScritture(); S.tab = innerWidth >= 1000 ? 'pan' : 'pat'; S.fAcc = 'all'; S.loading = false; S.msg = ''; window.scrollTo(0, 0); render();
 }
 
+let RIFIUTATO = false;
 onAuthStateChanged(auth, async user => {
   if (S.demo) return;
+  if (user && user.uid !== OWNER_UID) { RIFIUTATO = true; await signOut(auth); return; }
   S.user = user; S.msg = '';
-  if (!user) { S.profile = null; S.data = null; S.loading = false; return render(); }
+  if (!user) {
+    if (RIFIUTATO) { S.msg = 'App privata: questo account non è autorizzato.'; RIFIUTATO = false; }
+    S.profile = null; S.data = null; S.loading = false; return render();
+  }
   S.loading = true; render();
   try {
-    const ref = doc(db, 'users', user.uid);
-    let snap = await getDoc(ref);
-    if (!snap.exists()) {
-      const nome = String(user.displayName || (user.email || 'Utente').split('@')[0]).trim().slice(0, 40) || 'Utente';
-      await setDoc(ref, { nome, approved: false, creato: serverTimestamp() });
-      snap = await getDoc(ref);
-    }
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (!snap.exists()) throw new Error('profilo non trovato');
     S.profile = snap.data();
-    if (user.uid === ADMIN_UID && !S.profile.approved) {
-      await updateDoc(ref, { approved: true });
-      S.profile.approved = true;
-    }
-    if (S.profile.approved) {
-      await loadData(user.uid, S.profile.nome, false);
-      if (isAdmin()) await loadUsers();
-    }
+    await loadData(user.uid, S.profile.nome, false);
+    try { const m = sessionStorage.getItem('pf_copia_ok'); if (m) { sessionStorage.removeItem('pf_copia_ok'); S.msg = m; S.tab = 'rep'; S.copiaMsg = { ok: true, t: m }; } } catch (e) {}
   } catch (e) { S.msg = errText(e); }
   S.loading = false; render();
 });
