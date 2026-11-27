@@ -170,12 +170,6 @@ function pagePat() {
     <div class="card"><h2>Esporta</h2><button class="b" data-act="export">Scarica i dati (CSV per Excel)</button></div>`;
 }
 
-function importCard() {
-  if (!isAdmin()) return '';
-  if (S.timp) return `<div class="card"><h2>Importa titoli</h2><div class="lbl" style="margin-bottom:6px">Anteprima: ${S.timp.righe.length} portafogli da creare o aggiornare${S.timp.acc ? '' : ' (account principale)'}</div>${S.timp.righe.map(x => `<div class="row"><div class="n">${esc(x.dove)}<small>${x.exId ? 'sostituisce ' + x.nPrima + ' prodotti (valore ' + eur(x.prima) + ')' : 'nuovo portafoglio'} · ${x.prodotti.length} prodotti</small></div><div class="v">${eur(x.valore)}</div></div>`).join('')}<div class="acts"><button class="b" data-act="timpok">Conferma</button><button class="b s" data-act="timpno">Annulla</button></div></div>`;
-  return `<div class="card"><h2>Importa titoli</h2><div class="lbl">Carica il CSV della scheda "Elenco titoli": crea o aggiorna un portafoglio per ogni conto, con un prodotto per riga (ISIN, quote, classe).</div><input id="titf" type="file" accept=".csv,.txt">${S.timpErr ? `<div class="msg">${esc(S.timpErr)}</div>` : ''}</div>`;
-}
-
 /* ---------- Importazioni (storico e portafoglio da file CSV) ---------- */
 function pageImp() {
   const D = S.data, I = S.imp, CSVACC = '.csv,.txt,text/csv,text/plain,application/csv,application/vnd.ms-excel';
@@ -523,7 +517,7 @@ function pagePort() {
       ${ac ? '' : ports.map(v => `<div class="pblk">${S.pe === v.id ? editBlock(v) : pCol(v.id) ? viewHead(v) : viewBlock(v)}</div>`).join('') || (ac ? '' : '<div class="lbl">Nessun portafoglio.</div>')}
       ${ac ? '' : `<div class="tbar" style="margin-top:10px"><input id="pnn_${esc(k)}" maxlength="40" placeholder="Nuovo portafoglio (es. Directa)" style="max-width:260px;margin:0"><button class="b s sm" data-act="pnew" data-v="${esc(k)}">＋ Aggiungi portafoglio</button></div>`}</div>`;
   }).join('');
-  return `<div class="con"><div class="ptop"><h2>Portafogli · ${esc(aname)}</h2><div class="pbtn">${stato}<button class="b s sm" data-act="pcolall" data-v="${accList(D).every(([k]) => accCol(k)) ? 0 : 1}">${accList(D).every(([k]) => accCol(k)) ? 'Espandi tutto' : 'Comprimi tutto'}</button></div></div>${convCard}${secs}${importCard()}</div>`;
+  return `<div class="con"><div class="ptop"><h2>Portafogli · ${esc(aname)}</h2><div class="pbtn">${stato}<button class="b s sm" data-act="pcolall" data-v="${accList(D).every(([k]) => accCol(k)) ? 0 : 1}">${accList(D).every(([k]) => accCol(k)) ? 'Espandi tutto' : 'Comprimi tutto'}</button></div></div>${convCard}${secs}</div>`;
 }
 
 function pagePan() { return conStoricoAcc(pagePan0); }

@@ -431,8 +431,6 @@ async function act(el) {
       await syncStorico(); S.msg = 'Portafoglio eliminato.'; return render();
     }
     if (a === 'pconv') return portConverti();
-    if (a === 'timpno') { S.timp = null; S.timpErr = ''; return render(); }
-    if (a === 'timpok') return isAdmin() ? titoliApplica() : undefined;
     if (a === 'save') {
       S.fd = grabForm();
       const tipo = $('ft').value, categoria = $('fc').value; let nome = $('fn') ? $('fn').value.trim() : '', fm = $('fm'), fa2 = $('fa');
@@ -595,7 +593,7 @@ document.addEventListener('input', e => {
 
 const tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
 const tipAt = (e, t) => { if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; const w = tip.offsetWidth; tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
-/* ---------- Importa titoli (CSV della scheda "Elenco titoli") ---------- */
+/* ---------- Lettura dei file CSV ---------- */
 function csvRighe(t) {
   t = t.replace(/^﻿/, ''); const d = (t.split('\n')[0].match(/;/g) || []).length > (t.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
   const rows = []; let r = [], c = '', q = false;
@@ -609,56 +607,6 @@ function csvRighe(t) {
   }
   if (c !== '' || r.length) { r.push(c); rows.push(r); }
   return rows.filter(x => x.some(y => y.trim() !== ''));
-}
-function titoliProposta(txt) {
-  const D = S.data, R = csvRighe(txt); if (R.length < 2) throw new Error('File vuoto.');
-  const H = R[0].map(x => x.trim().toLowerCase()), ix = n => H.indexOf(n);
-  const iC = ix('classe'), iI = ix('isin'), iN = ix('nome'), iV = ix('valore'), iQ = H.findIndex(h => h === 'quantità' || h === 'quantita');
-  const iCo = H.map((h, i) => /^quantit[àa] .+/.test(h) ? i : -1).filter(i => i >= 0);
-  if (iC < 0 || iI < 0 || iV < 0 || iQ < 0 || !iCo.length) throw new Error('Non trovo le colonne Classe, Isin, Valore, Quantità e le quantità per conto. Hai scaricato la scheda "Elenco titoli"?');
-  const acc = S.fAcc && S.fAcc !== 'all' && S.fAcc !== 'main' ? S.fAcc : '';
-  if (D.voci.some(v => isInvLegacy(v) && (v.account || '') === acc)) throw new Error('Prima riunisci le voci di investimento esistenti nei portafogli (riquadro in alto, pagina Portafogli).');
-  const mapC = c => { c = c.trim().toLowerCase(); return /^azion/.test(c) ? 'Azioni' : /^obblig/.test(c) ? 'Obbligazioni' : /^cript/.test(c) ? 'Criptovalute' : /^(commod|oro)/.test(c) ? 'Oro e materie prime' : 'Altro'; };
-  const g = new Map(); let letti = 0;
-  R.slice(1).forEach(r => {
-    const tot = pnum(r[iQ]), val = pnum(r[iV]); if (!(tot > 0) || !(val > 0)) return; letti++;
-    iCo.forEach(i => {
-      const qt = pnum(r[i]); if (!(qt > 0)) return;
-      const broker = H[i].replace(/^quantit[àa] /, '').trim().split(/\s+/)[0]; const dove = broker.charAt(0).toUpperCase() + broker.slice(1);
-      if (!g.has(dove.toLowerCase())) g.set(dove.toLowerCase(), { dove, valore: 0, prodotti: [] });
-      const G = g.get(dove.toLowerCase()), isin = String(r[iI] || '').trim().toUpperCase(), man = r2(val * qt / tot), cl = mapC(r[iC]), nm = String(r[iN] || '').trim();
-      G.valore += man;
-      const p = /^[A-Z0-9]{12}$/.test(isin) ? G.prodotti.find(z => z.isin === isin) : null;
-      if (p) { p.quote += qt; p.manuale = r2(p.manuale + man); }
-      else if (/^[A-Z0-9]{12}$/.test(isin)) G.prodotti.push({ isin, nome: nm, classe: cl, quote: qt, manuale: man });
-      else G.prodotti.push({ isin: '', nome: nm, classe: cl, quote: 0, manuale: man });
-    });
-  });
-  const righe = [...g.values()].map(x => {
-    x.valore = r2(x.valore);
-    const ex = D.voci.find(v => isPort(v) && (v.dove || '').trim().toLowerCase() === x.dove.toLowerCase() && (v.account || '') === acc);
-    return { ...x, exId: ex ? ex.id : '', prima: ex ? ex.valore : null, nPrima: ex ? (ex.prodotti || []).length : 0 };
-  }).sort((a, b) => a.dove.localeCompare(b.dove));
-  if (!righe.length) throw new Error('Nessun titolo con quantità trovato.');
-  return { righe, acc, letti };
-}
-async function titoliApplica() {
-  const D = S.data, P = S.timp; if (!P) return;
-  for (const x of P.righe) {
-    if (x.exId) {
-      const v = D.voci.find(y => y.id === x.exId); if (!v) continue;
-      const { id, assetClass, ...rest } = v; const keep = p => { const o = (v.prodotti || []).find(z => z.isin && z.isin === p.isin); return o ? { ...p, ...(o.nom ? { nom: true } : {}), ...(o.pmc > 0 ? { pmc: o.pmc } : {}), ...(o.aliq != null ? { aliq: o.aliq } : {}) } : p; }; const dati = { ...rest, valore: x.valore, prodotti: conPrezzi(x.prodotti.map(keep)), portafoglio: true }; dati.valore = valoreProd(dati);
-      await setDoc(doc(db, 'users', D.uid, 'voci', id), dati); delete v.assetClass; Object.assign(v, dati);
-    } else {
-      if (!D.voci.some(y => y.categoria === 'Liquidità' && y.nome.toLowerCase() === x.dove.toLowerCase() && (y.account || '') === P.acc)) {
-        const nl = { tipo: 'attivo', categoria: 'Liquidità', nome: x.dove, account: P.acc, valore: 0 };
-        const r0 = await addDoc(collection(db, 'users', D.uid, 'voci'), nl); D.voci.push({ id: r0.id, ...nl });
-      }
-      const dati = { tipo: 'attivo', categoria: 'Investimenti', nome: x.dove, dove: x.dove, account: P.acc, valore: x.valore, prodotti: conPrezzi(x.prodotti), portafoglio: true }; dati.valore = valoreProd(dati);
-      const r = await addDoc(collection(db, 'users', D.uid, 'voci'), dati); D.voci.push({ id: r.id, ...dati });
-    }
-  }
-  D.voci.forEach(applyPiano); S.timp = null; await syncStorico(); S.msg = 'Titoli importati e aggiornati.'; render();
 }
 /* ---------- Portafogli: modifica prodotti, nuovo portafoglio, riunione delle voci vecchie ---------- */
 function grabPort() {
@@ -727,11 +675,6 @@ async function portConverti() {
   }
   D.voci.forEach(applyPiano); await syncStorico(); S.msg = 'Portafogli aggiornati.'; render();
 }
-document.addEventListener('change', async e => {
-  if (e.target.id !== 'titf' || !e.target.files[0] || !S.data || !isAdmin()) return;
-  try { S.timp = titoliProposta(await e.target.files[0].text()); S.timpErr = ''; } catch (x) { S.timp = null; S.timpErr = x.message || 'File non valido.'; }
-  render();
-});
 /* ---------- Pagina Importazioni: storico e portafoglio da CSV ---------- */
 const MESI_IT = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
 const meseIt = k => MESI_IT[+k.slice(5) - 1] + ' ' + k.slice(0, 4);
