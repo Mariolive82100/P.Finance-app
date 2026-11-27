@@ -2,6 +2,8 @@
 /* Pagina di prova: salvataggio nella cartella riservata di Google Drive. Solo dati inventati. */
 const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const NOME = 'prova-drive.json';
+/* L'ID client non è una password: identifica l'app ed è pubblico per natura */
+const CLIENT_ID = '123810645490-iikqffltvem9qhud133kdfr0re0nof4g.apps.googleusercontent.com';
 const API = 'https://www.googleapis.com/drive/v3/files';
 const UP = 'https://www.googleapis.com/upload/drive/v3/files';
 const $ = id => document.getElementById(id);
@@ -66,13 +68,11 @@ function disegna() {
 
 /* ---------- accesso ---------- */
 function collega() {
-  const id = (mem.get('cid') || '').trim();
-  if (!id) { $('conf').open = true; return avviso('Prima incolla e salva l\'ID client.'); }
   if (!window.google || !google.accounts) return avviso('Google non è ancora pronto. Controlla la connessione e riprova.');
   const inizio = Date.now();
   diario('richiesta di accesso');
   const client = google.accounts.oauth2.initTokenClient({
-    client_id: id,
+    client_id: CLIENT_ID,
     scope: SCOPE,
     callback: async r => {
       if (r.error || !google.accounts.oauth2.hasGrantedAllScopes(r, SCOPE)) {
@@ -186,13 +186,6 @@ async function esegui(azione) {
 }
 
 /* ---------- pulsanti ---------- */
-$('cid').value = mem.get('cid') || '';
-$('conf').open = !mem.get('cid');
-$('salvaCid').onclick = () => {
-  const v = $('cid').value.trim();
-  if (!/\.apps\.googleusercontent\.com$/.test(v)) return avviso('L\'ID client deve finire con .apps.googleusercontent.com');
-  mem.set('cid', v); $('conf').open = false; avviso(''); disegna();
-};
 $('collega').onclick = collega;
 $('scollega').onclick = () => { perdiToken('scollegato a mano'); dati = null; file = null; avviso(''); disegna(); };
 $('scaduto').onclick = () => { perdiToken('scadenza simulata'); avviso('Ora premi "Ricollega" e conta quanti tocchi servono.'); };
@@ -246,7 +239,7 @@ document.addEventListener('visibilitychange', () => {
 });
 setInterval(() => { if (token && !valido()) perdiToken('permesso scaduto'); else if (!occupato) disegna(); }, 30000);
 
-diario('controllo v2 · pagina aperta: ' + (valido() ? 'permesso ancora valido' : 'serve il collegamento'));
+diario('versione 3 · pagina aperta: ' + (valido() ? 'permesso ancora valido' : 'serve il collegamento'));
 disegna();
 /* Con un permesso ancora valido i dati si rileggono da soli */
 if (valido()) esegui(leggi);
