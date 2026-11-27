@@ -14,7 +14,7 @@ const mem = {
 };
 
 let token = null, scadenza = 0;      // permesso temporaneo di Google
-let file = null;                     // { id, version } del file letto
+let file = null;                     // { id, md5Checksum }: impronta del contenuto letto
 let dati = null;
 let occupato = false;
 
@@ -118,7 +118,7 @@ async function chiama(url, opzioni = {}) {
 }
 
 async function cerca() {
-  const q = new URLSearchParams({ spaces: 'appDataFolder', q: "name='" + NOME + "'", orderBy: 'createdTime', fields: 'files(id,version)' });
+  const q = new URLSearchParams({ spaces: 'appDataFolder', q: "name='" + NOME + "'", orderBy: 'createdTime', fields: 'files(id,md5Checksum)' });
   return (await (await chiama(API + '?' + q)).json()).files[0] || null;
 }
 
@@ -127,19 +127,20 @@ const dispositivo = () => (/Mobi|Android|iPhone|iPad/.test(navigator.userAgent) 
 async function scrivi(nuovi) {
   /* Controllo "due dispositivi": se il file è cambiato dopo l'ultima lettura, non si sovrascrive */
   const attuale = await cerca();
-  if ((attuale && (!file || attuale.id !== file.id || attuale.version !== file.version)) || (!attuale && file)) throw new Error('CAMBIATO');
+  if ((attuale && (!file || attuale.id !== file.id || attuale.md5Checksum !== file.md5Checksum)) || (!attuale && file)) throw new Error('CAMBIATO');
   const corpo = { ...nuovi, numero: (dati ? dati.numero : 0) + 1, quando: new Date().toISOString(), da: dispositivo() };
   let id = attuale && attuale.id;
+  let salvato;
   if (!id) {
     const sep = 'pf' + Date.now();
     const multi = '--' + sep + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' +
       JSON.stringify({ name: NOME, parents: ['appDataFolder'] }) +
       '\r\n--' + sep + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(corpo) + '\r\n--' + sep + '--';
-    id = (await (await chiama(UP + '?uploadType=multipart&fields=id', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + sep }, body: multi })).json()).id;
+    salvato = await (await chiama(UP + '?uploadType=multipart&fields=id,md5Checksum', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + sep }, body: multi })).json();
   } else {
-    await chiama(UP + '/' + id + '?uploadType=media&fields=id', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+    salvato = await (await chiama(UP + '/' + id + '?uploadType=media&fields=id,md5Checksum', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })).json();
   }
-  file = await (await chiama(API + '/' + id + '?fields=id,version')).json();
+  file = salvato;
   dati = corpo;
   diario('salvataggio n. ' + corpo.numero + ' riuscito');
 }
@@ -245,7 +246,7 @@ document.addEventListener('visibilitychange', () => {
 });
 setInterval(() => { if (token && !valido()) perdiToken('permesso scaduto'); else if (!occupato) disegna(); }, 30000);
 
-diario('pagina aperta: ' + (valido() ? 'permesso ancora valido' : 'serve il collegamento'));
+diario('controllo v2 · pagina aperta: ' + (valido() ? 'permesso ancora valido' : 'serve il collegamento'));
 disegna();
 /* Con un permesso ancora valido i dati si rileggono da soli */
 if (valido()) esegui(leggi);
